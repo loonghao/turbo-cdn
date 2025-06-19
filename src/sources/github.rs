@@ -1,11 +1,13 @@
+// Licensed under the MIT License
+// Copyright (c) 2025 Hal <hal.long@outlook.com>
+
 use async_trait::async_trait;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use std::collections::HashMap;
 use tracing::{debug, warn};
 
 use super::{
-    Checksum, ChecksumAlgorithm, DownloadSource, DownloadUrl, FileInfo, HealthStatus,
-    RepositoryMetadata, RepositoryStats,
+    DownloadSource, DownloadUrl, FileInfo, HealthStatus, RepositoryMetadata, RepositoryStats,
 };
 use crate::config::GitHubConfig;
 use crate::error::{Result, TurboCdnError};
@@ -34,6 +36,7 @@ struct GitHubRepository {
 
 /// GitHub license information
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 struct GitHubLicense {
     name: String,
     spdx_id: Option<String>,
@@ -107,7 +110,7 @@ impl GitHubSource {
             .get(&url)
             .send()
             .await
-            .map_err(|e| TurboCdnError::Network(e))?;
+            .map_err(TurboCdnError::Network)?;
 
         if !response.status().is_success() {
             return Err(TurboCdnError::source_validation(format!(
@@ -138,7 +141,7 @@ impl GitHubSource {
             .get(&url)
             .send()
             .await
-            .map_err(|e| TurboCdnError::Network(e))?;
+            .map_err(TurboCdnError::Network)?;
 
         if !response.status().is_success() {
             return Err(TurboCdnError::source_validation(format!(
@@ -166,7 +169,7 @@ impl GitHubSource {
             .get(&url)
             .send()
             .await
-            .map_err(|e| TurboCdnError::Network(e))?;
+            .map_err(TurboCdnError::Network)?;
 
         if !response.status().is_success() {
             return Err(TurboCdnError::source_validation(format!(

@@ -1,3 +1,6 @@
+// Licensed under the MIT License
+// Copyright (c) 2025 Hal <hal.long@outlook.com>
+
 use indicatif::{ProgressBar, ProgressStyle};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -391,7 +394,7 @@ impl ProgressInfo {
 pub struct ConsoleProgressReporter;
 
 impl ConsoleProgressReporter {
-    pub fn new() -> ProgressCallback {
+    pub fn default_callback() -> ProgressCallback {
         Box::new(|progress: ProgressInfo| {
             println!(
                 "Progress: {:.1}% ({}) - {} - ETA: {}",
@@ -406,7 +409,7 @@ impl ConsoleProgressReporter {
 
 impl Default for ConsoleProgressReporter {
     fn default() -> Self {
-        Self::new();
+        let _tracker = Self::default_callback();
         Self
     }
 }

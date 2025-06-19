@@ -1,3 +1,6 @@
+// Licensed under the MIT License
+// Copyright (c) 2025 Hal <hal.long@outlook.com>
+
 use futures::stream::{self, StreamExt};
 use reqwest::header::{HeaderMap, HeaderValue, RANGE};
 use std::path::{Path, PathBuf};
@@ -6,7 +9,7 @@ use std::time::{Duration, Instant};
 use tokio::fs::{File, OpenOptions};
 use tokio::io::{AsyncSeekExt, AsyncWriteExt, SeekFrom};
 use tokio::sync::Semaphore;
-use tracing::{debug, error, info, warn};
+use tracing::{debug, info, warn};
 use uuid::Uuid;
 
 use crate::cache::{CacheLookup, CacheManager};
@@ -219,7 +222,7 @@ impl Downloader {
                         checksum: entry.checksum,
                     });
                 }
-                CacheLookup::Expired(entry) => {
+                CacheLookup::Expired(_entry) => {
                     info!("Cache entry expired for {}, will re-download", cache_key);
                     self.cache_manager.remove(&cache_key).await?;
                 }
@@ -319,21 +322,13 @@ impl Downloader {
 
         // Create progress tracker
         let progress_tracker = Arc::new(ProgressTracker::new(file_size));
-        if let Some(callback) = options.progress_callback {
-            // Clone the callback to avoid lifetime issues
-            let callback_clone = callback;
-            progress_tracker
-                .set_callback(move |progress| {
-                    callback_clone(progress);
-                })
-                .await;
-        }
+        // Note: Progress callback will be handled by the caller if needed
 
         // Determine output path
         let output_path = self.get_output_path(&download_request.file_name, options)?;
 
         // Choose download strategy
-        let result = if file_size > options.chunk_size as u64 && download_url.supports_ranges {
+        if file_size > options.chunk_size as u64 && download_url.supports_ranges {
             // Multi-chunk download
             self.download_chunked(
                 &download_url.url,
@@ -361,7 +356,7 @@ impl Downloader {
         // Cache the file if enabled
         if options.use_cache {
             let cache_key = self.cache_manager.generate_key(
-                &download_request
+                download_request
                     .repository
                     .as_ref()
                     .unwrap_or(&"unknown".to_string()),
@@ -399,7 +394,7 @@ impl Downloader {
             .head(url)
             .send()
             .await
-            .map_err(|e| TurboCdnError::Network(e))?;
+            .map_err(TurboCdnError::Network)?;
 
         if !response.status().is_success() {
             return Err(TurboCdnError::download(format!(
@@ -434,7 +429,7 @@ impl Downloader {
             .get(url)
             .send()
             .await
-            .map_err(|e| TurboCdnError::Network(e))?;
+            .map_err(TurboCdnError::Network)?;
 
         if !response.status().is_success() {
             return Err(TurboCdnError::download(format!(
@@ -443,26 +438,18 @@ impl Downloader {
             )));
         }
 
-        let mut file = File::create(output_path)
-            .await
-            .map_err(|e| TurboCdnError::Io(e))?;
+        let mut file = File::create(output_path).await.map_err(TurboCdnError::Io)?;
 
         let mut downloaded = 0u64;
 
-        while let Some(chunk) = response
-            .chunk()
-            .await
-            .map_err(|e| TurboCdnError::Network(e))?
-        {
-            file.write_all(&chunk)
-                .await
-                .map_err(|e| TurboCdnError::Io(e))?;
+        while let Some(chunk) = response.chunk().await.map_err(TurboCdnError::Network)? {
+            file.write_all(&chunk).await.map_err(TurboCdnError::Io)?;
 
             downloaded += chunk.len() as u64;
             progress_tracker.update(downloaded).await;
         }
 
-        file.sync_all().await.map_err(|e| TurboCdnError::Io(e))?;
+        file.sync_all().await.map_err(TurboCdnError::Io)?;
         Ok(())
     }
 
@@ -476,20 +463,16 @@ impl Downloader {
         progress_tracker: Arc<ProgressTracker>,
     ) -> Result<()> {
         // Create output file
-        let file = File::create(output_path)
-            .await
-            .map_err(|e| TurboCdnError::Io(e))?;
+        let file = File::create(output_path).await.map_err(TurboCdnError::Io)?;
 
         // Set file size
-        file.set_len(file_size)
-            .await
-            .map_err(|e| TurboCdnError::Io(e))?;
+        file.set_len(file_size).await.map_err(TurboCdnError::Io)?;
 
         drop(file); // Close the file so chunks can open it
 
         // Calculate chunk ranges
         let chunk_size = options.chunk_size as u64;
-        let num_chunks = (file_size + chunk_size - 1) / chunk_size;
+        let num_chunks = file_size.div_ceil(chunk_size);
         let max_chunks = options.max_concurrent_chunks.min(num_chunks as usize);
 
         let chunk_ranges: Vec<(u64, u64)> = (0..num_chunks)
@@ -555,7 +538,7 @@ impl Downloader {
             .header(RANGE, range_header)
             .send()
             .await
-            .map_err(|e| TurboCdnError::Network(e))?;
+            .map_err(TurboCdnError::Network)?;
 
         if !response.status().is_success()
             && response.status() != reqwest::StatusCode::PARTIAL_CONTENT
@@ -570,22 +553,16 @@ impl Downloader {
             .write(true)
             .open(&task.output_file)
             .await
-            .map_err(|e| TurboCdnError::Io(e))?;
+            .map_err(TurboCdnError::Io)?;
 
         file.seek(SeekFrom::Start(task.start_byte))
             .await
-            .map_err(|e| TurboCdnError::Io(e))?;
+            .map_err(TurboCdnError::Io)?;
 
         let mut downloaded = 0u64;
 
-        while let Some(chunk) = response
-            .chunk()
-            .await
-            .map_err(|e| TurboCdnError::Network(e))?
-        {
-            file.write_all(&chunk)
-                .await
-                .map_err(|e| TurboCdnError::Io(e))?;
+        while let Some(chunk) = response.chunk().await.map_err(TurboCdnError::Network)? {
+            file.write_all(&chunk).await.map_err(TurboCdnError::Io)?;
 
             downloaded += chunk.len() as u64;
             task.progress_tracker
@@ -608,7 +585,7 @@ impl Downloader {
 
         tokio::fs::write(&output_path, data)
             .await
-            .map_err(|e| TurboCdnError::Io(e))?;
+            .map_err(TurboCdnError::Io)?;
 
         Ok(output_path)
     }
@@ -620,7 +597,7 @@ impl Downloader {
             .as_ref()
             .unwrap_or(&self.config.general.download_dir);
 
-        std::fs::create_dir_all(output_dir).map_err(|e| TurboCdnError::Io(e))?;
+        std::fs::create_dir_all(output_dir).map_err(TurboCdnError::Io)?;
 
         Ok(output_dir.join(file_name))
     }

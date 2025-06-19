@@ -1,10 +1,11 @@
+// Licensed under the MIT License
+// Copyright (c) 2025 Hal <hal.long@outlook.com>
+
 use async_trait::async_trait;
 use std::collections::HashMap;
 use tracing::debug;
 
-use super::{
-    DownloadSource, DownloadUrl, FileInfo, HealthStatus, RepositoryMetadata, RepositoryStats,
-};
+use super::{DownloadSource, DownloadUrl, HealthStatus, RepositoryMetadata, RepositoryStats};
 use crate::config::FastlyConfig;
 use crate::error::{Result, TurboCdnError};
 
@@ -48,7 +49,7 @@ impl FastlySource {
             .head(url)
             .send()
             .await
-            .map_err(|e| TurboCdnError::Network(e))?;
+            .map_err(TurboCdnError::Network)?;
 
         if response.status().is_success() {
             let size = response
