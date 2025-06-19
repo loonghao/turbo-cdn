@@ -1,0 +1,120 @@
+[package]
+name = "turbo-cdn"
+version = "0.1.0"
+edition = "2021"
+authors = ["Hal <hal.long@outlook.com>"]
+description = "Revolutionary global download accelerator for open-source software with AI optimization, multi-CDN routing, and P2P acceleration"
+license = "MIT"
+repository = "https://github.com/loonghao/turbo-cdn"
+homepage = "https://github.com/loonghao/turbo-cdn"
+documentation = "https://docs.rs/turbo-cdn"
+readme = "README.md"
+keywords = ["download", "cdn", "accelerator", "opensource", "rust"]
+categories = [
+    "network-programming",
+    "web-programming",
+    "command-line-utilities",
+]
+exclude = ["/.github/", "/tests/fixtures/", "/benches/", "*.md"]
+
+[dependencies]
+# Async runtime
+tokio = { version = "1.0", features = ["full", "fs"] }
+
+# HTTP client
+reqwest = { version = "0.12", features = [
+    "json",
+    "stream",
+    "rustls-tls",
+    "gzip",
+    "brotli",
+    "deflate",
+] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Error handling
+anyhow = "1.0"
+thiserror = "2.0"
+
+# URL handling
+url = "2.0"
+
+# Async utilities
+futures = "0.3"
+async-trait = "0.1"
+
+# Progress tracking
+indicatif = "0.17"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# UUID generation
+uuid = { version = "1.0", features = ["v4", "serde"] }
+
+# Time handling
+chrono = { version = "0.4", features = ["serde"] }
+
+# File system operations
+tokio-util = { version = "0.7", features = ["io"] }
+
+# Hashing
+sha2 = "0.10"
+blake3 = "1.0"
+
+# Configuration
+config = "0.15"
+
+# Compression
+flate2 = "1.0"
+
+# Regex
+regex = "1.0"
+
+# Random
+rand = "0.9"
+
+# Metrics
+metrics = "0.24"
+
+# TOML parsing
+toml = "0.8"
+
+# Directory utilities
+dirs = "6.0"
+
+[dev-dependencies]
+# Testing
+tokio-test = "0.4"
+tempfile = "3.0"
+wiremock = "0.6"
+criterion = { version = "0.6", features = ["html_reports"] }
+proptest = "1.0"
+
+# Test utilities
+pretty_assertions = "1.0"
+serial_test = "3.0"
+
+[features]
+default = ["rustls-tls"]
+rustls-tls = ["reqwest/rustls-tls"]
+native-tls = ["reqwest/native-tls"]
+
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+
+[profile.dev]
+opt-level = 0
+debug = true
+
+[profile.test]
+opt-level = 1
+debug = true
