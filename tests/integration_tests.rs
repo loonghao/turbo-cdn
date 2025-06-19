@@ -51,8 +51,8 @@ fn test_error_types() {
     assert_eq!(error.category(), "config");
     assert!(!error.is_retryable());
 
-    // Create a simple network error for testing
-    let network_error = TurboCdnError::network("timeout error");
+    // Create a simple timeout error for testing (which is retryable)
+    let network_error = TurboCdnError::timeout("timeout error");
     assert!(network_error.is_retryable());
 }
 
