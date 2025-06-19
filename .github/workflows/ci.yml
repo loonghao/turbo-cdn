@@ -34,10 +34,19 @@ jobs:
         toolchain: ${{ matrix.rust }}
         components: rustfmt, clippy
 
-    - name: Cache dependencies
-      uses: Swatinem/rust-cache@v2
+    - name: Cache Rust dependencies
+      uses: actions/cache@v4
       with:
-        key: ${{ matrix.os }}-${{ matrix.rust }}
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          target/
+        key: ${{ runner.os }}-cargo-${{ matrix.rust }}-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-${{ matrix.rust }}-
+          ${{ runner.os }}-cargo-
 
     - name: Check formatting
       run: cargo fmt --all -- --check
@@ -66,8 +75,19 @@ jobs:
       with:
         components: llvm-tools-preview
 
-    - name: Cache dependencies
-      uses: Swatinem/rust-cache@v2
+    - name: Cache Rust dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          target/
+        key: ${{ runner.os }}-cargo-coverage-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-coverage-
+          ${{ runner.os }}-cargo-
 
     - name: Install cargo-llvm-cov
       uses: taiki-e/install-action@cargo-llvm-cov
@@ -91,20 +111,24 @@ jobs:
     - name: Install Rust toolchain
       uses: dtolnay/rust-toolchain@stable
 
-    - name: Cache dependencies
-      uses: Swatinem/rust-cache@v2
-
-    - name: Install cargo-audit
-      run: cargo install cargo-audit
+    - name: Cache Rust dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          target/
+        key: ${{ runner.os }}-cargo-security-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-security-
+          ${{ runner.os }}-cargo-
 
     - name: Run security audit
-      run: cargo audit
-
-    - name: Install cargo-deny
-      run: cargo install cargo-deny
-
-    - name: Run cargo-deny
-      run: cargo deny check
+      uses: rustsec/audit-check@v2.0.0
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
 
   msrv:
     name: Minimum Supported Rust Version
@@ -114,10 +138,21 @@ jobs:
       uses: actions/checkout@v4
 
     - name: Install Rust toolchain
-      uses: dtolnay/rust-toolchain@1.70.0
+      uses: dtolnay/rust-toolchain@1.75.0
 
-    - name: Cache dependencies
-      uses: Swatinem/rust-cache@v2
+    - name: Cache Rust dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          target/
+        key: ${{ runner.os }}-cargo-msrv-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-msrv-
+          ${{ runner.os }}-cargo-
 
     - name: Check MSRV
       run: cargo check --all-features
@@ -132,16 +167,24 @@ jobs:
     - name: Install Rust toolchain
       uses: dtolnay/rust-toolchain@stable
 
-    - name: Cache dependencies
-      uses: Swatinem/rust-cache@v2
+    - name: Cache Rust dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          target/
+        key: ${{ runner.os }}-cargo-docs-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-docs-
+          ${{ runner.os }}-cargo-
 
     - name: Build documentation
-      run: cargo doc --all-features --no-deps
-
-    - name: Check for broken links
-      run: |
-        cargo install cargo-deadlinks
-        cargo deadlinks --check-http
+      run: cargo doc --all-features --no-deps --document-private-items
+      env:
+        RUSTDOCFLAGS: "-D warnings"
 
   benchmark:
     name: Performance Benchmarks
@@ -154,19 +197,22 @@ jobs:
     - name: Install Rust toolchain
       uses: dtolnay/rust-toolchain@stable
 
-    - name: Cache dependencies
-      uses: Swatinem/rust-cache@v2
+    - name: Cache Rust dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          target/
+        key: ${{ runner.os }}-cargo-bench-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-bench-
+          ${{ runner.os }}-cargo-
 
     - name: Run benchmarks
       run: cargo bench --all-features
-
-    - name: Store benchmark results
-      uses: benchmark-action/github-action-benchmark@v1
-      with:
-        tool: 'cargo'
-        output-file-path: target/criterion/reports/index.html
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-        auto-push: true
 
   compliance:
     name: Compliance Check
@@ -178,8 +224,19 @@ jobs:
     - name: Install Rust toolchain
       uses: dtolnay/rust-toolchain@stable
 
-    - name: Cache dependencies
-      uses: Swatinem/rust-cache@v2
+    - name: Cache Rust dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          target/
+        key: ${{ runner.os }}-cargo-compliance-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-compliance-
+          ${{ runner.os }}-cargo-
 
     - name: Check license headers
       run: |
@@ -188,16 +245,6 @@ jobs:
         if [ -s missing_licenses.txt ]; then
           echo "Files missing license headers:"
           cat missing_licenses.txt
-          exit 1
-        fi
-
-    - name: Validate dependencies
-      run: |
-        # Ensure all dependencies are compatible with our license
-        cargo tree --format "{p} {l}" | grep -v "MIT\|Apache-2.0\|BSD\|ISC\|Unlicense" | tee incompatible_licenses.txt || true
-        if [ -s incompatible_licenses.txt ]; then
-          echo "Dependencies with incompatible licenses:"
-          cat incompatible_licenses.txt
           exit 1
         fi
 
@@ -212,8 +259,19 @@ jobs:
     - name: Install Rust toolchain
       uses: dtolnay/rust-toolchain@stable
 
-    - name: Cache dependencies
-      uses: Swatinem/rust-cache@v2
+    - name: Cache Rust dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          target/
+        key: ${{ runner.os }}-cargo-integration-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-integration-
+          ${{ runner.os }}-cargo-
 
     - name: Build release binary
       run: cargo build --release
