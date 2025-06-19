@@ -51,9 +51,8 @@ fn test_error_types() {
     assert_eq!(error.category(), "config");
     assert!(!error.is_retryable());
 
-    let network_error = TurboCdnError::Network(reqwest::Error::from(reqwest::Error::from(
-        std::io::Error::new(std::io::ErrorKind::TimedOut, "timeout"),
-    )));
+    // Create a simple network error for testing
+    let network_error = TurboCdnError::network("timeout error");
     assert!(network_error.is_retryable());
 }
 

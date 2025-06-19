@@ -1,7 +1,10 @@
+// Licensed under the MIT License
+// Copyright (c) 2025 Hal <hal.long@outlook.com>
+
 use async_trait::async_trait;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use std::collections::HashMap;
-use tracing::{debug, warn};
+use tracing::debug;
 
 use super::{
     DownloadSource, DownloadUrl, FileInfo, HealthStatus, RepositoryMetadata, RepositoryStats,
@@ -18,6 +21,7 @@ pub struct JsDelivrSource {
 
 /// jsDelivr API response for package information
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 struct JsDelivrPackage {
     #[serde(rename = "type")]
     package_type: String,
@@ -68,7 +72,7 @@ impl JsDelivrSource {
             .get(&url)
             .send()
             .await
-            .map_err(|e| TurboCdnError::Network(e))?;
+            .map_err(TurboCdnError::Network)?;
 
         if !response.status().is_success() {
             return Err(TurboCdnError::source_validation(format!(
@@ -107,7 +111,7 @@ impl JsDelivrSource {
             .get(&url)
             .send()
             .await
-            .map_err(|e| TurboCdnError::Network(e))?;
+            .map_err(TurboCdnError::Network)?;
 
         if !response.status().is_success() {
             return Err(TurboCdnError::source_validation(format!(
@@ -205,7 +209,7 @@ impl DownloadSource for JsDelivrSource {
                 .head(&cdn_url)
                 .send()
                 .await
-                .map_err(|e| TurboCdnError::Network(e))?;
+                .map_err(TurboCdnError::Network)?;
 
             if head_response.status().is_success() {
                 let size = head_response

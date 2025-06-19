@@ -1,3 +1,6 @@
+// Licensed under the MIT License
+// Copyright (c) 2025 Hal <hal.long@outlook.com>
+
 //! # Turbo CDN
 //!
 //! Revolutionary global download accelerator for open-source software with AI optimization,
@@ -68,6 +71,7 @@ pub use sources::{
 
 /// Main TurboCdn client
 #[derive(Debug)]
+#[allow(dead_code)]
 pub struct TurboCdn {
     downloader: Downloader,
 }
@@ -90,6 +94,7 @@ pub enum Source {
 
 /// Download request builder
 #[derive(Debug)]
+#[allow(dead_code)]
 pub struct DownloadRequestBuilder {
     repository: String,
     version: String,
@@ -126,7 +131,7 @@ impl TurboCdn {
     /// Get repository metadata
     pub async fn get_repository_metadata(
         &self,
-        repository: &str,
+        _repository: &str,
     ) -> Result<sources::RepositoryMetadata> {
         // This would need access to the source manager
         // For now, return an error indicating this needs to be implemented
@@ -371,7 +376,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_builder() {
-        let builder = TurboCdn::builder()
+        let _builder = TurboCdn::builder()
             .with_region(Region::Global)
             .with_cache(true);
 

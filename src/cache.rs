@@ -1,9 +1,11 @@
+// Licensed under the MIT License
+// Copyright (c) 2025 Hal <hal.long@outlook.com>
+
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime};
 use tokio::fs;
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tracing::{debug, info, warn};
 
 use crate::config::CacheConfig;
@@ -18,6 +20,7 @@ pub struct CacheManager {
 
 /// Metadata store for cache entries
 #[derive(Debug)]
+#[allow(dead_code)]
 pub struct MetadataStore {
     cache_dir: PathBuf,
     metadata: HashMap<String, CacheEntry>,

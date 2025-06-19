@@ -1,3 +1,6 @@
+// Licensed under the MIT License
+// Copyright (c) 2025 Hal <hal.long@outlook.com>
+
 use async_trait::async_trait;
 use serde::Deserialize;
 use std::collections::HashMap;
@@ -24,6 +27,7 @@ struct CdnjsSearchResponse {
 
 /// CDNJS library information
 #[derive(Debug, Clone, Deserialize)]
+#[allow(dead_code)]
 struct CdnjsLibrary {
     name: String,
     description: Option<String>,
@@ -36,6 +40,7 @@ struct CdnjsLibrary {
 
 /// CDNJS repository information
 #[derive(Debug, Clone, Deserialize)]
+#[allow(dead_code)]
 struct CdnjsRepository {
     #[serde(rename = "type")]
     repo_type: String,
@@ -44,6 +49,7 @@ struct CdnjsRepository {
 
 /// CDNJS auto-update information
 #[derive(Debug, Clone, Deserialize)]
+#[allow(dead_code)]
 struct CdnjsAutoUpdate {
     source: String,
     target: String,
@@ -51,6 +57,7 @@ struct CdnjsAutoUpdate {
 
 /// CDNJS library details
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 struct CdnjsLibraryDetails {
     name: String,
     description: Option<String>,
@@ -88,7 +95,7 @@ impl CloudflareSource {
             .get(&url)
             .send()
             .await
-            .map_err(|e| TurboCdnError::Network(e))?;
+            .map_err(TurboCdnError::Network)?;
 
         if !response.status().is_success() {
             return Err(TurboCdnError::source_validation(format!(
@@ -119,7 +126,7 @@ impl CloudflareSource {
             .get(&url)
             .send()
             .await
-            .map_err(|e| TurboCdnError::Network(e))?;
+            .map_err(TurboCdnError::Network)?;
 
         if !response.status().is_success() {
             return Err(TurboCdnError::source_validation(format!(
@@ -156,7 +163,7 @@ impl CloudflareSource {
             .head(url)
             .send()
             .await
-            .map_err(|e| TurboCdnError::Network(e))?;
+            .map_err(TurboCdnError::Network)?;
 
         if response.status().is_success() {
             let size = response

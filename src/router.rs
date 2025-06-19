@@ -1,7 +1,10 @@
+// Licensed under the MIT License
+// Copyright (c) 2025 Hal <hal.long@outlook.com>
+
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::time::{Duration, Instant};
-use tracing::{debug, info, warn};
+use std::time::Duration;
+use tracing::{debug, info};
 
 use crate::config::{Region, TurboCdnConfig};
 use crate::error::{Result, TurboCdnError};
@@ -9,6 +12,7 @@ use crate::sources::{DownloadUrl, SourceManager};
 
 /// Intelligent router for selecting optimal download sources
 #[derive(Debug)]
+#[allow(dead_code)]
 pub struct SmartRouter {
     config: TurboCdnConfig,
     source_manager: SourceManager,

@@ -1,3 +1,6 @@
+// Licensed under the MIT License
+// Copyright (c) 2025 Hal <hal.long@outlook.com>
+
 use std::fmt;
 use thiserror::Error;
 

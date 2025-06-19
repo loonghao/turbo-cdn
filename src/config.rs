@@ -1,3 +1,6 @@
+// Licensed under the MIT License
+// Copyright (c) 2025 Hal <hal.long@outlook.com>
+
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -6,7 +9,7 @@ use std::time::Duration;
 use crate::error::{Result, TurboCdnError};
 
 /// Global configuration for turbo-cdn
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct TurboCdnConfig {
     /// General settings
     pub general: GeneralConfig,
@@ -106,7 +109,7 @@ pub struct CacheConfig {
 }
 
 /// Source configurations
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct SourcesConfig {
     /// GitHub configuration
     pub github: GitHubConfig,
@@ -310,20 +313,6 @@ pub enum LogFormat {
     Compact,
 }
 
-impl Default for TurboCdnConfig {
-    fn default() -> Self {
-        Self {
-            general: GeneralConfig::default(),
-            network: NetworkConfig::default(),
-            cache: CacheConfig::default(),
-            sources: SourcesConfig::default(),
-            compliance: ComplianceConfig::default(),
-            logging: LoggingConfig::default(),
-            metrics: MetricsConfig::default(),
-        }
-    }
-}
-
 impl Default for GeneralConfig {
     fn default() -> Self {
         Self {
@@ -364,18 +353,6 @@ impl Default for CacheConfig {
             ttl: 24 * 60 * 60,            // 24 hours
             compression: true,
             cleanup_interval: 60 * 60, // 1 hour
-        }
-    }
-}
-
-impl Default for SourcesConfig {
-    fn default() -> Self {
-        Self {
-            github: GitHubConfig::default(),
-            jsdelivr: JsDelivrConfig::default(),
-            fastly: FastlyConfig::default(),
-            cloudflare: CloudflareConfig::default(),
-            custom: Vec::new(),
         }
     }
 }
