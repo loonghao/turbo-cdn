@@ -1,0 +1,294 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., v1.0.0)'
+        required: true
+        type: string
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  create-release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+      version: ${{ steps.get_version.outputs.version }}
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Get version
+      id: get_version
+      run: |
+        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+        else
+          echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Generate changelog
+      id: changelog
+      run: |
+        # Extract changelog for this version
+        if [ -f CHANGELOG.md ]; then
+          # Get changelog section for this version
+          awk '/^## \[/{if(p) exit; if($0 ~ /\['${{ steps.get_version.outputs.version }}'\]/) p=1} p' CHANGELOG.md > release_notes.md
+          if [ ! -s release_notes.md ]; then
+            echo "No changelog found for version ${{ steps.get_version.outputs.version }}" > release_notes.md
+          fi
+        else
+          echo "Automated release for ${{ steps.get_version.outputs.version }}" > release_notes.md
+        fi
+
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ steps.get_version.outputs.version }}
+        release_name: Release ${{ steps.get_version.outputs.version }}
+        body_path: release_notes.md
+        draft: false
+        prerelease: ${{ contains(steps.get_version.outputs.version, '-') }}
+
+  build-and-upload:
+    name: Build and Upload
+    needs: create-release
+    strategy:
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+            name: turbo-cdn-linux-x64
+          - target: x86_64-unknown-linux-musl
+            os: ubuntu-latest
+            name: turbo-cdn-linux-x64-musl
+          - target: aarch64-unknown-linux-gnu
+            os: ubuntu-latest
+            name: turbo-cdn-linux-arm64
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+            name: turbo-cdn-windows-x64.exe
+          - target: x86_64-apple-darwin
+            os: macos-latest
+            name: turbo-cdn-macos-x64
+          - target: aarch64-apple-darwin
+            os: macos-latest
+            name: turbo-cdn-macos-arm64
+
+    runs-on: ${{ matrix.os }}
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        targets: ${{ matrix.target }}
+
+    - name: Cache dependencies
+      uses: Swatinem/rust-cache@v2
+      with:
+        key: ${{ matrix.target }}
+
+    - name: Install cross-compilation tools
+      if: matrix.target == 'aarch64-unknown-linux-gnu'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y gcc-aarch64-linux-gnu
+
+    - name: Install musl tools
+      if: matrix.target == 'x86_64-unknown-linux-musl'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y musl-tools
+
+    - name: Build binary
+      run: |
+        cargo build --release --target ${{ matrix.target }} --all-features
+
+    - name: Prepare binary
+      shell: bash
+      run: |
+        cd target/${{ matrix.target }}/release
+        if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+          cp turbo-cdn.exe ../../../${{ matrix.name }}
+        else
+          cp turbo-cdn ../../../${{ matrix.name }}
+        fi
+        cd ../../..
+
+    - name: Generate SHA256
+      shell: bash
+      run: |
+        if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+          certutil -hashfile ${{ matrix.name }} SHA256 | head -2 | tail -1 > ${{ matrix.name }}.sha256
+        else
+          shasum -a 256 ${{ matrix.name }} > ${{ matrix.name }}.sha256
+        fi
+
+    - name: Upload binary
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ needs.create-release.outputs.upload_url }}
+        asset_path: ${{ matrix.name }}
+        asset_name: ${{ matrix.name }}
+        asset_content_type: application/octet-stream
+
+    - name: Upload SHA256
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ needs.create-release.outputs.upload_url }}
+        asset_path: ${{ matrix.name }}.sha256
+        asset_name: ${{ matrix.name }}.sha256
+        asset_content_type: text/plain
+
+  publish-crate:
+    name: Publish to crates.io
+    needs: [create-release, build-and-upload]
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Cache dependencies
+      uses: Swatinem/rust-cache@v2
+
+    - name: Verify version
+      run: |
+        CARGO_VERSION=$(cargo metadata --format-version 1 | jq -r '.packages[] | select(.name == "turbo-cdn") | .version')
+        TAG_VERSION="${{ needs.create-release.outputs.version }}"
+        TAG_VERSION="${TAG_VERSION#v}"  # Remove 'v' prefix
+        
+        if [ "$CARGO_VERSION" != "$TAG_VERSION" ]; then
+          echo "Version mismatch: Cargo.toml has $CARGO_VERSION, tag is $TAG_VERSION"
+          exit 1
+        fi
+
+    - name: Publish to crates.io
+      run: cargo publish --token ${{ secrets.CRATES_TOKEN }}
+
+  update-homebrew:
+    name: Update Homebrew Formula
+    needs: [create-release, build-and-upload]
+    runs-on: ubuntu-latest
+    if: ${{ !contains(needs.create-release.outputs.version, '-') }}  # Only for stable releases
+    steps:
+    - name: Update Homebrew formula
+      uses: mislav/bump-homebrew-formula-action@v3
+      with:
+        formula-name: turbo-cdn
+        formula-path: Formula/turbo-cdn.rb
+        homebrew-tap: loonghao/homebrew-tap
+        download-url: https://github.com/loonghao/turbo-cdn/releases/download/${{ needs.create-release.outputs.version }}/turbo-cdn-macos-x64
+        commit-message: |
+          Update turbo-cdn to ${{ needs.create-release.outputs.version }}
+          
+          Created by release workflow
+      env:
+        COMMITTER_TOKEN: ${{ secrets.HOMEBREW_TOKEN }}
+
+  update-documentation:
+    name: Update Documentation
+    needs: create-release
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Cache dependencies
+      uses: Swatinem/rust-cache@v2
+
+    - name: Build documentation
+      run: cargo doc --all-features --no-deps
+
+    - name: Deploy to GitHub Pages
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./target/doc
+        destination_dir: docs/${{ needs.create-release.outputs.version }}
+
+  notify-release:
+    name: Notify Release
+    needs: [create-release, publish-crate]
+    runs-on: ubuntu-latest
+    steps:
+    - name: Notify Discord
+      if: ${{ secrets.DISCORD_WEBHOOK }}
+      run: |
+        curl -H "Content-Type: application/json" \
+             -d '{
+               "embeds": [{
+                 "title": "🚀 New Turbo CDN Release",
+                 "description": "Version ${{ needs.create-release.outputs.version }} has been released!",
+                 "url": "https://github.com/loonghao/turbo-cdn/releases/tag/${{ needs.create-release.outputs.version }}",
+                 "color": 5814783,
+                 "fields": [
+                   {
+                     "name": "📦 Crates.io",
+                     "value": "[View on crates.io](https://crates.io/crates/turbo-cdn)",
+                     "inline": true
+                   },
+                   {
+                     "name": "📚 Documentation",
+                     "value": "[View docs](https://docs.rs/turbo-cdn)",
+                     "inline": true
+                   }
+                 ]
+               }]
+             }' \
+             ${{ secrets.DISCORD_WEBHOOK }}
+
+    - name: Create GitHub Discussion
+      uses: abirismyname/create-discussion@v1.2.0
+      with:
+        title: "🎉 Release ${{ needs.create-release.outputs.version }} is now available!"
+        body: |
+          We're excited to announce the release of Turbo CDN ${{ needs.create-release.outputs.version }}!
+          
+          ## 📦 Installation
+          
+          ```bash
+          # Using Cargo
+          cargo install turbo-cdn
+          
+          # Using Homebrew (macOS)
+          brew install loonghao/tap/turbo-cdn
+          
+          # Download binary
+          # Visit: https://github.com/loonghao/turbo-cdn/releases/tag/${{ needs.create-release.outputs.version }}
+          ```
+          
+          ## 🔗 Links
+          
+          - [📋 Release Notes](https://github.com/loonghao/turbo-cdn/releases/tag/${{ needs.create-release.outputs.version }})
+          - [📦 Crates.io](https://crates.io/crates/turbo-cdn)
+          - [📚 Documentation](https://docs.rs/turbo-cdn)
+          
+          Thank you to all contributors who made this release possible! 🙏
+        repository-id: ${{ github.repository }}
+        category-slug: "announcements"
+        github-token: ${{ secrets.GITHUB_TOKEN }}
