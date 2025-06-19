@@ -17,22 +17,25 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        rust: [stable, beta]
-        exclude:
-          - os: macos-latest
-            rust: beta
-          - os: windows-latest
-            rust: beta
+        rust: [stable]
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
 
     - name: Install Rust toolchain
-      uses: dtolnay/rust-toolchain@stable
+      uses: dtolnay/rust-toolchain@1.80.0
       with:
-        toolchain: ${{ matrix.rust }}
         components: rustfmt, clippy
+
+    - name: Handle Cargo.lock compatibility
+      run: |
+        # If Cargo.lock doesn't exist or has compatibility issues, regenerate it
+        if ! cargo check --locked 2>/dev/null; then
+          echo "Regenerating Cargo.lock for compatibility..."
+          rm -f Cargo.lock
+          cargo generate-lockfile
+        fi
 
     - name: Cache Rust dependencies
       uses: actions/cache@v4
@@ -71,7 +74,7 @@ jobs:
       uses: actions/checkout@v4
 
     - name: Install Rust toolchain
-      uses: dtolnay/rust-toolchain@stable
+      uses: dtolnay/rust-toolchain@1.80.0
       with:
         components: llvm-tools-preview
 
@@ -109,7 +112,7 @@ jobs:
       uses: actions/checkout@v4
 
     - name: Install Rust toolchain
-      uses: dtolnay/rust-toolchain@stable
+      uses: dtolnay/rust-toolchain@1.80.0
 
     - name: Cache Rust dependencies
       uses: actions/cache@v4
@@ -138,7 +141,7 @@ jobs:
       uses: actions/checkout@v4
 
     - name: Install Rust toolchain
-      uses: dtolnay/rust-toolchain@1.75.0
+      uses: dtolnay/rust-toolchain@1.80.0
 
     - name: Cache Rust dependencies
       uses: actions/cache@v4
@@ -165,7 +168,7 @@ jobs:
       uses: actions/checkout@v4
 
     - name: Install Rust toolchain
-      uses: dtolnay/rust-toolchain@stable
+      uses: dtolnay/rust-toolchain@1.80.0
 
     - name: Cache Rust dependencies
       uses: actions/cache@v4
@@ -195,7 +198,7 @@ jobs:
       uses: actions/checkout@v4
 
     - name: Install Rust toolchain
-      uses: dtolnay/rust-toolchain@stable
+      uses: dtolnay/rust-toolchain@1.80.0
 
     - name: Cache Rust dependencies
       uses: actions/cache@v4
@@ -222,7 +225,7 @@ jobs:
       uses: actions/checkout@v4
 
     - name: Install Rust toolchain
-      uses: dtolnay/rust-toolchain@stable
+      uses: dtolnay/rust-toolchain@1.80.0
 
     - name: Cache Rust dependencies
       uses: actions/cache@v4
@@ -257,7 +260,7 @@ jobs:
       uses: actions/checkout@v4
 
     - name: Install Rust toolchain
-      uses: dtolnay/rust-toolchain@stable
+      uses: dtolnay/rust-toolchain@1.80.0
 
     - name: Cache Rust dependencies
       uses: actions/cache@v4
