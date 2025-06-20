@@ -22,7 +22,7 @@
 //!
 //! #[tokio::main]
 //! async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
-//!     let downloader = TurboCdn::builder()
+//!     let mut downloader = TurboCdn::builder()
 //!         .with_sources(&[
 //!             Source::github(),
 //!             Source::jsdelivr(),
@@ -32,14 +32,15 @@
 //!         .build()
 //!         .await?;
 //!
-//!     let request = downloader
-//!         .download("oven-sh/bun", "v1.0.0", "bun-linux-x64.zip")
-//!         .with_progress(|progress| {
+//!     let options = DownloadOptions {
+//!         progress_callback: Some(Box::new(|progress| {
 //!             println!("Downloaded: {:.1}%", progress.percentage);
-//!         });
+//!         })),
+//!         ..Default::default()
+//!     };
 //!
-//!     // Note: execute() would be called here in a real implementation
-//!     // let result = request.execute().await?;
+//!     // Note: This would perform the actual download in a real implementation
+//!     // let result = downloader.download("oven-sh/bun", "v1.0.0", "bun-linux-x64.zip", options).await?;
 //!     // println!("Downloaded to: {}", result.path.display());
 //!     Ok(())
 //! }
@@ -55,7 +56,6 @@ pub mod router;
 pub mod sources;
 
 use std::path::PathBuf;
-use std::time::Duration;
 
 // Re-export commonly used types
 pub use cache::{CacheManager, CacheStats};
@@ -72,7 +72,6 @@ pub use sources::{
 
 /// Main TurboCdn client
 #[derive(Debug)]
-#[allow(dead_code)]
 pub struct TurboCdn {
     downloader: Downloader,
 }
@@ -93,16 +92,6 @@ pub enum Source {
     Cloudflare,
 }
 
-/// Download request builder
-#[derive(Debug)]
-#[allow(dead_code)]
-pub struct DownloadRequestBuilder {
-    repository: String,
-    version: String,
-    file_name: String,
-    options: DownloadOptions,
-}
-
 impl TurboCdn {
     /// Create a new TurboCdn builder
     pub fn builder() -> TurboCdnBuilder {
@@ -115,18 +104,16 @@ impl TurboCdn {
     }
 
     /// Download a file from a repository
-    pub fn download(
-        &self,
+    pub async fn download(
+        &mut self,
         repository: &str,
         version: &str,
         file_name: &str,
-    ) -> DownloadRequestBuilder {
-        DownloadRequestBuilder {
-            repository: repository.to_string(),
-            version: version.to_string(),
-            file_name: file_name.to_string(),
-            options: DownloadOptions::default(),
-        }
+        options: DownloadOptions,
+    ) -> Result<DownloadResult> {
+        self.downloader
+            .download(repository, version, file_name, options)
+            .await
     }
 
     /// Get repository metadata
@@ -134,8 +121,7 @@ impl TurboCdn {
         &self,
         _repository: &str,
     ) -> Result<sources::RepositoryMetadata> {
-        // This would need access to the source manager
-        // For now, return an error indicating this needs to be implemented
+        // TODO: Implement repository metadata retrieval
         Err(TurboCdnError::unsupported(
             "Repository metadata not yet implemented",
         ))
@@ -143,8 +129,7 @@ impl TurboCdn {
 
     /// Get download statistics
     pub async fn get_stats(&self) -> Result<TurboCdnStats> {
-        // This would need access to the router and cache manager
-        // For now, return default stats
+        // TODO: Implement statistics collection from downloader components
         Ok(TurboCdnStats::default())
     }
 
@@ -152,8 +137,7 @@ impl TurboCdn {
     pub async fn health_check(
         &self,
     ) -> Result<std::collections::HashMap<String, sources::HealthStatus>> {
-        // This would need access to the source manager
-        // For now, return an empty map
+        // TODO: Implement health check via source manager
         Ok(std::collections::HashMap::new())
     }
 }
@@ -255,62 +239,6 @@ impl TurboCdnBuilder {
 impl Default for TurboCdnBuilder {
     fn default() -> Self {
         Self::new()
-    }
-}
-
-impl DownloadRequestBuilder {
-    /// Set download options
-    pub fn with_options(mut self, options: DownloadOptions) -> Self {
-        self.options = options;
-        self
-    }
-
-    /// Set progress callback
-    pub fn with_progress<F>(mut self, callback: F) -> Self
-    where
-        F: Fn(ProgressInfo) + Send + Sync + 'static,
-    {
-        self.options.progress_callback = Some(Box::new(callback));
-        self
-    }
-
-    /// Set output directory
-    pub fn with_output_dir<P: Into<PathBuf>>(mut self, dir: P) -> Self {
-        self.options.output_dir = Some(dir.into());
-        self
-    }
-
-    /// Set maximum concurrent chunks
-    pub fn with_max_chunks(mut self, chunks: usize) -> Self {
-        self.options.max_concurrent_chunks = chunks;
-        self
-    }
-
-    /// Set chunk size
-    pub fn with_chunk_size(mut self, size: usize) -> Self {
-        self.options.chunk_size = size;
-        self
-    }
-
-    /// Set timeout
-    pub fn with_timeout(mut self, timeout: Duration) -> Self {
-        self.options.timeout = timeout;
-        self
-    }
-
-    /// Enable or disable cache
-    pub fn with_cache(mut self, use_cache: bool) -> Self {
-        self.options.use_cache = use_cache;
-        self
-    }
-
-    /// Execute the download
-    pub async fn execute(self) -> Result<DownloadResult> {
-        // This is a simplified implementation
-        // In a real implementation, we'd need access to the downloader
-        Err(TurboCdnError::unsupported(
-            "Download execution not yet implemented in this API",
-        ))
     }
 }
 
