@@ -12,11 +12,44 @@ This indicates an authentication issue with the release-plz workflow.
 
 ## Solution
 
-### Option 1: Use GITHUB_TOKEN (Recommended for most cases)
+The workflow now supports multiple authentication methods with automatic fallback:
 
-The default `GITHUB_TOKEN` should work for most release-plz operations. The workflow has been updated to include proper permissions and configuration.
+### Option 1: Use GitHub App (Recommended - Most Secure)
 
-### Option 2: Create a Personal Access Token (PAT)
+The workflow now supports GitHub App authentication with automatic fallback. This is the most secure and reliable method.
+
+#### Setup GitHub App:
+
+1. **Create GitHub App**:
+   - Go to GitHub Settings → Developer settings → GitHub Apps
+   - Click "New GitHub App"
+   - Set these fields:
+     - **GitHub App name**: `release-plz-bot` (or any name you prefer)
+     - **Homepage URL**: Your GitHub profile or repository URL
+     - **Webhook**: Uncheck "Active" (not needed)
+   - **Repository permissions**:
+     - Contents: Read & write
+     - Pull requests: Read & write
+     - Actions: Read (optional, for better workflow integration)
+   - **Where can this GitHub App be installed?**: "Only on this account"
+
+2. **Generate Private Key**:
+   - After creating the app, go to the app settings
+   - Scroll down to "Private keys" section
+   - Click "Generate a private key"
+   - Download and securely store the `.pem` file
+
+3. **Install the App**:
+   - Go to "Install App" tab in the GitHub App settings
+   - Install it on your repository
+
+4. **Add Secrets to Repository**:
+   - Go to your repository → Settings → Secrets and variables → Actions
+   - Add these secrets:
+     - `APP_ID`: Your GitHub App ID (found in app settings)
+     - `APP_PRIVATE_KEY`: Content of the `.pem` file you downloaded
+
+### Option 2: Use Personal Access Token (PAT)
 
 If you need additional permissions (e.g., to trigger other workflows), create a PAT:
 
@@ -61,13 +94,25 @@ After making these changes:
 2. Ensure "Workflow permissions" is set to "Read and write permissions"
 3. Check "Allow GitHub Actions to create and approve pull requests"
 
+### Option 3: Use GITHUB_TOKEN (Basic - Limited functionality)
+
+The default `GITHUB_TOKEN` works for basic operations but cannot trigger other workflows.
+
+## Authentication Priority
+
+The workflow uses this authentication priority:
+1. **GitHub App token** (if `APP_ID` and `APP_PRIVATE_KEY` secrets are configured)
+2. **Personal Access Token** (if `RELEASE_PLZ_TOKEN` secret is configured)
+3. **Default GITHUB_TOKEN** (fallback)
+
 ## What Was Fixed
 
 The workflow configuration has been updated with:
 
-1. Added `persist-credentials: true` to checkout steps
-2. Enhanced permissions for the workflow
-3. Proper token handling in both release and PR jobs
-4. Improved error handling and authentication flow
+1. **GitHub App Support**: Added automatic GitHub App token generation with fallback
+2. **Enhanced Authentication**: Multiple authentication methods with priority order
+3. **Latest Action Version**: Updated to release-plz action v0.5.108
+4. **Improved Error Handling**: Continue-on-error for GitHub App token generation
+5. **Proper Token Handling**: Consistent token usage across all steps
 
-These changes should resolve the authentication issues and allow release-plz to work properly.
+These changes provide a robust authentication system that should resolve all authentication issues.
