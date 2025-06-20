@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["ChecksumAlgorithm"],"mod":["cloudflare","fastly","github","jsdelivr","utils"],"struct":["Checksum","DownloadUrl","FileInfo","HealthStatus","RepositoryMetadata","RepositoryStats","SourceManager"],"trait":["DownloadSource"]};
