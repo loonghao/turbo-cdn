@@ -70,6 +70,56 @@ pub use sources::{
     jsdelivr::JsDelivrSource, DownloadUrl, SourceManager,
 };
 
+/// Parsed URL information from various sources
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ParsedUrl {
+    /// Repository in format "owner/repo"
+    pub repository: String,
+    /// Version/tag name
+    pub version: String,
+    /// Filename
+    pub filename: String,
+    /// Original URL
+    pub original_url: String,
+    /// Detected source type
+    pub source_type: DetectedSourceType,
+}
+
+/// Detected source type from URL parsing
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum DetectedSourceType {
+    /// GitHub releases
+    GitHub,
+    /// jsDelivr CDN
+    JsDelivr,
+    /// Fastly CDN (jsDelivr)
+    Fastly,
+    /// Cloudflare CDN
+    Cloudflare,
+    /// npm registry
+    Npm,
+    /// Python Package Index (PyPI)
+    PyPI,
+    /// Golang module proxy
+    GoProxy,
+    /// Rust crates.io
+    CratesIo,
+    /// Maven Central Repository
+    Maven,
+    /// NuGet Gallery
+    NuGet,
+    /// Docker Hub
+    DockerHub,
+    /// GitLab releases
+    GitLab,
+    /// Bitbucket downloads
+    Bitbucket,
+    /// SourceForge files
+    SourceForge,
+    /// Other/unknown source
+    Other(String),
+}
+
 /// Main TurboCdn client
 #[derive(Debug)]
 pub struct TurboCdn {
@@ -116,12 +166,698 @@ impl TurboCdn {
             .await
     }
 
+    /// Download from any supported URL with automatic CDN optimization
+    ///
+    /// This method accepts URLs from various sources and automatically optimizes them:
+    ///
+    /// **Supported URL formats:**
+    /// - GitHub: `https://github.com/owner/repo/releases/download/tag/file.zip`
+    /// - GitLab: `https://gitlab.com/owner/repo/-/releases/tag/downloads/file.zip`
+    /// - Bitbucket: `https://bitbucket.org/owner/repo/downloads/file.zip`
+    /// - jsDelivr: `https://cdn.jsdelivr.net/gh/owner/repo@tag/file.zip`
+    /// - Fastly: `https://fastly.jsdelivr.net/gh/owner/repo@tag/file.zip`
+    /// - Cloudflare: `https://cdnjs.cloudflare.com/ajax/libs/library/version/file.js`
+    /// - npm: `https://registry.npmjs.org/package/-/package-version.tgz`
+    /// - PyPI: `https://files.pythonhosted.org/packages/source/p/package/package-version.tar.gz`
+    /// - Go Proxy: `https://proxy.golang.org/module/@v/version.zip`
+    /// - Crates.io: `https://crates.io/api/v1/crates/crate/version/download`
+    /// - Maven: `https://repo1.maven.org/maven2/group/artifact/version/artifact-version.jar`
+    /// - NuGet: `https://api.nuget.org/v3-flatcontainer/package/version/package.version.nupkg`
+    /// - Docker Hub: `https://registry-1.docker.io/v2/library/image/manifests/tag`
+    /// - SourceForge: `https://downloads.sourceforge.net/project/name/file.zip`
+    ///
+    /// **Automatic optimization:**
+    /// 1. Parses the URL to extract repository, version, and filename
+    /// 2. Detects user's geographic location
+    /// 3. Selects the optimal CDN based on location and performance
+    /// 4. Downloads using the best available source with failover
+    ///
+    /// # Arguments
+    /// * `url` - The source URL from any supported CDN or repository
+    /// * `options` - Download options (optional, uses defaults if None)
+    ///
+    /// # Example
+    /// ```rust,no_run
+    /// use turbo_cdn::*;
+    ///
+    /// #[tokio::main]
+    /// async fn main() -> turbo_cdn::Result<()> {
+    ///     let mut downloader = TurboCdn::new().await?;
+    ///
+    ///     // GitHub releases URL
+    ///     let result = downloader.download_from_url(
+    ///         "https://github.com/oven-sh/bun/releases/download/bun-v1.2.9/bun-bun-v1.2.9.zip",
+    ///         None
+    ///     ).await?;
+    ///
+    ///     // jsDelivr URL
+    ///     let result = downloader.download_from_url(
+    ///         "https://cdn.jsdelivr.net/gh/microsoft/vscode@1.74.0/package.json",
+    ///         None
+    ///     ).await?;
+    ///
+    ///     println!("Downloaded to: {}", result.path.display());
+    ///     Ok(())
+    /// }
+    /// ```
+    pub async fn download_from_url(
+        &mut self,
+        url: &str,
+        options: Option<DownloadOptions>,
+    ) -> Result<DownloadResult> {
+        let parsed_url = self.parse_url(url)?;
+        let options = options.unwrap_or_default();
+
+        self.download(
+            &parsed_url.repository,
+            &parsed_url.version,
+            &parsed_url.filename,
+            options,
+        )
+        .await
+    }
+
+    /// Get the optimal CDN URL for a given source URL without downloading
+    ///
+    /// This method parses the input URL and returns the best CDN URL based on:
+    /// 1. User's geographic location (detected automatically)
+    /// 2. CDN performance metrics
+    /// 3. Source availability and reliability
+    ///
+    /// # Arguments
+    /// * `url` - The source URL from any supported CDN or repository
+    ///
+    /// # Returns
+    /// * `String` containing the optimal CDN URL for the user's location
+    ///
+    /// # Example
+    /// ```rust,no_run
+    /// use turbo_cdn::*;
+    ///
+    /// #[tokio::main]
+    /// async fn main() -> turbo_cdn::Result<()> {
+    ///     let downloader = TurboCdn::new().await?;
+    ///
+    ///     let optimal_url = downloader.get_optimal_url(
+    ///         "https://github.com/oven-sh/bun/releases/download/bun-v1.2.9/bun-bun-v1.2.9.zip"
+    ///     ).await?;
+    ///
+    ///     println!("Optimal URL: {}", optimal_url);
+    ///     // Might output: https://fastly.jsdelivr.net/gh/oven-sh/bun@bun-v1.2.9/bun-bun-v1.2.9.zip
+    ///     Ok(())
+    /// }
+    /// ```
+    pub async fn get_optimal_url(&self, url: &str) -> Result<String> {
+        let parsed_url = self.parse_url(url)?;
+
+        // Use the downloader's method to get optimal URL
+        self.downloader
+            .get_optimal_url(
+                &parsed_url.repository,
+                &parsed_url.version,
+                &parsed_url.filename,
+            )
+            .await
+    }
+
     /// Get repository metadata
     pub async fn get_repository_metadata(
         &self,
         repository: &str,
     ) -> Result<sources::RepositoryMetadata> {
         self.downloader.get_repository_metadata(repository).await
+    }
+
+    /// Parse any supported URL into components (public for testing)
+    ///
+    /// Supports URLs from various sources:
+    /// - GitHub: `https://github.com/{owner}/{repo}/releases/download/{tag}/{filename}`
+    /// - GitLab: `https://gitlab.com/{owner}/{repo}/-/releases/{tag}/downloads/{filename}`
+    /// - Bitbucket: `https://bitbucket.org/{owner}/{repo}/downloads/{filename}`
+    /// - jsDelivr: `https://cdn.jsdelivr.net/gh/{owner}/{repo}@{tag}/{filename}`
+    /// - Fastly: `https://fastly.jsdelivr.net/gh/{owner}/{repo}@{tag}/{filename}`
+    /// - Cloudflare: `https://cdnjs.cloudflare.com/ajax/libs/{library}/{version}/{filename}`
+    /// - npm: `https://registry.npmjs.org/{package}/-/{package}-{version}.tgz`
+    /// - PyPI: `https://files.pythonhosted.org/packages/source/{first_letter}/{package}/{package}-{version}.tar.gz`
+    /// - Go Proxy: `https://proxy.golang.org/{module}/@v/{version}.zip`
+    /// - Crates.io: `https://crates.io/api/v1/crates/{crate}/{version}/download`
+    /// - Maven: `https://repo1.maven.org/maven2/{group_path}/{artifact}/{version}/{artifact}-{version}.jar`
+    /// - NuGet: `https://api.nuget.org/v3-flatcontainer/{package}/{version}/{package}.{version}.nupkg`
+    /// - Docker Hub: `https://registry-1.docker.io/v2/library/{image}/manifests/{tag}`
+    /// - SourceForge: `https://downloads.sourceforge.net/project/{project}/{filename}`
+    ///
+    /// # Arguments
+    /// * `url` - The URL to parse
+    ///
+    /// # Returns
+    /// * `ParsedUrl` containing repository, version, filename, and detected source type
+    ///
+    /// # Errors
+    /// * Returns error if URL format is invalid or unsupported
+    pub fn parse_url(&self, url: &str) -> Result<ParsedUrl> {
+        let url_obj = url::Url::parse(url)
+            .map_err(|e| TurboCdnError::config(format!("Invalid URL format: {}", e)))?;
+
+        let host = url_obj
+            .host_str()
+            .ok_or_else(|| TurboCdnError::config("URL must have a valid host".to_string()))?;
+
+        match host {
+            "github.com" => self.parse_github_url(&url_obj, url),
+            "gitlab.com" => self.parse_gitlab_url(&url_obj, url),
+            "bitbucket.org" => self.parse_bitbucket_url(&url_obj, url),
+            "cdn.jsdelivr.net" => self.parse_jsdelivr_url(&url_obj, url),
+            "fastly.jsdelivr.net" => self.parse_fastly_url(&url_obj, url),
+            "cdnjs.cloudflare.com" => self.parse_cloudflare_url(&url_obj, url),
+            "registry.npmjs.org" => self.parse_npm_url(&url_obj, url),
+            "files.pythonhosted.org" => self.parse_pypi_url(&url_obj, url),
+            "proxy.golang.org" => self.parse_go_proxy_url(&url_obj, url),
+            "crates.io" => self.parse_crates_io_url(&url_obj, url),
+            "repo1.maven.org" => self.parse_maven_url(&url_obj, url),
+            "api.nuget.org" => self.parse_nuget_url(&url_obj, url),
+            "registry-1.docker.io" => self.parse_docker_hub_url(&url_obj, url),
+            "downloads.sourceforge.net" => self.parse_sourceforge_url(&url_obj, url),
+            _ => Err(TurboCdnError::config(format!(
+                "Unsupported URL host: {}. Supported hosts: github.com, gitlab.com, bitbucket.org, cdn.jsdelivr.net, fastly.jsdelivr.net, cdnjs.cloudflare.com, registry.npmjs.org, files.pythonhosted.org, proxy.golang.org, crates.io, repo1.maven.org, api.nuget.org, registry-1.docker.io, downloads.sourceforge.net",
+                host
+            ))),
+        }
+    }
+
+    /// Parse GitHub releases URL
+    fn parse_github_url(&self, url_obj: &url::Url, original_url: &str) -> Result<ParsedUrl> {
+        let path = url_obj.path();
+        let path_segments: Vec<&str> = path.trim_start_matches('/').split('/').collect();
+
+        // Expected format: {owner}/{repo}/releases/download/{tag}/{filename}
+        if path_segments.len() < 6 {
+            return Err(TurboCdnError::config(
+                "Invalid GitHub releases URL format. Expected: https://github.com/{owner}/{repo}/releases/download/{tag}/{filename}".to_string(),
+            ));
+        }
+
+        if path_segments[2] != "releases" || path_segments[3] != "download" {
+            return Err(TurboCdnError::config(
+                "URL must be a GitHub releases download URL".to_string(),
+            ));
+        }
+
+        let owner = path_segments[0];
+        let repo = path_segments[1];
+        let tag = path_segments[4];
+        let filename = path_segments[5..].join("/");
+
+        self.validate_components(owner, repo, tag, &filename)?;
+
+        Ok(ParsedUrl {
+            repository: format!("{}/{}", owner, repo),
+            version: tag.to_string(),
+            filename,
+            original_url: original_url.to_string(),
+            source_type: DetectedSourceType::GitHub,
+        })
+    }
+
+    /// Parse GitLab releases URL
+    fn parse_gitlab_url(&self, url_obj: &url::Url, original_url: &str) -> Result<ParsedUrl> {
+        let path = url_obj.path();
+        let path_segments: Vec<&str> = path.trim_start_matches('/').split('/').collect();
+
+        // Expected format: {owner}/{repo}/-/releases/{tag}/downloads/{filename}
+        if path_segments.len() < 7 {
+            return Err(TurboCdnError::config(
+                "Invalid GitLab releases URL format. Expected: https://gitlab.com/{owner}/{repo}/-/releases/{tag}/downloads/{filename}".to_string(),
+            ));
+        }
+
+        if path_segments[2] != "-"
+            || path_segments[3] != "releases"
+            || path_segments[5] != "downloads"
+        {
+            return Err(TurboCdnError::config(
+                "URL must be a GitLab releases download URL".to_string(),
+            ));
+        }
+
+        let owner = path_segments[0];
+        let repo = path_segments[1];
+        let tag = path_segments[4];
+        let filename = path_segments[6..].join("/");
+
+        self.validate_components(owner, repo, tag, &filename)?;
+
+        Ok(ParsedUrl {
+            repository: format!("{}/{}", owner, repo),
+            version: tag.to_string(),
+            filename,
+            original_url: original_url.to_string(),
+            source_type: DetectedSourceType::GitLab,
+        })
+    }
+
+    /// Parse Bitbucket downloads URL
+    fn parse_bitbucket_url(&self, url_obj: &url::Url, original_url: &str) -> Result<ParsedUrl> {
+        let path = url_obj.path();
+        let path_segments: Vec<&str> = path.trim_start_matches('/').split('/').collect();
+
+        // Expected format: {owner}/{repo}/downloads/{filename}
+        if path_segments.len() < 4 {
+            return Err(TurboCdnError::config(
+                "Invalid Bitbucket downloads URL format. Expected: https://bitbucket.org/{owner}/{repo}/downloads/{filename}".to_string(),
+            ));
+        }
+
+        if path_segments[2] != "downloads" {
+            return Err(TurboCdnError::config(
+                "URL must be a Bitbucket downloads URL".to_string(),
+            ));
+        }
+
+        let owner = path_segments[0];
+        let repo = path_segments[1];
+        let filename = path_segments[3..].join("/");
+
+        // For Bitbucket, we'll extract version from filename if possible
+        let version = self
+            .extract_version_from_filename(&filename)
+            .unwrap_or_else(|| "latest".to_string());
+
+        self.validate_components(owner, repo, &version, &filename)?;
+
+        Ok(ParsedUrl {
+            repository: format!("{}/{}", owner, repo),
+            version,
+            filename,
+            original_url: original_url.to_string(),
+            source_type: DetectedSourceType::Bitbucket,
+        })
+    }
+
+    /// Parse jsDelivr CDN URL
+    fn parse_jsdelivr_url(&self, url_obj: &url::Url, original_url: &str) -> Result<ParsedUrl> {
+        let path = url_obj.path();
+        let path_segments: Vec<&str> = path.trim_start_matches('/').split('/').collect();
+
+        // Expected format: gh/{owner}/{repo}@{tag}/{filename}
+        if path_segments.len() < 4 || path_segments[0] != "gh" {
+            return Err(TurboCdnError::config(
+                "Invalid jsDelivr URL format. Expected: https://cdn.jsdelivr.net/gh/{owner}/{repo}@{tag}/{filename}".to_string(),
+            ));
+        }
+
+        let owner = path_segments[1];
+        let repo_and_tag = path_segments[2];
+        let filename = path_segments[3..].join("/");
+
+        // Parse repo@tag format
+        let (repo, tag) = if let Some(at_pos) = repo_and_tag.find('@') {
+            let repo = &repo_and_tag[..at_pos];
+            let tag = &repo_and_tag[at_pos + 1..];
+            (repo, tag)
+        } else {
+            return Err(TurboCdnError::config(
+                "Invalid jsDelivr URL: missing @tag in repository specification".to_string(),
+            ));
+        };
+
+        self.validate_components(owner, repo, tag, &filename)?;
+
+        Ok(ParsedUrl {
+            repository: format!("{}/{}", owner, repo),
+            version: tag.to_string(),
+            filename,
+            original_url: original_url.to_string(),
+            source_type: DetectedSourceType::JsDelivr,
+        })
+    }
+
+    /// Parse Fastly CDN URL (same format as jsDelivr)
+    fn parse_fastly_url(&self, url_obj: &url::Url, original_url: &str) -> Result<ParsedUrl> {
+        let path = url_obj.path();
+        let path_segments: Vec<&str> = path.trim_start_matches('/').split('/').collect();
+
+        // Expected format: gh/{owner}/{repo}@{tag}/{filename}
+        if path_segments.len() < 4 || path_segments[0] != "gh" {
+            return Err(TurboCdnError::config(
+                "Invalid Fastly URL format. Expected: https://fastly.jsdelivr.net/gh/{owner}/{repo}@{tag}/{filename}".to_string(),
+            ));
+        }
+
+        let owner = path_segments[1];
+        let repo_and_tag = path_segments[2];
+        let filename = path_segments[3..].join("/");
+
+        // Parse repo@tag format
+        let (repo, tag) = if let Some(at_pos) = repo_and_tag.find('@') {
+            let repo = &repo_and_tag[..at_pos];
+            let tag = &repo_and_tag[at_pos + 1..];
+            (repo, tag)
+        } else {
+            return Err(TurboCdnError::config(
+                "Invalid Fastly URL: missing @tag in repository specification".to_string(),
+            ));
+        };
+
+        self.validate_components(owner, repo, tag, &filename)?;
+
+        Ok(ParsedUrl {
+            repository: format!("{}/{}", owner, repo),
+            version: tag.to_string(),
+            filename,
+            original_url: original_url.to_string(),
+            source_type: DetectedSourceType::Fastly,
+        })
+    }
+
+    /// Parse Cloudflare CDN URL
+    fn parse_cloudflare_url(&self, url_obj: &url::Url, original_url: &str) -> Result<ParsedUrl> {
+        let path = url_obj.path();
+        let path_segments: Vec<&str> = path.trim_start_matches('/').split('/').collect();
+
+        // Expected format: ajax/libs/{library}/{version}/{filename}
+        if path_segments.len() < 5 || path_segments[0] != "ajax" || path_segments[1] != "libs" {
+            return Err(TurboCdnError::config(
+                "Invalid Cloudflare URL format. Expected: https://cdnjs.cloudflare.com/ajax/libs/{library}/{version}/{filename}".to_string(),
+            ));
+        }
+
+        let library = path_segments[2];
+        let version = path_segments[3];
+        let filename = path_segments[4..].join("/");
+
+        if library.is_empty() || version.is_empty() || filename.is_empty() {
+            return Err(TurboCdnError::config(
+                "Invalid Cloudflare URL: missing required components".to_string(),
+            ));
+        }
+
+        Ok(ParsedUrl {
+            repository: format!("cdnjs/{}", library), // Use cdnjs as pseudo-owner
+            version: version.to_string(),
+            filename,
+            original_url: original_url.to_string(),
+            source_type: DetectedSourceType::Cloudflare,
+        })
+    }
+
+    /// Parse npm registry URL
+    fn parse_npm_url(&self, url_obj: &url::Url, original_url: &str) -> Result<ParsedUrl> {
+        let path = url_obj.path();
+        let path_segments: Vec<&str> = path.trim_start_matches('/').split('/').collect();
+
+        // Expected format: {package}/-/{package}-{version}.tgz
+        if path_segments.len() < 3 || path_segments[1] != "-" {
+            return Err(TurboCdnError::config(
+                "Invalid npm URL format. Expected: https://registry.npmjs.org/{package}/-/{package}-{version}.tgz".to_string(),
+            ));
+        }
+
+        let package = path_segments[0];
+        let filename = path_segments[2];
+
+        // Extract version from filename (package-version.tgz)
+        let version = if let Some(tgz_pos) = filename.rfind(".tgz") {
+            let without_ext = &filename[..tgz_pos];
+            if let Some(dash_pos) = without_ext.rfind('-') {
+                &without_ext[dash_pos + 1..]
+            } else {
+                return Err(TurboCdnError::config(
+                    "Invalid npm filename: cannot extract version".to_string(),
+                ));
+            }
+        } else {
+            return Err(TurboCdnError::config(
+                "Invalid npm filename: must end with .tgz".to_string(),
+            ));
+        };
+
+        if package.is_empty() || version.is_empty() {
+            return Err(TurboCdnError::config(
+                "Invalid npm URL: missing required components".to_string(),
+            ));
+        }
+
+        Ok(ParsedUrl {
+            repository: format!("npm/{}", package), // Use npm as pseudo-owner
+            version: version.to_string(),
+            filename: filename.to_string(),
+            original_url: original_url.to_string(),
+            source_type: DetectedSourceType::Npm,
+        })
+    }
+
+    /// Validate URL components
+    fn validate_components(
+        &self,
+        owner: &str,
+        repo: &str,
+        tag: &str,
+        filename: &str,
+    ) -> Result<()> {
+        if owner.is_empty() || repo.is_empty() || tag.is_empty() || filename.is_empty() {
+            return Err(TurboCdnError::config(
+                "Invalid URL: missing required components (owner, repo, tag, or filename)"
+                    .to_string(),
+            ));
+        }
+        Ok(())
+    }
+
+    /// Extract version from filename using common patterns (public for testing)
+    pub fn extract_version_from_filename(&self, filename: &str) -> Option<String> {
+        // Common version patterns in filenames
+        let patterns = [
+            r"v?(\d+\.\d+\.\d+)",   // v1.2.3 or 1.2.3
+            r"v?(\d+\.\d+)",        // v1.2 or 1.2
+            r"(\d{4}-\d{2}-\d{2})", // 2023-12-01
+            r"(\d{8})",             // 20231201
+        ];
+
+        for pattern in &patterns {
+            if let Ok(re) = regex::Regex::new(pattern) {
+                if let Some(captures) = re.captures(filename) {
+                    if let Some(version) = captures.get(1) {
+                        return Some(version.as_str().to_string());
+                    }
+                }
+            }
+        }
+
+        None
+    }
+
+    /// Parse PyPI URL
+    fn parse_pypi_url(&self, url_obj: &url::Url, original_url: &str) -> Result<ParsedUrl> {
+        let path = url_obj.path();
+        let path_segments: Vec<&str> = path.trim_start_matches('/').split('/').collect();
+
+        // Expected format: packages/source/{first_letter}/{package}/{package}-{version}.tar.gz
+        if path_segments.len() < 5 || path_segments[0] != "packages" || path_segments[1] != "source"
+        {
+            return Err(TurboCdnError::config(
+                "Invalid PyPI URL format. Expected: https://files.pythonhosted.org/packages/source/{first_letter}/{package}/{package}-{version}.tar.gz".to_string(),
+            ));
+        }
+
+        let package = path_segments[3];
+        let filename = path_segments[4];
+
+        // Extract version from filename
+        let version = if let Some(tar_pos) = filename.rfind(".tar.gz") {
+            let without_ext = &filename[..tar_pos];
+            if let Some(dash_pos) = without_ext.rfind('-') {
+                &without_ext[dash_pos + 1..]
+            } else {
+                return Err(TurboCdnError::config(
+                    "Invalid PyPI filename: cannot extract version".to_string(),
+                ));
+            }
+        } else {
+            return Err(TurboCdnError::config(
+                "Invalid PyPI filename: must end with .tar.gz".to_string(),
+            ));
+        };
+
+        Ok(ParsedUrl {
+            repository: format!("pypi/{}", package),
+            version: version.to_string(),
+            filename: filename.to_string(),
+            original_url: original_url.to_string(),
+            source_type: DetectedSourceType::PyPI,
+        })
+    }
+
+    /// Parse Go proxy URL
+    fn parse_go_proxy_url(&self, url_obj: &url::Url, original_url: &str) -> Result<ParsedUrl> {
+        let path = url_obj.path();
+        let path_segments: Vec<&str> = path.trim_start_matches('/').split('/').collect();
+
+        // Expected format: {module}/@v/{version}.zip
+        if path_segments.len() < 3 || !path_segments[path_segments.len() - 2].starts_with("@v") {
+            return Err(TurboCdnError::config(
+                "Invalid Go proxy URL format. Expected: https://proxy.golang.org/{module}/@v/{version}.zip".to_string(),
+            ));
+        }
+
+        let module_parts = &path_segments[..path_segments.len() - 2];
+        let module = module_parts.join("/");
+        let filename = path_segments[path_segments.len() - 1];
+
+        // Extract version from filename
+        let version = if let Some(zip_pos) = filename.rfind(".zip") {
+            &filename[..zip_pos]
+        } else {
+            return Err(TurboCdnError::config(
+                "Invalid Go proxy filename: must end with .zip".to_string(),
+            ));
+        };
+
+        Ok(ParsedUrl {
+            repository: format!("go/{}", module),
+            version: version.to_string(),
+            filename: filename.to_string(),
+            original_url: original_url.to_string(),
+            source_type: DetectedSourceType::GoProxy,
+        })
+    }
+
+    /// Parse Crates.io URL
+    fn parse_crates_io_url(&self, url_obj: &url::Url, original_url: &str) -> Result<ParsedUrl> {
+        let path = url_obj.path();
+        let path_segments: Vec<&str> = path.trim_start_matches('/').split('/').collect();
+
+        // Expected format: api/v1/crates/{crate}/{version}/download
+        if path_segments.len() != 6
+            || path_segments[0] != "api"
+            || path_segments[1] != "v1"
+            || path_segments[2] != "crates"
+            || path_segments[5] != "download"
+        {
+            return Err(TurboCdnError::config(
+                "Invalid Crates.io URL format. Expected: https://crates.io/api/v1/crates/{crate}/{version}/download".to_string(),
+            ));
+        }
+
+        let crate_name = path_segments[3];
+        let version = path_segments[4];
+        let filename = format!("{}-{}.crate", crate_name, version);
+
+        Ok(ParsedUrl {
+            repository: format!("crates/{}", crate_name),
+            version: version.to_string(),
+            filename,
+            original_url: original_url.to_string(),
+            source_type: DetectedSourceType::CratesIo,
+        })
+    }
+
+    /// Parse Maven Central URL
+    fn parse_maven_url(&self, url_obj: &url::Url, original_url: &str) -> Result<ParsedUrl> {
+        let path = url_obj.path();
+        let path_segments: Vec<&str> = path.trim_start_matches('/').split('/').collect();
+
+        // Expected format: maven2/{group_path}/{artifact}/{version}/{artifact}-{version}.jar
+        if path_segments.len() < 5 || path_segments[0] != "maven2" {
+            return Err(TurboCdnError::config(
+                "Invalid Maven URL format. Expected: https://repo1.maven.org/maven2/{group_path}/{artifact}/{version}/{artifact}-{version}.jar".to_string(),
+            ));
+        }
+
+        let artifact = path_segments[path_segments.len() - 3];
+        let version = path_segments[path_segments.len() - 2];
+        let filename = path_segments[path_segments.len() - 1];
+        let group_path = path_segments[1..path_segments.len() - 3].join(".");
+
+        Ok(ParsedUrl {
+            repository: format!("maven/{}.{}", group_path, artifact),
+            version: version.to_string(),
+            filename: filename.to_string(),
+            original_url: original_url.to_string(),
+            source_type: DetectedSourceType::Maven,
+        })
+    }
+
+    /// Parse NuGet URL
+    fn parse_nuget_url(&self, url_obj: &url::Url, original_url: &str) -> Result<ParsedUrl> {
+        let path = url_obj.path();
+        let path_segments: Vec<&str> = path.trim_start_matches('/').split('/').collect();
+
+        // Expected format: v3-flatcontainer/{package}/{version}/{package}.{version}.nupkg
+        if path_segments.len() != 4 || path_segments[0] != "v3-flatcontainer" {
+            return Err(TurboCdnError::config(
+                "Invalid NuGet URL format. Expected: https://api.nuget.org/v3-flatcontainer/{package}/{version}/{package}.{version}.nupkg".to_string(),
+            ));
+        }
+
+        let package = path_segments[1];
+        let version = path_segments[2];
+        let filename = path_segments[3];
+
+        Ok(ParsedUrl {
+            repository: format!("nuget/{}", package),
+            version: version.to_string(),
+            filename: filename.to_string(),
+            original_url: original_url.to_string(),
+            source_type: DetectedSourceType::NuGet,
+        })
+    }
+
+    /// Parse Docker Hub URL
+    fn parse_docker_hub_url(&self, url_obj: &url::Url, original_url: &str) -> Result<ParsedUrl> {
+        let path = url_obj.path();
+        let path_segments: Vec<&str> = path.trim_start_matches('/').split('/').collect();
+
+        // Expected format: v2/library/{image}/manifests/{tag}
+        if path_segments.len() != 5
+            || path_segments[0] != "v2"
+            || path_segments[1] != "library"
+            || path_segments[3] != "manifests"
+        {
+            return Err(TurboCdnError::config(
+                "Invalid Docker Hub URL format. Expected: https://registry-1.docker.io/v2/library/{image}/manifests/{tag}".to_string(),
+            ));
+        }
+
+        let image = path_segments[2];
+        let tag = path_segments[4];
+        let filename = format!("{}-{}.tar", image, tag);
+
+        Ok(ParsedUrl {
+            repository: format!("docker/{}", image),
+            version: tag.to_string(),
+            filename,
+            original_url: original_url.to_string(),
+            source_type: DetectedSourceType::DockerHub,
+        })
+    }
+
+    /// Parse SourceForge URL
+    fn parse_sourceforge_url(&self, url_obj: &url::Url, original_url: &str) -> Result<ParsedUrl> {
+        let path = url_obj.path();
+        let path_segments: Vec<&str> = path.trim_start_matches('/').split('/').collect();
+
+        // Expected format: project/{project}/{filename}
+        if path_segments.len() < 3 || path_segments[0] != "project" {
+            return Err(TurboCdnError::config(
+                "Invalid SourceForge URL format. Expected: https://downloads.sourceforge.net/project/{project}/{filename}".to_string(),
+            ));
+        }
+
+        let project = path_segments[1];
+        let filename = path_segments[2..].join("/");
+
+        // Try to extract version from filename
+        let version = self
+            .extract_version_from_filename(&filename)
+            .unwrap_or_else(|| "latest".to_string());
+
+        Ok(ParsedUrl {
+            repository: format!("sourceforge/{}", project),
+            version,
+            filename,
+            original_url: original_url.to_string(),
+            source_type: DetectedSourceType::SourceForge,
+        })
     }
 
     /// Get download statistics

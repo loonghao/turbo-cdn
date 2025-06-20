@@ -642,6 +642,30 @@ impl Downloader {
         }))
     }
 
+    /// Get the optimal CDN URL for a file without downloading
+    pub async fn get_optimal_url(
+        &self,
+        repository: &str,
+        version: &str,
+        file_name: &str,
+    ) -> Result<String> {
+        // Use the source manager directly to get all download URLs
+        let download_urls = self
+            .router
+            .get_source_manager()
+            .get_all_download_urls(repository, version, file_name)
+            .await?;
+
+        // Return the first (best) URL
+        if let Some(best_url) = download_urls.first() {
+            Ok(best_url.url.clone())
+        } else {
+            Err(TurboCdnError::routing(
+                "No optimal URL found for the given parameters".to_string(),
+            ))
+        }
+    }
+
     /// Get download statistics
     pub async fn get_stats(&self) -> Result<crate::TurboCdnStats> {
         let cache_stats = self.cache_manager.get_stats();
