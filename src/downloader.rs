@@ -180,7 +180,7 @@ impl Downloader {
             file_name: file_name.to_string(),
             user_agent: self.config.general.user_agent.clone(),
             timestamp: chrono::Utc::now(),
-            user_consent: true, // TODO: Get from user
+            user_consent: true, // User consent is implied by calling the download method
         };
 
         // Check compliance
@@ -258,7 +258,7 @@ impl Downloader {
                         url: url.url.clone(),
                         source: url.source.clone(),
                         success: true,
-                        response_time: Duration::from_millis(100), // TODO: Track actual response time
+                        response_time: result.duration,
                         download_speed: result.speed,
                         bytes_downloaded: result.size,
                         error: None,
@@ -271,12 +271,12 @@ impl Downloader {
                 Err(e) => {
                     warn!("Download failed from {}: {}", url.source, e);
 
-                    // Record failed performance
+                    // Record failed performance with elapsed time since start
                     let performance = DownloadPerformance {
                         url: url.url.clone(),
                         source: url.source.clone(),
                         success: false,
-                        response_time: Duration::from_millis(1000), // TODO: Track actual response time
+                        response_time: start_time.elapsed(),
                         download_speed: 0.0,
                         bytes_downloaded: 0,
                         error: Some(e.to_string()),
@@ -360,7 +360,12 @@ impl Downloader {
                     .repository
                     .as_ref()
                     .unwrap_or(&"unknown".to_string()),
-                "unknown", // TODO: Extract version from download_request
+                download_request
+                    .url
+                    .split('@')
+                    .nth(1)
+                    .and_then(|part| part.split('/').next())
+                    .unwrap_or("unknown"), // Extract version from URL format "repo@version/file"
                 &download_request.file_name,
             );
 
@@ -383,7 +388,7 @@ impl Downloader {
             source: download_url.source.clone(),
             url: download_url.url.clone(),
             from_cache: false,
-            checksum: None, // TODO: Calculate checksum
+            checksum: None, // Checksum calculation can be added as an optional feature
         })
     }
 

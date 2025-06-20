@@ -12,7 +12,6 @@ use crate::sources::{DownloadUrl, SourceManager};
 
 /// Intelligent router for selecting optimal download sources
 #[derive(Debug)]
-#[allow(dead_code)]
 pub struct SmartRouter {
     config: TurboCdnConfig,
     source_manager: SourceManager,
@@ -175,6 +174,37 @@ impl SmartRouter {
 
         // Factor in source priority (lower priority number = higher score)
         score -= url.priority as f64 * 5.0;
+
+        // Apply region-specific scoring adjustments
+        match self.config.general.default_region {
+            Region::China => {
+                // Prefer sources that work well in China
+                if url.source == "fastly" || url.source == "jsdelivr" {
+                    score += 20.0;
+                }
+            }
+            Region::AsiaPacific => {
+                // Prefer CDNs with good Asia-Pacific presence
+                if url.source == "cloudflare" || url.source == "fastly" {
+                    score += 15.0;
+                }
+            }
+            Region::Europe => {
+                // Prefer European CDN nodes
+                if url.source == "jsdelivr" || url.source == "cloudflare" {
+                    score += 15.0;
+                }
+            }
+            Region::NorthAmerica => {
+                // GitHub and US-based CDNs perform well
+                if url.source == "github" || url.source == "cloudflare" {
+                    score += 15.0;
+                }
+            }
+            Region::Global => {
+                // No regional preference
+            }
+        }
 
         // Factor in source performance metrics
         if let Some(source_metrics) = self.performance_tracker.source_metrics.get(&url.source) {
