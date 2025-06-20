@@ -119,26 +119,21 @@ impl TurboCdn {
     /// Get repository metadata
     pub async fn get_repository_metadata(
         &self,
-        _repository: &str,
+        repository: &str,
     ) -> Result<sources::RepositoryMetadata> {
-        // TODO: Implement repository metadata retrieval
-        Err(TurboCdnError::unsupported(
-            "Repository metadata not yet implemented",
-        ))
+        self.downloader.get_repository_metadata(repository).await
     }
 
     /// Get download statistics
     pub async fn get_stats(&self) -> Result<TurboCdnStats> {
-        // TODO: Implement statistics collection from downloader components
-        Ok(TurboCdnStats::default())
+        self.downloader.get_stats().await
     }
 
     /// Perform health check on all sources
     pub async fn health_check(
         &self,
     ) -> Result<std::collections::HashMap<String, sources::HealthStatus>> {
-        // TODO: Implement health check via source manager
-        Ok(std::collections::HashMap::new())
+        self.downloader.health_check().await
     }
 }
 

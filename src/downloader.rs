@@ -606,6 +606,102 @@ impl Downloader {
 
         Ok(output_dir.join(file_name))
     }
+
+    /// Get repository metadata from the first available source
+    pub async fn get_repository_metadata(
+        &self,
+        repository: &str,
+    ) -> Result<crate::sources::RepositoryMetadata> {
+        let sources = self.router.get_source_manager().enabled_sources();
+
+        if sources.is_empty() {
+            return Err(TurboCdnError::source_validation("No sources available"));
+        }
+
+        let mut last_error = None;
+
+        for source in sources {
+            match source.get_repository_metadata(repository).await {
+                Ok(metadata) => {
+                    info!(
+                        "Retrieved metadata for {} from {}",
+                        repository,
+                        source.name()
+                    );
+                    return Ok(metadata);
+                }
+                Err(e) => {
+                    warn!("Failed to get metadata from {}: {}", source.name(), e);
+                    last_error = Some(e);
+                }
+            }
+        }
+
+        Err(last_error.unwrap_or_else(|| {
+            TurboCdnError::source_validation("No sources could provide repository metadata")
+        }))
+    }
+
+    /// Get download statistics
+    pub async fn get_stats(&self) -> Result<crate::TurboCdnStats> {
+        let cache_stats = self.cache_manager.get_stats();
+        let performance_stats = self.router.get_performance_stats();
+
+        // Calculate statistics from router performance data
+        let mut total_downloads = 0u64;
+        let mut successful_downloads = 0u64;
+        let mut failed_downloads = 0u64;
+        let mut total_bytes = 0u64;
+        let mut total_speed = 0f64;
+        let mut speed_count = 0u64;
+
+        for source_metrics in performance_stats.get_source_metrics().values() {
+            total_downloads += source_metrics.total_requests;
+            successful_downloads += source_metrics.successful_requests;
+            failed_downloads += source_metrics.failed_requests;
+
+            if source_metrics.average_download_speed > 0.0 {
+                total_speed += source_metrics.average_download_speed;
+                speed_count += 1;
+            }
+        }
+
+        for url_metrics in performance_stats.get_url_metrics().values() {
+            // URL metrics might have overlapping data with source metrics
+            // We'll use them for additional insights but avoid double counting
+            if url_metrics.average_download_speed > 0.0 {
+                total_bytes += url_metrics.successful_requests * 1024 * 1024; // Estimate
+            }
+        }
+
+        let average_speed = if speed_count > 0 {
+            total_speed / speed_count as f64
+        } else {
+            0.0
+        };
+
+        let cache_hit_rate = if cache_stats.hit_count + cache_stats.miss_count > 0 {
+            cache_stats.hit_count as f64 / (cache_stats.hit_count + cache_stats.miss_count) as f64
+        } else {
+            0.0
+        };
+
+        Ok(crate::TurboCdnStats {
+            total_downloads,
+            successful_downloads,
+            failed_downloads,
+            total_bytes,
+            cache_hit_rate,
+            average_speed,
+        })
+    }
+
+    /// Perform health check on all sources
+    pub async fn health_check(
+        &self,
+    ) -> Result<std::collections::HashMap<String, crate::sources::HealthStatus>> {
+        Ok(self.router.get_source_manager().health_check_all().await)
+    }
 }
 
 impl Default for DownloadOptions {
