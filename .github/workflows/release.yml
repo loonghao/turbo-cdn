@@ -263,7 +263,7 @@ jobs:
              ${{ secrets.DISCORD_WEBHOOK }}
 
     - name: Create GitHub Discussion
-      uses: abirismyname/create-discussion@v1.2.0
+      uses: abirismyname/create-discussion@v2.1.0
       with:
         title: "🎉 Release ${{ needs.create-release.outputs.version }} is now available!"
         body: |
