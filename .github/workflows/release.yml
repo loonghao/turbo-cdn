@@ -20,7 +20,6 @@ jobs:
     name: Create Release
     runs-on: ubuntu-latest
     outputs:
-      upload_url: ${{ steps.create_release.outputs.upload_url }}
       version: ${{ steps.get_version.outputs.version }}
     steps:
     - name: Checkout code
@@ -53,12 +52,12 @@ jobs:
 
     - name: Create Release
       id: create_release
-      uses: actions/create-release@v1
+      uses: softprops/action-gh-release@v2
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         tag_name: ${{ steps.get_version.outputs.version }}
-        release_name: Release ${{ steps.get_version.outputs.version }}
+        name: Release ${{ steps.get_version.outputs.version }}
         body_path: release_notes.md
         draft: false
         prerelease: ${{ contains(steps.get_version.outputs.version, '-') }}
@@ -139,25 +138,15 @@ jobs:
           shasum -a 256 ${{ matrix.name }} > ${{ matrix.name }}.sha256
         fi
 
-    - name: Upload binary
-      uses: actions/upload-release-asset@v1
+    - name: Upload Release Assets
+      uses: softprops/action-gh-release@v2
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        upload_url: ${{ needs.create-release.outputs.upload_url }}
-        asset_path: ${{ matrix.name }}
-        asset_name: ${{ matrix.name }}
-        asset_content_type: application/octet-stream
-
-    - name: Upload SHA256
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ needs.create-release.outputs.upload_url }}
-        asset_path: ${{ matrix.name }}.sha256
-        asset_name: ${{ matrix.name }}.sha256
-        asset_content_type: text/plain
+        tag_name: ${{ needs.create-release.outputs.version }}
+        files: |
+          ${{ matrix.name }}
+          ${{ matrix.name }}.sha256
 
   publish-crate:
     name: Publish to crates.io
@@ -231,64 +220,4 @@ jobs:
         publish_dir: ./target/doc
         destination_dir: docs/${{ needs.create-release.outputs.version }}
 
-  notify-release:
-    name: Notify Release
-    needs: [create-release, publish-crate]
-    runs-on: ubuntu-latest
-    steps:
-    - name: Notify Discord
-      if: ${{ secrets.DISCORD_WEBHOOK }}
-      run: |
-        curl -H "Content-Type: application/json" \
-             -d '{
-               "embeds": [{
-                 "title": "🚀 New Turbo CDN Release",
-                 "description": "Version ${{ needs.create-release.outputs.version }} has been released!",
-                 "url": "https://github.com/loonghao/turbo-cdn/releases/tag/${{ needs.create-release.outputs.version }}",
-                 "color": 5814783,
-                 "fields": [
-                   {
-                     "name": "📦 Crates.io",
-                     "value": "[View on crates.io](https://crates.io/crates/turbo-cdn)",
-                     "inline": true
-                   },
-                   {
-                     "name": "📚 Documentation",
-                     "value": "[View docs](https://docs.rs/turbo-cdn)",
-                     "inline": true
-                   }
-                 ]
-               }]
-             }' \
-             ${{ secrets.DISCORD_WEBHOOK }}
 
-    - name: Create GitHub Discussion
-      uses: abirismyname/create-discussion@v2.1.0
-      with:
-        title: "🎉 Release ${{ needs.create-release.outputs.version }} is now available!"
-        body: |
-          We're excited to announce the release of Turbo CDN ${{ needs.create-release.outputs.version }}!
-          
-          ## 📦 Installation
-          
-          ```bash
-          # Using Cargo
-          cargo install turbo-cdn
-          
-          # Using Homebrew (macOS)
-          brew install loonghao/tap/turbo-cdn
-          
-          # Download binary
-          # Visit: https://github.com/loonghao/turbo-cdn/releases/tag/${{ needs.create-release.outputs.version }}
-          ```
-          
-          ## 🔗 Links
-          
-          - [📋 Release Notes](https://github.com/loonghao/turbo-cdn/releases/tag/${{ needs.create-release.outputs.version }})
-          - [📦 Crates.io](https://crates.io/crates/turbo-cdn)
-          - [📚 Documentation](https://docs.rs/turbo-cdn)
-          
-          Thank you to all contributors who made this release possible! 🙏
-        repository-id: ${{ github.repository }}
-        category-slug: "announcements"
-        github-token: ${{ secrets.GITHUB_TOKEN }}
