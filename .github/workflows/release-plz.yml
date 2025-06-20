@@ -3,7 +3,6 @@ name: Release-plz
 permissions:
   pull-requests: write
   contents: write
-  actions: read
 
 on:
   push:
@@ -19,32 +18,23 @@ jobs:
     permissions:
       contents: write
     steps:
-      # Generate GitHub token for authentication
-      - name: Generate GitHub token
-        uses: actions/create-github-app-token@v1
-        id: generate-token
-        with:
-          app-id: ${{ secrets.APP_ID }}
-          private-key: ${{ secrets.APP_PRIVATE_KEY }}
-        continue-on-error: true
-
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          # Use GitHub App token if available, fallback to PAT or GITHUB_TOKEN
-          token: ${{ steps.generate-token.outputs.token || secrets.RELEASE_PLZ_TOKEN || secrets.GITHUB_TOKEN }}
+          # Use PAT to allow triggering other workflows (like release.yml)
+          token: ${{ secrets.RELEASE_PLZ_TOKEN || secrets.GITHUB_TOKEN }}
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
       - name: Run release-plz
-        uses: release-plz/action@v0.5.108
+        uses: release-plz/action@v0.5
         with:
           command: release
         env:
-          # Use GitHub App token if available, fallback to PAT or GITHUB_TOKEN
-          GITHUB_TOKEN: ${{ steps.generate-token.outputs.token || secrets.RELEASE_PLZ_TOKEN || secrets.GITHUB_TOKEN }}
+          # Use PAT to allow triggering other workflows, ensure no whitespace
+          GITHUB_TOKEN: ${{ secrets.RELEASE_PLZ_TOKEN || secrets.GITHUB_TOKEN }}
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
 
   # Create a PR with the new versions and changelog, preparing the next release
@@ -59,32 +49,23 @@ jobs:
       group: release-plz-${{ github.ref }}
       cancel-in-progress: false
     steps:
-      # Generate GitHub token for authentication
-      - name: Generate GitHub token
-        uses: actions/create-github-app-token@v1
-        id: generate-token
-        with:
-          app-id: ${{ secrets.APP_ID }}
-          private-key: ${{ secrets.APP_PRIVATE_KEY }}
-        continue-on-error: true
-
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          # Use GitHub App token if available, fallback to PAT or GITHUB_TOKEN
-          token: ${{ steps.generate-token.outputs.token || secrets.RELEASE_PLZ_TOKEN || secrets.GITHUB_TOKEN }}
+          # Use PAT to allow triggering CI workflows on the release PR
+          token: ${{ secrets.RELEASE_PLZ_TOKEN || secrets.GITHUB_TOKEN }}
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
       - name: Run release-plz
-        uses: release-plz/action@v0.5.108
+        uses: release-plz/action@v0.5
         with:
           command: release-pr
         env:
-          # Use GitHub App token if available, fallback to PAT or GITHUB_TOKEN
-          GITHUB_TOKEN: ${{ steps.generate-token.outputs.token || secrets.RELEASE_PLZ_TOKEN || secrets.GITHUB_TOKEN }}
+          # Use PAT to allow triggering CI workflows on the release PR, ensure no whitespace
+          GITHUB_TOKEN: ${{ secrets.RELEASE_PLZ_TOKEN || secrets.GITHUB_TOKEN }}
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
 
 
