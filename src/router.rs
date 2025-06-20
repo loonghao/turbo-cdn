@@ -308,6 +308,11 @@ impl SmartRouter {
         self.region_optimizer.current_region = region;
         info!("Updated router region to {:?}", region);
     }
+
+    /// Get reference to the source manager
+    pub fn get_source_manager(&self) -> &SourceManager {
+        &self.source_manager
+    }
 }
 
 impl PerformanceTracker {
@@ -316,6 +321,16 @@ impl PerformanceTracker {
             source_metrics: HashMap::new(),
             url_metrics: HashMap::new(),
         }
+    }
+
+    /// Get source metrics
+    pub fn get_source_metrics(&self) -> &HashMap<String, SourceMetrics> {
+        &self.source_metrics
+    }
+
+    /// Get URL metrics
+    pub fn get_url_metrics(&self) -> &HashMap<String, UrlMetrics> {
+        &self.url_metrics
     }
 
     fn record_performance(&mut self, performance: DownloadPerformance) {
