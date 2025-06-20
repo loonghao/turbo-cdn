@@ -16,6 +16,7 @@ use crate::error::{Result, TurboCdnError};
 pub struct CacheManager {
     config: CacheConfig,
     metadata_store: MetadataStore,
+    stats: CacheStats,
 }
 
 /// Metadata store for cache entries
@@ -53,6 +54,19 @@ pub struct CacheStats {
     pub last_cleanup: SystemTime,
 }
 
+impl CacheStats {
+    fn new() -> Self {
+        Self {
+            total_entries: 0,
+            total_size: 0,
+            hit_count: 0,
+            miss_count: 0,
+            eviction_count: 0,
+            last_cleanup: SystemTime::now(),
+        }
+    }
+}
+
 /// Cache lookup result
 #[derive(Debug)]
 pub enum CacheLookup {
@@ -68,6 +82,7 @@ impl CacheManager {
             return Ok(Self {
                 config,
                 metadata_store: MetadataStore::disabled(),
+                stats: CacheStats::new(),
             });
         }
 
@@ -82,6 +97,7 @@ impl CacheManager {
         let mut cache_manager = Self {
             config,
             metadata_store,
+            stats: CacheStats::new(),
         };
 
         // Perform initial cleanup
@@ -127,9 +143,11 @@ impl CacheManager {
 
             // Update access time
             self.metadata_store.update_access(key);
+            self.stats.hit_count += 1;
             debug!("Cache hit: {}", key);
             Ok(CacheLookup::Hit(entry.clone()))
         } else {
+            self.stats.miss_count += 1;
             debug!("Cache miss: {}", key);
             Ok(CacheLookup::Miss)
         }
@@ -274,19 +292,16 @@ impl CacheManager {
             );
         }
 
+        self.stats.last_cleanup = SystemTime::now();
         Ok(())
     }
 
     /// Get cache statistics
     pub fn get_stats(&self) -> CacheStats {
-        CacheStats {
-            total_entries: self.metadata_store.metadata.len(),
-            total_size: self.get_total_size(),
-            hit_count: 0, // TODO: Track these metrics
-            miss_count: 0,
-            eviction_count: 0,
-            last_cleanup: SystemTime::now(),
-        }
+        let mut stats = self.stats.clone();
+        stats.total_entries = self.metadata_store.metadata.len();
+        stats.total_size = self.get_total_size();
+        stats
     }
 
     /// Clear all cache entries
@@ -352,6 +367,7 @@ impl CacheManager {
             freed_space += entry.file_size;
             self.remove(&entry.key).await?;
             removed_count += 1;
+            self.stats.eviction_count += 1;
         }
 
         Ok((removed_count, freed_space))
@@ -429,19 +445,36 @@ impl MetadataStore {
 
     fn add_entry(&mut self, entry: CacheEntry) {
         self.metadata.insert(entry.key.clone(), entry);
-        // TODO: Persist metadata to disk
+        if let Err(e) = self.persist_metadata() {
+            warn!("Failed to persist metadata after adding entry: {}", e);
+        }
     }
 
     fn remove_entry(&mut self, key: &str) {
         self.metadata.remove(key);
-        // TODO: Persist metadata to disk
+        if let Err(e) = self.persist_metadata() {
+            warn!("Failed to persist metadata after removing entry: {}", e);
+        }
     }
 
     fn update_access(&mut self, key: &str) {
         if let Some(entry) = self.metadata.get_mut(key) {
             entry.last_accessed = SystemTime::now();
             entry.access_count += 1;
-            // TODO: Persist metadata to disk
+            if let Err(e) = self.persist_metadata() {
+                warn!("Failed to persist metadata after updating access: {}", e);
+            }
         }
+    }
+
+    fn persist_metadata(&self) -> Result<()> {
+        let metadata_file = self.cache_dir.join("metadata.json");
+        let content = serde_json::to_string_pretty(&self.metadata)
+            .map_err(|e| TurboCdnError::cache(format!("Failed to serialize metadata: {}", e)))?;
+
+        std::fs::write(&metadata_file, content)
+            .map_err(|e| TurboCdnError::cache(format!("Failed to write metadata file: {}", e)))?;
+
+        Ok(())
     }
 }
