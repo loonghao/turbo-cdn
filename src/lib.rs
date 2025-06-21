@@ -1017,6 +1017,214 @@ pub struct TurboCdnStats {
     pub average_speed: f64,
 }
 
+/// Async API module for external integrations (like vx)
+pub mod async_api {
+    use super::*;
+    use std::sync::Arc;
+    use tokio::sync::Mutex;
+
+    /// Async wrapper for TurboCdn that provides thread-safe access
+    #[derive(Debug)]
+    pub struct AsyncTurboCdn {
+        inner: Arc<Mutex<TurboCdn>>,
+    }
+
+    impl AsyncTurboCdn {
+        /// Create a new AsyncTurboCdn instance
+        pub async fn new() -> Result<Self> {
+            let turbo_cdn = TurboCdn::new().await?;
+            Ok(Self {
+                inner: Arc::new(Mutex::new(turbo_cdn)),
+            })
+        }
+
+        /// Create a new AsyncTurboCdn instance with custom configuration
+        pub async fn with_config(config: TurboCdnConfig) -> Result<Self> {
+            let turbo_cdn = TurboCdn::builder().with_config(config).build().await?;
+            Ok(Self {
+                inner: Arc::new(Mutex::new(turbo_cdn)),
+            })
+        }
+
+        /// Create a new AsyncTurboCdn instance with builder
+        pub async fn with_builder(builder: TurboCdnBuilder) -> Result<Self> {
+            let turbo_cdn = builder.build().await?;
+            Ok(Self {
+                inner: Arc::new(Mutex::new(turbo_cdn)),
+            })
+        }
+
+        /// Download from any supported URL with automatic optimization (async version)
+        pub async fn download_from_url_async(
+            &self,
+            url: &str,
+            options: Option<DownloadOptions>,
+        ) -> Result<DownloadResult> {
+            let mut client = self.inner.lock().await;
+            client.download_from_url(url, options).await
+        }
+
+        /// Get optimal CDN URL without downloading (async version)
+        pub async fn get_optimal_url_async(&self, url: &str) -> Result<String> {
+            let client = self.inner.lock().await;
+            client.get_optimal_url(url).await
+        }
+
+        /// Parse URL into components (async version)
+        pub async fn parse_url_async(&self, url: &str) -> Result<ParsedUrl> {
+            let client = self.inner.lock().await;
+            Ok(client.parse_url(url)?)
+        }
+
+        /// Download a file by repository, version, and filename (async version)
+        pub async fn download_async(
+            &self,
+            repository: &str,
+            version: &str,
+            file_name: &str,
+            options: Option<DownloadOptions>,
+        ) -> Result<DownloadResult> {
+            let mut client = self.inner.lock().await;
+            client
+                .download(repository, version, file_name, options.unwrap_or_default())
+                .await
+        }
+
+        /// Get repository metadata (async version)
+        pub async fn get_repository_metadata_async(
+            &self,
+            repository: &str,
+        ) -> Result<sources::RepositoryMetadata> {
+            let client = self.inner.lock().await;
+            client.get_repository_metadata(repository).await
+        }
+
+        /// Extract version from filename (async version)
+        pub async fn extract_version_from_filename_async(&self, filename: &str) -> Option<String> {
+            let client = self.inner.lock().await;
+            client.extract_version_from_filename(filename)
+        }
+
+        /// Get download statistics (async version)
+        pub async fn get_stats_async(&self) -> Result<TurboCdnStats> {
+            let client = self.inner.lock().await;
+            client.get_stats().await
+        }
+
+        /// Perform health check on all sources (async version)
+        pub async fn health_check_async(
+            &self,
+        ) -> Result<std::collections::HashMap<String, sources::HealthStatus>> {
+            let client = self.inner.lock().await;
+            client.health_check().await
+        }
+
+        /// Clone the AsyncTurboCdn instance (creates a new reference to the same client)
+        pub fn clone(&self) -> Self {
+            Self {
+                inner: Arc::clone(&self.inner),
+            }
+        }
+    }
+
+    /// Async builder for AsyncTurboCdn
+    #[derive(Debug)]
+    pub struct AsyncTurboCdnBuilder {
+        builder: TurboCdnBuilder,
+    }
+
+    impl AsyncTurboCdnBuilder {
+        /// Create a new async builder
+        pub fn new() -> Self {
+            Self {
+                builder: TurboCdnBuilder::new(),
+            }
+        }
+
+        /// Set the configuration
+        pub fn with_config(mut self, config: TurboCdnConfig) -> Self {
+            self.builder = self.builder.with_config(config);
+            self
+        }
+
+        /// Set the download sources
+        pub fn with_sources(mut self, sources: &[Source]) -> Self {
+            self.builder = self.builder.with_sources(sources);
+            self
+        }
+
+        /// Set the region for optimization
+        pub fn with_region(mut self, region: Region) -> Self {
+            self.builder = self.builder.with_region(region);
+            self
+        }
+
+        /// Set the download directory
+        pub fn with_download_dir<P: Into<PathBuf>>(mut self, dir: P) -> Self {
+            self.builder = self.builder.with_download_dir(dir);
+            self
+        }
+
+        /// Enable or disable caching
+        pub fn with_cache(mut self, enabled: bool) -> Self {
+            self.builder = self.builder.with_cache(enabled);
+            self
+        }
+
+        /// Set maximum concurrent downloads
+        pub fn with_max_concurrent_downloads(mut self, max: usize) -> Self {
+            self.builder = self.builder.with_max_concurrent_downloads(max);
+            self
+        }
+
+        /// Build the AsyncTurboCdn client
+        pub async fn build(self) -> Result<AsyncTurboCdn> {
+            AsyncTurboCdn::with_builder(self.builder).await
+        }
+    }
+
+    impl Default for AsyncTurboCdnBuilder {
+        fn default() -> Self {
+            Self::new()
+        }
+    }
+
+    /// Convenience functions for quick async operations
+    pub mod quick {
+        use super::*;
+
+        /// Quick download from URL with default settings
+        pub async fn download_url(url: &str) -> Result<DownloadResult> {
+            let client = AsyncTurboCdn::new().await?;
+            client.download_from_url_async(url, None).await
+        }
+
+        /// Quick URL optimization
+        pub async fn optimize_url(url: &str) -> Result<String> {
+            let client = AsyncTurboCdn::new().await?;
+            client.get_optimal_url_async(url).await
+        }
+
+        /// Quick URL parsing
+        pub async fn parse_url(url: &str) -> Result<ParsedUrl> {
+            let client = AsyncTurboCdn::new().await?;
+            client.parse_url_async(url).await
+        }
+
+        /// Quick repository download
+        pub async fn download_repository(
+            repository: &str,
+            version: &str,
+            file_name: &str,
+        ) -> Result<DownloadResult> {
+            let client = AsyncTurboCdn::new().await?;
+            client
+                .download_async(repository, version, file_name, None)
+                .await
+        }
+    }
+}
+
 /// Initialize tracing for the library
 pub fn init_tracing() {
     use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
