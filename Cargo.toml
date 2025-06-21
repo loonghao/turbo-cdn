@@ -1,6 +1,6 @@
 [package]
 name = "turbo-cdn"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 authors = ["Hal <hal.long@outlook.com>"]
 description = "Revolutionary global download accelerator for open-source software with AI optimization, multi-CDN routing, and P2P acceleration"
