@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["LogFormat","Region"],"struct":["CacheConfig","CloudflareConfig","ComplianceConfig","CustomSourceConfig","DataProtectionConfig","FastlyConfig","GeneralConfig","GitHubConfig","JsDelivrConfig","LoggingConfig","MetricsConfig","NetworkConfig","ProxyConfig","SourcesConfig","TurboCdnConfig"]};

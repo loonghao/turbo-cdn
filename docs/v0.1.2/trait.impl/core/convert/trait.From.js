@@ -1,0 +1,9 @@
+(function() {
+    var implementors = Object.fromEntries([["turbo_cdn",[["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.87.0/core/convert/trait.From.html\" title=\"trait core::convert::From\">From</a>&lt;<a class=\"enum\" href=\"https://docs.rs/url/2.5.4/url/parser/enum.ParseError.html\" title=\"enum url::parser::ParseError\">ParseError</a>&gt; for <a class=\"enum\" href=\"turbo_cdn/error/enum.TurboCdnError.html\" title=\"enum turbo_cdn::error::TurboCdnError\">TurboCdnError</a>"],["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.87.0/core/convert/trait.From.html\" title=\"trait core::convert::From\">From</a>&lt;<a class=\"struct\" href=\"https://doc.rust-lang.org/1.87.0/std/io/error/struct.Error.html\" title=\"struct std::io::error::Error\">Error</a>&gt; for <a class=\"enum\" href=\"turbo_cdn/error/enum.TurboCdnError.html\" title=\"enum turbo_cdn::error::TurboCdnError\">TurboCdnError</a>"],["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.87.0/core/convert/trait.From.html\" title=\"trait core::convert::From\">From</a>&lt;<a class=\"struct\" href=\"https://docs.rs/serde_json/1.0.140/serde_json/error/struct.Error.html\" title=\"struct serde_json::error::Error\">Error</a>&gt; for <a class=\"enum\" href=\"turbo_cdn/error/enum.TurboCdnError.html\" title=\"enum turbo_cdn::error::TurboCdnError\">TurboCdnError</a>"],["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.87.0/core/convert/trait.From.html\" title=\"trait core::convert::From\">From</a>&lt;Error&gt; for <a class=\"enum\" href=\"turbo_cdn/error/enum.TurboCdnError.html\" title=\"enum turbo_cdn::error::TurboCdnError\">TurboCdnError</a>"]]]]);
+    if (window.register_implementors) {
+        window.register_implementors(implementors);
+    } else {
+        window.pending_implementors = implementors;
+    }
+})()
+//{"start":57,"fragment_lengths":[1601]}

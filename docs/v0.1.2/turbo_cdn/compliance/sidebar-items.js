@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["AuditEventType","RiskLevel"],"struct":["AuditLogEntry","AuditLogger","ComplianceChecker","ComplianceResult","ContentValidator","DownloadRequest","LicenseInfo","LicenseValidator"]};
