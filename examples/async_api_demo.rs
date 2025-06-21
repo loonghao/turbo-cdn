@@ -2,13 +2,13 @@
 // Copyright (c) 2025 Hal <hal.long@outlook.com>
 
 //! # Async API Demo for vx Integration
-//! 
+//!
 //! This example demonstrates the async API interfaces designed specifically
 //! for integration with external tools like vx.
 
+use std::time::Duration;
 use turbo_cdn::async_api::{AsyncTurboCdn, AsyncTurboCdnBuilder};
 use turbo_cdn::{DownloadOptions, Region, Source};
-use std::time::Duration;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -76,11 +76,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     for test_url in test_urls {
         println!("🔗 Testing URL: {}", test_url);
-        
+
         match async_client.parse_url_async(test_url).await {
             Ok(parsed) => {
                 println!("   ✅ Parsed: {} v{}", parsed.repository, parsed.version);
-                
+
                 // Try to get optimal URL
                 match async_client.get_optimal_url_async(test_url).await {
                     Ok(optimal) => {
@@ -107,7 +107,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("-----------------------------------------");
 
     let client = AsyncTurboCdn::new().await?;
-    
+
     // Clone the client for concurrent use
     let client1 = client.clone();
     let client2 = client.clone();
@@ -119,11 +119,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     let task2 = tokio::spawn(async move {
-        client2.get_optimal_url_async("https://cdn.jsdelivr.net/gh/lodash/lodash@4.17.21/lodash.min.js").await
+        client2
+            .get_optimal_url_async(
+                "https://cdn.jsdelivr.net/gh/lodash/lodash@4.17.21/lodash.min.js",
+            )
+            .await
     });
 
     let task3 = tokio::spawn(async move {
-        client3.extract_version_from_filename_async("myapp-v2.1.0-beta.zip").await
+        client3
+            .extract_version_from_filename_async("myapp-v2.1.0-beta.zip")
+            .await
     });
 
     // Wait for all tasks to complete
@@ -131,7 +137,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     match result1 {
         Ok(Ok(parsed)) => {
-            println!("✅ Task 1 - Parsed VSCode: {} v{}", parsed.repository, parsed.version);
+            println!(
+                "✅ Task 1 - Parsed VSCode: {} v{}",
+                parsed.repository, parsed.version
+            );
         }
         Ok(Err(e)) => {
             println!("❌ Task 1 failed: {}", e);
@@ -184,13 +193,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // For demo purposes, we'll just show the setup
     // In a real scenario, you would call:
     // let result = client.download_from_url_async(url, Some(download_options)).await?;
-    
+
     println!("🔧 Download options configured:");
-    println!("   📊 Max chunks: {}", download_options.max_concurrent_chunks);
-    println!("   📦 Chunk size: {} KB", download_options.chunk_size / 1024);
+    println!(
+        "   📊 Max chunks: {}",
+        download_options.max_concurrent_chunks
+    );
+    println!(
+        "   📦 Chunk size: {} KB",
+        download_options.chunk_size / 1024
+    );
     println!("   ⏱️  Timeout: {:?}", download_options.timeout);
     println!("   💾 Use cache: {}", download_options.use_cache);
-    println!("   🔐 Verify checksum: {}", download_options.verify_checksum);
+    println!(
+        "   🔐 Verify checksum: {}",
+        download_options.verify_checksum
+    );
 
     println!("\n💡 Integration Tips for vx:");
     println!("==========================");
@@ -205,13 +223,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("==========================");
     println!("```rust");
     println!("use turbo_cdn::async_api::AsyncTurboCdn;");
-    println!("");
+    println!();
     println!("// In your vx application");
     println!("let cdn_client = AsyncTurboCdn::new().await?;");
-    println!("");
+    println!();
     println!("// Optimize any URL");
     println!("let optimal_url = cdn_client.get_optimal_url_async(original_url).await?;");
-    println!("");
+    println!();
     println!("// Download with optimization");
     println!("let result = cdn_client.download_from_url_async(url, None).await?;");
     println!("```");
@@ -224,23 +242,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 async fn vx_integration_example() -> Result<(), Box<dyn std::error::Error>> {
     // This is how vx might use the async API
     let cdn = AsyncTurboCdn::new().await?;
-    
+
     // Example: Optimize a GitHub release URL
-    let github_url = "https://github.com/oven-sh/bun/releases/download/bun-v1.2.9/bun-bun-v1.2.9.zip";
-    
+    let github_url =
+        "https://github.com/oven-sh/bun/releases/download/bun-v1.2.9/bun-bun-v1.2.9.zip";
+
     // Parse the URL to get information
     let parsed = cdn.parse_url_async(github_url).await?;
     println!("Repository: {}", parsed.repository);
     println!("Version: {}", parsed.version);
-    
+
     // Get the optimal URL for user's location
     let optimal_url = cdn.get_optimal_url_async(github_url).await?;
     println!("Optimal URL: {}", optimal_url);
-    
+
     // Download using the optimal URL
     let result = cdn.download_from_url_async(&optimal_url, None).await?;
     println!("Downloaded to: {}", result.path.display());
     println!("Speed: {:.2} MB/s", result.speed / 1_000_000.0);
-    
+
     Ok(())
 }
