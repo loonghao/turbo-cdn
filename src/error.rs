@@ -167,6 +167,13 @@ impl TurboCdnError {
         }
     }
 
+    /// Create a new network error
+    pub fn network<S: Into<String>>(message: S) -> Self {
+        Self::Internal {
+            message: format!("Network error: {}", message.into()),
+        }
+    }
+
     /// Check if the error is retryable
     pub fn is_retryable(&self) -> bool {
         matches!(

@@ -120,18 +120,14 @@ for (filename, expected) in examples {
 
 ```rust
 use turbo_cdn::{TurboCdn, DownloadOptions};
+use std::time::Duration;
 
 let mut client = TurboCdn::new().await?;
 
 let options = DownloadOptions {
-    progress_callback: Some(Box::new(|progress| {
-        println!("Progress: {:.1}% ({:.2} MB/s)", 
-            progress.percentage, 
-            progress.speed_mbps()
-        );
-    })),
+    timeout: Some(Duration::from_secs(60)),
     verify_checksum: true,
-    max_retries: 5,
+    use_cache: true,
     ..Default::default()
 };
 
@@ -139,6 +135,9 @@ let result = client.download_from_url(
     "https://registry.npmjs.org/lodash/-/lodash-4.17.21.tgz",
     Some(options)
 ).await?;
+
+println!("✅ Downloaded to: {}", result.path.display());
+println!("📊 Speed: {:.2} MB/s", result.speed / 1_000_000.0);
 ```
 
 ## 🌍 Geographic Optimization

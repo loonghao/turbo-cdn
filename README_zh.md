@@ -141,6 +141,127 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
+### 高级配置
+
+```rust
+use turbo_cdn::*;
+use std::time::Duration;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // 构建器模式配置
+    let mut downloader = TurboCdn::builder()
+        .with_sources(&[Source::github(), Source::jsdelivr(), Source::fastly()])
+        .with_region(Region::China)
+        .with_cache(true)
+        .with_max_concurrent_downloads(8)
+        .build()
+        .await?;
+
+    // 高级下载选项
+    let options = DownloadOptions {
+        timeout: Some(Duration::from_secs(60)),
+        verify_checksum: true,
+        use_cache: true,
+        ..Default::default()
+    };
+
+    let result = downloader
+        .download("microsoft/vscode", "1.85.0", "VSCode-linux-x64.tar.gz", options)
+        .await?;
+
+    println!("✅ 下载到: {}", result.path.display());
+    println!("📊 速度: {:.2} MB/s", result.speed / 1_000_000.0);
+
+    Ok(())
+}
+```
+
+### 配置文件
+
+Turbo CDN 支持多种配置源，自动发现配置文件：
+
+```toml
+# ~/.config/turbo-cdn/config.toml 或 ./turbo-cdn.toml
+
+[meta]
+version = "1.0"
+schema_version = "2025.1"
+
+[general]
+enabled = true
+debug_mode = false
+max_concurrent_downloads = 8
+default_region = "China"
+
+[performance]
+max_concurrent_downloads = 8
+chunk_size = "2MB"
+timeout = "30s"
+retry_attempts = 3
+
+[performance.cache]
+enabled = true
+max_size = "10GB"
+ttl = "24h"
+
+[security]
+verify_ssl = true
+verify_checksums = true
+allowed_protocols = ["https", "http"]
+
+[logging]
+level = "info"
+format = "json"
+audit_enabled = true
+```
+
+### 环境变量
+
+使用环境变量覆盖任何配置：
+
+```bash
+# 启用调试模式
+export TURBO_CDN_GENERAL__DEBUG_MODE=true
+
+# 设置缓存大小
+export TURBO_CDN_PERFORMANCE__CACHE__MAX_SIZE="5GB"
+
+# 设置区域
+export TURBO_CDN_REGIONS__DEFAULT="China"
+
+# 设置用户代理
+export TURBO_CDN_SECURITY__USER_AGENT="my-app/1.0"
+```
+
+### 异步 API（适用于外部工具）
+
+完美集成到其他工具如 `vx`：
+
+```rust
+use turbo_cdn::async_api;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // 快速优化任意 URL
+    let optimized_url = async_api::quick::optimize_url(
+        "https://github.com/rust-lang/mdBook/releases/download/v0.4.21/mdbook.tar.gz"
+    ).await?;
+
+    println!("🚀 优化后的 URL: {}", optimized_url);
+
+    // 快速下载并自动优化
+    let result = async_api::quick::download_optimized(
+        "https://registry.npmjs.org/express/-/express-4.18.2.tgz",
+        "./downloads"
+    ).await?;
+
+    println!("✅ 已下载: {}", result.path.display());
+
+    Ok(())
+}
+```
+
 ## 📊 性能
 
 Turbo CDN 提供卓越的性能提升:

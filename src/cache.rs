@@ -86,13 +86,21 @@ impl CacheManager {
             });
         }
 
+        // Get cache directory from config or use default
+        let cache_dir = if let Some(ref dir) = config.directory {
+            PathBuf::from(dir)
+        } else {
+            dirs::cache_dir()
+                .unwrap_or_else(|| PathBuf::from(".cache"))
+                .join("turbo-cdn")
+        };
+
         // Ensure cache directory exists
-        fs::create_dir_all(&config.cache_dir).await.map_err(|e| {
+        fs::create_dir_all(&cache_dir).await.map_err(|e| {
             TurboCdnError::cache(format!("Failed to create cache directory: {}", e))
         })?;
 
-        let metadata_store = MetadataStore::new(&config.cache_dir).await?;
-        let cache_dir = config.cache_dir.clone();
+        let metadata_store = MetadataStore::new(&cache_dir).await?;
 
         let mut cache_manager = Self {
             config,
@@ -170,24 +178,10 @@ impl CacheManager {
 
         // Generate file path
         let file_name = format!("{}.cache", key);
-        let file_path = self.config.cache_dir.join(&file_name);
+        let file_path = self.metadata_store.cache_dir.join(&file_name);
 
-        // Compress data if enabled
-        let (final_data, compressed) = if self.config.compression && data.len() > 1024 {
-            match self.compress_data(data) {
-                Ok(compressed_data) if compressed_data.len() < data.len() => {
-                    debug!(
-                        "Compressed cache entry from {} to {} bytes",
-                        data.len(),
-                        compressed_data.len()
-                    );
-                    (compressed_data, true)
-                }
-                _ => (data.to_vec(), false),
-            }
-        } else {
-            (data.to_vec(), false)
-        };
+        // Compression is disabled for now
+        let (final_data, compressed) = (data.to_vec(), false);
 
         // Write file
         fs::write(&file_path, &final_data)
@@ -209,7 +203,7 @@ impl CacheManager {
             last_accessed: SystemTime::now(),
             access_count: 1,
             compressed,
-            ttl: Duration::from_secs(self.config.ttl),
+            ttl: self.config.ttl,
         };
 
         // Store metadata
@@ -278,8 +272,9 @@ impl CacheManager {
 
         // Check total cache size and remove LRU entries if needed
         let total_size = self.get_total_size();
-        if total_size > self.config.max_size {
-            let excess = total_size - self.config.max_size;
+        let max_size = self.parse_size_string(&self.config.max_size)?;
+        if total_size > max_size {
+            let excess = total_size - max_size;
             let lru_removed = self.remove_lru_entries(excess).await?;
             removed_count += lru_removed.0;
             freed_space += lru_removed.1;
@@ -340,7 +335,8 @@ impl CacheManager {
 
     async fn ensure_space_available(&mut self, required_space: u64) -> Result<()> {
         let current_size = self.get_total_size();
-        let available_space = self.config.max_size.saturating_sub(current_size);
+        let max_size = self.parse_size_string(&self.config.max_size)?;
+        let available_space = max_size.saturating_sub(current_size);
 
         if required_space > available_space {
             let space_to_free = required_space - available_space;
@@ -373,6 +369,7 @@ impl CacheManager {
         Ok((removed_count, freed_space))
     }
 
+    #[allow(dead_code)]
     fn compress_data(&self, data: &[u8]) -> Result<Vec<u8>> {
         use flate2::write::GzEncoder;
         use flate2::Compression;
@@ -408,6 +405,38 @@ impl CacheManager {
         hasher.update(data);
         let hash = hasher.finalize();
         format!("{:x}", hash)
+    }
+
+    /// Parse size string like "10GB", "500MB" to bytes
+    fn parse_size_string(&self, size_str: &str) -> Result<u64> {
+        let size_str = size_str.trim().to_uppercase();
+
+        if let Some(captures) = regex::Regex::new(r"^(\d+(?:\.\d+)?)(B|KB|MB|GB|TB)?$")
+            .unwrap()
+            .captures(&size_str)
+        {
+            let number: f64 = captures[1]
+                .parse()
+                .map_err(|_| TurboCdnError::cache("Invalid size number".to_string()))?;
+
+            let unit = captures.get(2).map_or("B", |m| m.as_str());
+
+            let multiplier = match unit {
+                "B" => 1u64,
+                "KB" => 1_024u64,
+                "MB" => 1_024u64 * 1_024u64,
+                "GB" => 1_024u64 * 1_024u64 * 1_024u64,
+                "TB" => 1_024u64 * 1_024u64 * 1_024u64 * 1_024u64,
+                _ => return Err(TurboCdnError::cache(format!("Unknown size unit: {}", unit))),
+            };
+
+            Ok((number * multiplier as f64) as u64)
+        } else {
+            Err(TurboCdnError::cache(format!(
+                "Invalid size format: {}",
+                size_str
+            )))
+        }
     }
 }
 

@@ -182,9 +182,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("------------------------------------------------");
 
     let download_options = DownloadOptions {
-        max_concurrent_chunks: 4,
-        chunk_size: 512 * 1024, // 512KB chunks
-        timeout: Duration::from_secs(30),
+        timeout: Some(Duration::from_secs(30)),
         use_cache: true,
         verify_checksum: false, // Skip for demo
         ..Default::default()
@@ -195,14 +193,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // let result = client.download_from_url_async(url, Some(download_options)).await?;
 
     println!("🔧 Download options configured:");
-    println!(
-        "   📊 Max chunks: {}",
-        download_options.max_concurrent_chunks
-    );
-    println!(
-        "   📦 Chunk size: {} KB",
-        download_options.chunk_size / 1024
-    );
     println!("   ⏱️  Timeout: {:?}", download_options.timeout);
     println!("   💾 Use cache: {}", download_options.use_cache);
     println!(

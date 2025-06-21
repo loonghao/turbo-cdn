@@ -275,9 +275,7 @@ use std::time::Duration;
 
 // Custom download options
 let options = DownloadOptions {
-    max_concurrent_chunks: 8,
-    chunk_size: 1024 * 1024, // 1MB
-    timeout: Duration::from_secs(30),
+    timeout: Some(Duration::from_secs(30)),
     use_cache: true,
     verify_checksum: false,
     ..Default::default()

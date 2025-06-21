@@ -9,6 +9,7 @@ use tracing::{debug, info, warn};
 use uuid::Uuid;
 
 use crate::config::ComplianceConfig;
+use crate::domain_manager::DomainManager;
 use crate::error::{Result, TurboCdnError};
 
 /// Compliance checker for ensuring legal and ethical downloads
@@ -18,6 +19,7 @@ pub struct ComplianceChecker {
     audit_logger: AuditLogger,
     license_validator: LicenseValidator,
     content_validator: ContentValidator,
+    domain_manager: DomainManager,
 }
 
 /// Audit logger for compliance tracking
@@ -37,6 +39,7 @@ pub struct LicenseValidator {
 #[derive(Debug)]
 pub struct ContentValidator {
     blocked_patterns: Vec<regex::Regex>,
+    #[allow(dead_code)]
     allowed_domains: HashSet<String>,
 }
 
@@ -109,7 +112,32 @@ pub enum AuditEventType {
 impl ComplianceChecker {
     /// Create a new compliance checker
     pub fn new(config: ComplianceConfig) -> Result<Self> {
-        let audit_logger = AuditLogger::new(&config.audit_log_path, config.audit_logging)?;
+        let audit_logger = AuditLogger::new(
+            std::path::Path::new(&config.audit_log_path),
+            config.audit_logging,
+        )?;
+        let license_validator = LicenseValidator::new();
+        let content_validator = ContentValidator::new()?;
+        let domain_manager = DomainManager::new();
+
+        Ok(Self {
+            config,
+            audit_logger,
+            license_validator,
+            content_validator,
+            domain_manager,
+        })
+    }
+
+    /// Create a new compliance checker with custom domain manager
+    pub fn with_domain_manager(
+        config: ComplianceConfig,
+        domain_manager: DomainManager,
+    ) -> Result<Self> {
+        let audit_logger = AuditLogger::new(
+            std::path::Path::new(&config.audit_log_path),
+            config.audit_logging,
+        )?;
         let license_validator = LicenseValidator::new();
         let content_validator = ContentValidator::new()?;
 
@@ -118,7 +146,18 @@ impl ComplianceChecker {
             audit_logger,
             license_validator,
             content_validator,
+            domain_manager,
         })
+    }
+
+    /// Get a reference to the domain manager
+    pub fn domain_manager(&self) -> &DomainManager {
+        &self.domain_manager
+    }
+
+    /// Get a mutable reference to the domain manager
+    pub fn domain_manager_mut(&mut self) -> &mut DomainManager {
+        &mut self.domain_manager
     }
 
     /// Check if a download request is compliant
@@ -141,13 +180,13 @@ impl ComplianceChecker {
             result.risk_level = RiskLevel::Critical;
         }
 
-        // Validate source domain
+        // Validate source domain using domain manager
         if self.config.validate_source {
-            if let Err(e) = self.content_validator.validate_source(&request.url) {
+            if let Err(e) = self.domain_manager.validate_url(&request.url) {
                 result.approved = false;
                 result
                     .reasons
-                    .push(format!("Source validation failed: {}", e));
+                    .push(format!("Domain validation failed: {}", e));
                 result.risk_level = std::cmp::max(result.risk_level, RiskLevel::High);
             }
         }
@@ -484,6 +523,7 @@ impl ContentValidator {
         })
     }
 
+    #[allow(dead_code)]
     fn validate_source(&self, url: &str) -> Result<()> {
         let parsed_url = url::Url::parse(url)
             .map_err(|e| TurboCdnError::compliance(format!("Invalid URL: {}", e)))?;

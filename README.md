@@ -112,7 +112,7 @@ use turbo_cdn::*;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize TurboCdn
-    let downloader = TurboCdn::builder()
+    let mut downloader = TurboCdn::builder()
         .with_sources(&[
             Source::github(),
             Source::jsdelivr(),
@@ -122,22 +122,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .build()
         .await?;
 
-    // Download with progress tracking
+    // Download with options
+    let options = DownloadOptions {
+        verify_checksum: true,
+        use_cache: true,
+        ..Default::default()
+    };
+
     let result = downloader
-        .download("oven-sh/bun", "v1.0.0", "bun-linux-x64.zip")
-        .with_progress(|progress| {
-            println!("Downloaded: {:.1}% ({}) - {} - ETA: {}",
-                progress.percentage(),
-                progress.size_human(),
-                progress.speed_human(),
-                progress.eta_human()
-            );
-        })
-        .execute()
+        .download("oven-sh/bun", "v1.0.0", "bun-linux-x64.zip", options)
         .await?;
 
     println!("✅ Downloaded to: {}", result.path.display());
     println!("📊 Speed: {:.2} MB/s", result.speed / 1_000_000.0);
+
+    // Get download statistics
+    let stats = downloader.get_stats().await?;
+    println!("📈 Total downloads: {}", stats.total_downloads);
+    println!("� Cache hit rate: {:.1}%", stats.cache_hit_rate * 100.0);
 
     Ok(())
 }
@@ -151,48 +153,114 @@ use std::time::Duration;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Custom configuration
-    let config = TurboCdnConfig {
-        general: GeneralConfig {
-            max_concurrent_downloads: 8,
-            default_region: Region::China,
-            ..Default::default()
-        },
-        network: NetworkConfig {
-            max_concurrent_chunks: 16,
-            chunk_size: 2 * 1024 * 1024, // 2MB chunks
-            max_retries: 5,
-            ..Default::default()
-        },
-        cache: CacheConfig {
-            enabled: true,
-            max_size: 5 * 1024 * 1024 * 1024, // 5GB cache
-            compression: true,
-            ..Default::default()
-        },
-        ..Default::default()
-    };
-
-    let downloader = TurboCdn::builder()
-        .with_config(config)
-        .with_sources(&[Source::github(), Source::jsdelivr()])
+    // Builder pattern with custom settings
+    let mut downloader = TurboCdn::builder()
+        .with_sources(&[Source::github(), Source::jsdelivr(), Source::fastly()])
+        .with_region(Region::China)
+        .with_cache(true)
+        .with_max_concurrent_downloads(8)
         .build()
         .await?;
 
     // Advanced download options
-    let options = DownloadOptions::builder()
-        .max_concurrent_chunks(8)
-        .chunk_size(1024 * 1024)
-        .timeout(Duration::from_secs(60))
-        .use_cache(true)
-        .verify_checksum(true)
-        .build();
+    let options = DownloadOptions {
+        timeout: Some(Duration::from_secs(60)),
+        verify_checksum: true,
+        use_cache: true,
+        ..Default::default()
+    };
 
     let result = downloader
-        .download("microsoft/vscode", "1.85.0", "VSCode-linux-x64.tar.gz")
-        .with_options(options)
-        .execute()
+        .download("microsoft/vscode", "1.85.0", "VSCode-linux-x64.tar.gz", options)
         .await?;
+
+    println!("✅ Downloaded to: {}", result.path.display());
+    println!("📊 Speed: {:.2} MB/s", result.speed / 1_000_000.0);
+
+    Ok(())
+}
+```
+
+### Configuration Files
+
+Turbo CDN supports multiple configuration sources with automatic discovery:
+
+```toml
+# ~/.config/turbo-cdn/config.toml or ./turbo-cdn.toml
+
+[meta]
+version = "1.0"
+schema_version = "2025.1"
+
+[general]
+enabled = true
+debug_mode = false
+max_concurrent_downloads = 8
+default_region = "Global"
+
+[performance]
+max_concurrent_downloads = 8
+chunk_size = "2MB"
+timeout = "30s"
+retry_attempts = 3
+
+[performance.cache]
+enabled = true
+max_size = "10GB"
+ttl = "24h"
+
+[security]
+verify_ssl = true
+verify_checksums = true
+allowed_protocols = ["https", "http"]
+
+[logging]
+level = "info"
+format = "json"
+audit_enabled = true
+```
+
+### Environment Variables
+
+Override any configuration with environment variables:
+
+```bash
+# Enable debug mode
+export TURBO_CDN_GENERAL__DEBUG_MODE=true
+
+# Set cache size
+export TURBO_CDN_PERFORMANCE__CACHE__MAX_SIZE="5GB"
+
+# Set region
+export TURBO_CDN_REGIONS__DEFAULT="China"
+
+# Set user agent
+export TURBO_CDN_SECURITY__USER_AGENT="my-app/1.0"
+```
+
+### Async API for External Tools
+
+Perfect for integration with other tools like `vx`:
+
+```rust
+use turbo_cdn::async_api;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Quick optimization for any URL
+    let optimized_url = async_api::quick::optimize_url(
+        "https://github.com/rust-lang/mdBook/releases/download/v0.4.21/mdbook.tar.gz"
+    ).await?;
+
+    println!("🚀 Optimized URL: {}", optimized_url);
+
+    // Quick download with automatic optimization
+    let result = async_api::quick::download_optimized(
+        "https://registry.npmjs.org/express/-/express-4.18.2.tgz",
+        "./downloads"
+    ).await?;
+
+    println!("✅ Downloaded: {}", result.path.display());
 
     Ok(())
 }

@@ -152,7 +152,7 @@ impl DownloadSource for JsDelivrSource {
     }
 
     fn priority(&self) -> u8 {
-        self.config.priority
+        self.config.priority.min(255) as u8
     }
 
     fn is_enabled(&self) -> bool {
