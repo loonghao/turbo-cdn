@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.2.0](https://github.com/loonghao/turbo-cdn/compare/v0.1.2...v0.2.0) - 2025-06-21
+
+### Added
+
+- implement automatic geo-detection and performance data persistence
+
+### Fixed
+
+- correct DownloadOptions timeout field type in documentation and examples
+- resolve all test compilation and runtime issues
+
 ## [0.1.2](https://github.com/loonghao/turbo-cdn/compare/v0.1.1...v0.1.2) - 2025-06-21
 
 ### Added
