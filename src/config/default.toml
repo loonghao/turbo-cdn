@@ -1,0 +1,437 @@
+# =============================================================================
+# Turbo CDN Default Configuration
+# Version: 1.0
+# Schema: 2025.1
+# 
+# This is the default configuration template for turbo-cdn.
+# Copy this file to one of the following locations and customize as needed:
+# 
+# System-wide: /etc/turbo-cdn/config.toml
+# User-level:  ~/.config/turbo-cdn/config.toml
+# Project:     ./turbo-cdn.toml
+# 
+# Environment variables can override any setting using TURBO_CDN_ prefix.
+# Example: TURBO_CDN_GENERAL__DEBUG_MODE=true
+# =============================================================================
+
+[meta]
+version = "1.0"
+schema_version = "2025.1"
+description = "Default turbo-cdn configuration with global mirror support"
+auto_update = true
+
+# =============================================================================
+# General Settings
+# =============================================================================
+[general]
+enabled = true
+config_check_interval = "1h"
+config_cache_ttl = "5m"
+debug_mode = false
+app_name = "turbo-cdn"
+user_agent_template = "turbo-cdn/{version} ({os}; {arch})"
+user_agent = "turbo-cdn/1.0"
+max_concurrent_downloads = 8
+download_dir = "./downloads"
+default_region = "Global"
+
+# =============================================================================
+# Region and Geographic Settings
+# =============================================================================
+[regions]
+auto_detect = true
+default = "Global"
+china_optimization = true
+detection_timeout = "5s"
+network_test_timeout = "3s"
+
+# China region configuration
+[regions.regions.China]
+enabled = true
+priority_boost = 100
+fallback_timeout = "8s"
+preferred_mirrors = ["npm", "pypi", "maven", "go"]
+dns_servers = ["223.5.5.5", "114.114.114.114"]
+
+# Global region configuration
+[regions.regions.Global]
+enabled = true
+priority_boost = 0
+fallback_timeout = "10s"
+preferred_mirrors = []
+dns_servers = ["8.8.8.8", "1.1.1.1"]
+
+# =============================================================================
+# Mirror Configurations
+# =============================================================================
+[mirrors]
+enabled = true
+health_check_interval = "10m"
+sync_check_enabled = true
+max_concurrent_health_checks = 5
+default_timeout = "30s"
+
+# npm Package Registry Mirrors
+[mirrors.configs.npm]
+enabled = true
+description = "npm package registry mirrors for faster JavaScript package downloads"
+timeout = "20s"
+
+[[mirrors.configs.npm.sources]]
+url = "https://registry.npmmirror.com"
+regions = ["China"]
+trust_level = 90
+tags = ["taobao", "fast", "china"]
+weight = 100
+max_connections = 10
+
+[[mirrors.configs.npm.sources]]
+url = "https://registry.npmjs.org"
+regions = ["Global"]
+trust_level = 100
+tags = ["official"]
+weight = 100
+max_connections = 20
+
+[[mirrors.configs.npm.url_patterns]]
+from = "registry.npmjs.org"
+to = "registry.npmmirror.com"
+regions = ["China"]
+priority = 100
+is_regex = false
+
+[mirrors.configs.npm.health_check]
+path = "/"
+expected_status = 200
+timeout = "5s"
+interval = "10m"
+retries = 3
+
+# Python Package Index (PyPI) Mirrors
+[mirrors.configs.pypi]
+enabled = true
+description = "Python Package Index mirrors for faster Python package downloads"
+timeout = "25s"
+
+[[mirrors.configs.pypi.sources]]
+url = "https://pypi.tuna.tsinghua.edu.cn"
+regions = ["China"]
+trust_level = 95
+tags = ["tsinghua", "edu", "china"]
+weight = 100
+
+[[mirrors.configs.pypi.sources]]
+url = "https://pypi.douban.com"
+regions = ["China"]
+trust_level = 85
+tags = ["douban", "china"]
+weight = 80
+
+[[mirrors.configs.pypi.sources]]
+url = "https://mirrors.aliyun.com/pypi"
+regions = ["China"]
+trust_level = 90
+tags = ["aliyun", "china"]
+weight = 90
+
+[[mirrors.configs.pypi.sources]]
+url = "https://files.pythonhosted.org"
+regions = ["Global"]
+trust_level = 100
+tags = ["official"]
+weight = 100
+
+[[mirrors.configs.pypi.url_patterns]]
+from = "files.pythonhosted.org"
+to = "pypi.tuna.tsinghua.edu.cn"
+regions = ["China"]
+priority = 100
+
+[[mirrors.configs.pypi.url_patterns]]
+from = "pypi.org"
+to = "pypi.tuna.tsinghua.edu.cn"
+regions = ["China"]
+priority = 90
+
+[mirrors.configs.pypi.health_check]
+path = "/simple/"
+expected_status = 200
+timeout = "5s"
+interval = "10m"
+retries = 3
+
+# Maven Central Repository Mirrors
+[mirrors.configs.maven]
+enabled = true
+description = "Maven Central Repository mirrors for faster Java package downloads"
+timeout = "35s"
+
+[[mirrors.configs.maven.sources]]
+url = "https://maven.aliyun.com/repository/central"
+regions = ["China"]
+trust_level = 90
+tags = ["aliyun", "china"]
+weight = 100
+
+[[mirrors.configs.maven.sources]]
+url = "https://repo.huaweicloud.com/repository/maven"
+regions = ["China"]
+trust_level = 85
+tags = ["huawei", "china"]
+weight = 80
+
+[[mirrors.configs.maven.sources]]
+url = "https://repo1.maven.org/maven2"
+regions = ["Global"]
+trust_level = 100
+tags = ["official"]
+weight = 100
+
+[[mirrors.configs.maven.url_patterns]]
+from = "repo1.maven.org/maven2"
+to = "maven.aliyun.com/repository/central"
+regions = ["China"]
+priority = 100
+
+[[mirrors.configs.maven.url_patterns]]
+from = "central.sonatype.com"
+to = "maven.aliyun.com/repository/central"
+regions = ["China"]
+priority = 90
+
+# Go Module Proxy Mirrors
+[mirrors.configs.go]
+enabled = true
+description = "Go module proxy mirrors for faster Go package downloads"
+timeout = "25s"
+
+[[mirrors.configs.go.sources]]
+url = "https://goproxy.cn"
+regions = ["China"]
+trust_level = 95
+tags = ["qiniu", "china"]
+weight = 100
+
+[[mirrors.configs.go.sources]]
+url = "https://goproxy.io"
+regions = ["China"]
+trust_level = 85
+tags = ["community", "china"]
+weight = 80
+
+[[mirrors.configs.go.sources]]
+url = "https://proxy.golang.org"
+regions = ["Global"]
+trust_level = 100
+tags = ["official"]
+weight = 100
+
+[[mirrors.configs.go.url_patterns]]
+from = "proxy.golang.org"
+to = "goproxy.cn"
+regions = ["China"]
+priority = 100
+
+# Docker Hub Mirrors
+[mirrors.configs.docker]
+enabled = true
+description = "Docker Hub mirrors for faster container image downloads"
+timeout = "30s"
+
+[[mirrors.configs.docker.sources]]
+url = "https://registry.cn-hangzhou.aliyuncs.com"
+regions = ["China"]
+trust_level = 90
+tags = ["aliyun", "china"]
+weight = 100
+
+[[mirrors.configs.docker.sources]]
+url = "https://dockerhub.azk8s.cn"
+regions = ["China"]
+trust_level = 85
+tags = ["azure", "china"]
+weight = 80
+
+[[mirrors.configs.docker.sources]]
+url = "https://registry-1.docker.io"
+regions = ["Global"]
+trust_level = 100
+tags = ["official"]
+weight = 100
+
+# GitHub Mirrors (Disabled by default - use with caution)
+[mirrors.configs.github]
+enabled = false
+description = "GitHub content mirrors (use with caution - may have sync delays)"
+warning = "GitHub mirrors may have sync delays and should be used with caution"
+timeout = "30s"
+
+[[mirrors.configs.github.sources]]
+url = "https://hub.fastgit.xyz"
+regions = ["China"]
+trust_level = 70
+tags = ["fastgit", "community", "china"]
+weight = 100
+
+[[mirrors.configs.github.sources]]
+url = "https://github.com.cnpmjs.org"
+regions = ["China"]
+trust_level = 65
+tags = ["cnpm", "community", "china"]
+weight = 80
+
+[[mirrors.configs.github.sources]]
+url = "https://github.com"
+regions = ["Global"]
+trust_level = 100
+tags = ["official"]
+weight = 100
+
+# =============================================================================
+# Domain Management
+# =============================================================================
+[domains]
+validation_enabled = true
+strict_mode = false
+allow_subdomains = true
+min_trust_level = 50
+cache_ttl = "1h"
+
+# Trusted domains configuration
+[domains.trusted.github]
+domain = "github.com"
+trust_level = 95
+category = "VersionControl"
+tags = ["git", "opensource"]
+notes = "GitHub - Git repository hosting"
+
+[domains.trusted.npm]
+domain = "registry.npmjs.org"
+trust_level = 95
+category = "PackageRegistry"
+tags = ["npm", "javascript"]
+notes = "npm - JavaScript package registry"
+
+[domains.trusted.pypi]
+domain = "pypi.org"
+trust_level = 95
+category = "PackageRegistry"
+tags = ["python", "pip"]
+notes = "PyPI - Python Package Index"
+
+[domains.trusted.maven]
+domain = "repo1.maven.org"
+trust_level = 95
+category = "PackageRegistry"
+tags = ["java", "maven"]
+notes = "Maven Central Repository"
+
+[domains.trusted.crates]
+domain = "crates.io"
+trust_level = 95
+category = "PackageRegistry"
+tags = ["rust", "cargo"]
+notes = "Crates.io - Rust package registry"
+
+# Domain categories
+[domains.categories.VersionControl]
+name = "Version Control"
+description = "Git repositories and version control systems"
+default_trust_level = 90
+allowed_by_default = true
+
+[domains.categories.PackageRegistry]
+name = "Package Registry"
+description = "Official package registries and repositories"
+default_trust_level = 95
+allowed_by_default = true
+
+[domains.categories.CDN]
+name = "Content Delivery Network"
+description = "CDN services and content delivery networks"
+default_trust_level = 85
+allowed_by_default = true
+
+# =============================================================================
+# Performance Configuration
+# =============================================================================
+[performance]
+max_concurrent_downloads = 8
+chunk_size = "1MB"
+timeout = "30s"
+retry_attempts = 3
+retry_delay = "1s"
+connection_pool_size = 20
+keep_alive_timeout = "30s"
+
+[performance.cache]
+enabled = true
+max_size = "10GB"
+ttl = "24h"
+cleanup_interval = "1h"
+directory = "~/.cache/turbo-cdn"
+
+[performance.bandwidth]
+adaptive = true
+# max_download_speed = 104857600  # 100MB/s (uncomment to limit)
+# max_upload_speed = 10485760     # 10MB/s (uncomment to limit)
+
+# =============================================================================
+# Security Configuration
+# =============================================================================
+[security]
+verify_ssl = true
+verify_checksums = true
+allowed_protocols = ["https", "http"]
+user_agent = "turbo-cdn/1.0"
+audit_logging = true
+audit_log_path = "~/.turbo-cdn/audit.log"
+validate_source = false
+verify_open_source = false
+strict_mode = false
+
+[security.custom_headers]
+# Add custom headers if needed
+# "X-Custom-Header" = "value"
+
+[security.data_protection]
+user_consent_required = false
+anonymize_data = false
+retention_days = 30
+
+# =============================================================================
+# Logging Configuration
+# =============================================================================
+[logging]
+level = "info"
+format = "json"
+output = "stdout"
+audit_enabled = true
+audit_file = "~/.turbo-cdn/audit.log"
+
+[logging.rotation]
+max_size = "100MB"
+max_files = 10
+interval = "24h"
+
+# =============================================================================
+# Monitoring Configuration
+# =============================================================================
+[monitoring]
+enabled = true
+metrics_interval = "1m"
+health_check_interval = "5m"
+
+[monitoring.export]
+format = "prometheus"
+endpoint = "http://localhost:9090/metrics"
+interval = "30s"
+
+# =============================================================================
+# Experimental Features (Use with caution)
+# =============================================================================
+[experimental]
+ml_optimization = false
+predictive_caching = false
+p2p_sharing = false
+advanced_analytics = false

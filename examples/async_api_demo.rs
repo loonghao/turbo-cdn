@@ -182,7 +182,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("------------------------------------------------");
 
     let download_options = DownloadOptions {
-        timeout: Some(Duration::from_secs(30)),
+        timeout: Duration::from_secs(30),
         use_cache: true,
         verify_checksum: false, // Skip for demo
         ..Default::default()

@@ -275,7 +275,7 @@ use std::time::Duration;
 
 // Custom download options
 let options = DownloadOptions {
-    timeout: Some(Duration::from_secs(30)),
+    timeout: Duration::from_secs(30),
     use_cache: true,
     verify_checksum: false,
     ..Default::default()
