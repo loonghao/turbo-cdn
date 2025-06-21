@@ -164,7 +164,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Advanced download options
     let options = DownloadOptions {
-        timeout: Some(Duration::from_secs(60)),
+        timeout: Duration::from_secs(60),
         verify_checksum: true,
         use_cache: true,
         ..Default::default()
