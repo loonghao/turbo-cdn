@@ -1252,4 +1252,82 @@ mod tests {
         let _fastly = Source::fastly();
         let _cloudflare = Source::cloudflare();
     }
+
+    #[tokio::test]
+    async fn test_turbo_cdn_new() {
+        let result = TurboCdn::new().await;
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_turbo_cdn_stats_creation() {
+        let stats = TurboCdnStats {
+            total_downloads: 100,
+            successful_downloads: 95,
+            failed_downloads: 5,
+            total_bytes: 1024 * 1024,
+            cache_hit_rate: 0.8,
+            average_speed: 1000.0,
+        };
+
+        assert_eq!(stats.total_downloads, 100);
+        assert_eq!(stats.successful_downloads, 95);
+        assert_eq!(stats.failed_downloads, 5);
+        assert_eq!(stats.total_bytes, 1024 * 1024);
+        assert_eq!(stats.cache_hit_rate, 0.8);
+        assert_eq!(stats.average_speed, 1000.0);
+    }
+
+    #[test]
+    fn test_parsed_url_creation() {
+        let parsed = ParsedUrl {
+            repository: "owner/repo".to_string(),
+            version: "v1.0.0".to_string(),
+            filename: "file.zip".to_string(),
+            original_url: "https://github.com/owner/repo/releases/download/v1.0.0/file.zip"
+                .to_string(),
+            source_type: DetectedSourceType::GitHub,
+        };
+
+        assert_eq!(parsed.repository, "owner/repo");
+        assert_eq!(parsed.version, "v1.0.0");
+        assert_eq!(parsed.filename, "file.zip");
+        assert_eq!(parsed.source_type, DetectedSourceType::GitHub);
+    }
+
+    #[test]
+    fn test_download_result_creation() {
+        use std::path::PathBuf;
+        use std::time::Duration;
+
+        let result = DownloadResult {
+            path: PathBuf::from("/tmp/file.zip"),
+            size: 1024,
+            duration: Duration::from_secs(1),
+            speed: 1024.0,
+            source: "github".to_string(),
+            url: "https://github.com/owner/repo/releases/download/v1.0.0/file.zip".to_string(),
+            from_cache: false,
+            checksum: None,
+        };
+
+        assert_eq!(result.path, PathBuf::from("/tmp/file.zip"));
+        assert_eq!(result.size, 1024);
+        assert_eq!(result.duration, Duration::from_secs(1));
+        assert_eq!(result.speed, 1024.0);
+        assert_eq!(result.source, "github");
+        assert!(!result.from_cache);
+        assert!(result.checksum.is_none());
+    }
+
+    #[test]
+    fn test_builder_configuration() {
+        let builder = TurboCdn::builder()
+            .with_cache(false)
+            .with_max_concurrent_downloads(10);
+
+        assert!(!builder.config.cache.enabled);
+        assert_eq!(builder.config.general.max_concurrent_downloads, 10);
+        assert_eq!(builder.sources.len(), 4); // Default sources
+    }
 }

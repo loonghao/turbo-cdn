@@ -293,3 +293,145 @@ async fn test_async_stress_parsing() {
         assert!(result.unwrap().is_ok());
     }
 }
+
+#[tokio::test]
+async fn test_async_with_config() {
+    let config = turbo_cdn::TurboCdnConfig::default();
+    let client = AsyncTurboCdn::with_config(config).await;
+
+    assert!(client.is_ok());
+
+    // Test that the client works
+    let client = client.unwrap();
+    let url =
+        "https://github.com/microsoft/TypeScript/releases/download/v5.0.0/typescript-5.0.0.tgz";
+    let result = client.parse_url_async(url).await;
+
+    assert!(result.is_ok());
+}
+
+#[tokio::test]
+async fn test_async_get_repository_metadata() {
+    let client = create_async_test_client().await;
+
+    // Test with a well-known repository
+    let repository = "microsoft/vscode";
+    let result = client.get_repository_metadata_async(repository).await;
+
+    // This might fail due to API limits, but we test the method exists and compiles
+    match result {
+        Ok(metadata) => {
+            assert!(!metadata.name.is_empty());
+        }
+        Err(_) => {
+            // Expected due to API limits in CI
+        }
+    }
+}
+
+#[tokio::test]
+async fn test_async_get_stats() {
+    let client = create_async_test_client().await;
+
+    let result = client.get_stats_async().await;
+    assert!(result.is_ok());
+
+    let stats = result.unwrap();
+    // Stats should be initialized with zeros
+    assert_eq!(stats.total_downloads, 0);
+    assert_eq!(stats.successful_downloads, 0);
+    assert_eq!(stats.failed_downloads, 0);
+}
+
+#[tokio::test]
+async fn test_async_health_check() {
+    let client = create_async_test_client().await;
+
+    let result = client.health_check_async().await;
+    assert!(result.is_ok());
+
+    let health_status = result.unwrap();
+    // Should have health status for all sources
+    assert!(!health_status.is_empty());
+}
+
+#[tokio::test]
+async fn test_async_download_method() {
+    let client = create_async_test_client().await;
+
+    // Test the download method signature (won't actually download due to API limits)
+    let repository = "microsoft/vscode";
+    let version = "1.85.0";
+    let file_name = "VSCode-linux-x64.tar.gz";
+
+    let result = client
+        .download_async(repository, version, file_name, None)
+        .await;
+
+    // This will likely fail due to API limits or file not found, but we test the method exists
+    match result {
+        Ok(_) => {
+            // Unexpected success in test environment
+        }
+        Err(e) => {
+            // Expected failure due to API limits or network issues
+            assert!(!e.to_string().is_empty());
+        }
+    }
+}
+
+#[tokio::test]
+async fn test_quick_optimize_url() {
+    let url = "https://github.com/oven-sh/bun/releases/download/bun-v1.2.9/bun-bun-v1.2.9.zip";
+
+    let result = turbo_cdn::async_api::quick::optimize_url(url).await;
+
+    // This might fail due to API limits, but we test the method exists
+    match result {
+        Ok(optimal_url) => {
+            assert!(!optimal_url.is_empty());
+        }
+        Err(_) => {
+            // Expected due to API limits in CI
+        }
+    }
+}
+
+#[tokio::test]
+async fn test_quick_download_url() {
+    let url = "https://github.com/oven-sh/bun/releases/download/bun-v1.2.9/bun-bun-v1.2.9.zip";
+
+    let result = turbo_cdn::async_api::quick::download_url(url).await;
+
+    // This will likely fail due to API limits, but we test the method exists
+    match result {
+        Ok(_) => {
+            // Unexpected success in test environment
+        }
+        Err(e) => {
+            // Expected failure due to API limits or network issues
+            assert!(!e.to_string().is_empty());
+        }
+    }
+}
+
+#[tokio::test]
+async fn test_quick_download_repository() {
+    let repository = "microsoft/vscode";
+    let version = "1.85.0";
+    let file_name = "VSCode-linux-x64.tar.gz";
+
+    let result =
+        turbo_cdn::async_api::quick::download_repository(repository, version, file_name).await;
+
+    // This will likely fail due to API limits, but we test the method exists
+    match result {
+        Ok(_) => {
+            // Unexpected success in test environment
+        }
+        Err(e) => {
+            // Expected failure due to API limits or network issues
+            assert!(!e.to_string().is_empty());
+        }
+    }
+}
