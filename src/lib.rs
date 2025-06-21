@@ -1024,7 +1024,7 @@ pub mod async_api {
     use tokio::sync::Mutex;
 
     /// Async wrapper for TurboCdn that provides thread-safe access
-    #[derive(Debug)]
+    #[derive(Debug, Clone)]
     pub struct AsyncTurboCdn {
         inner: Arc<Mutex<TurboCdn>>,
     }
@@ -1073,7 +1073,7 @@ pub mod async_api {
         /// Parse URL into components (async version)
         pub async fn parse_url_async(&self, url: &str) -> Result<ParsedUrl> {
             let client = self.inner.lock().await;
-            Ok(client.parse_url(url)?)
+            client.parse_url(url)
         }
 
         /// Download a file by repository, version, and filename (async version)
@@ -1117,13 +1117,6 @@ pub mod async_api {
         ) -> Result<std::collections::HashMap<String, sources::HealthStatus>> {
             let client = self.inner.lock().await;
             client.health_check().await
-        }
-
-        /// Clone the AsyncTurboCdn instance (creates a new reference to the same client)
-        pub fn clone(&self) -> Self {
-            Self {
-                inner: Arc::clone(&self.inner),
-            }
         }
     }
 
