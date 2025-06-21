@@ -125,7 +125,7 @@ use std::time::Duration;
 let mut client = TurboCdn::new().await?;
 
 let options = DownloadOptions {
-    timeout: Some(Duration::from_secs(60)),
+    timeout: Duration::from_secs(60),
     verify_checksum: true,
     use_cache: true,
     ..Default::default()
