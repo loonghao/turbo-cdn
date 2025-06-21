@@ -20,11 +20,10 @@ fn create_test_config() -> TurboCdnConfig {
 fn create_test_cache_config(temp_dir: &TempDir) -> CacheConfig {
     CacheConfig {
         enabled: true,
-        cache_dir: temp_dir.path().to_path_buf(),
-        max_size: 1024 * 1024, // 1MB
-        ttl: 3600,             // 1 hour
-        compression: true,
-        cleanup_interval: 60,
+        directory: Some(temp_dir.path().to_string_lossy().to_string()),
+        max_size: "1MB".to_string(),
+        ttl: Duration::from_secs(3600), // 1 hour
+        cleanup_interval: Duration::from_secs(60),
     }
 }
 
@@ -55,7 +54,19 @@ async fn test_downloader_creation() {
     let cache_config = create_test_cache_config(&temp_dir);
     let cache_manager = CacheManager::new(cache_config).await.unwrap();
 
-    let compliance_config = ComplianceConfig::default();
+    let compliance_config = ComplianceConfig {
+        verify_ssl: true,
+        verify_checksums: true,
+        allowed_protocols: vec!["https".to_string(), "http".to_string()],
+        user_agent: "turbo-cdn/1.0".to_string(),
+        custom_headers: std::collections::HashMap::new(),
+        audit_logging: true,
+        audit_log_path: "~/.turbo-cdn/audit.log".to_string(),
+        validate_source: false,
+        verify_open_source: false,
+        strict_mode: false,
+        data_protection: Default::default(),
+    };
     let compliance_checker = ComplianceChecker::new(compliance_config).unwrap();
 
     let result = Downloader::new(config, router, cache_manager, compliance_checker).await;
@@ -155,7 +166,19 @@ async fn test_downloader_with_invalid_user_agent() {
     let cache_config = create_test_cache_config(&temp_dir);
     let cache_manager = CacheManager::new(cache_config).await.unwrap();
 
-    let compliance_config = ComplianceConfig::default();
+    let compliance_config = ComplianceConfig {
+        verify_ssl: true,
+        verify_checksums: true,
+        allowed_protocols: vec!["https".to_string(), "http".to_string()],
+        user_agent: "turbo-cdn/1.0".to_string(),
+        custom_headers: std::collections::HashMap::new(),
+        audit_logging: true,
+        audit_log_path: "~/.turbo-cdn/audit.log".to_string(),
+        validate_source: false,
+        verify_open_source: false,
+        strict_mode: false,
+        data_protection: Default::default(),
+    };
     let compliance_checker = ComplianceChecker::new(compliance_config).unwrap();
 
     let result = Downloader::new(config, router, cache_manager, compliance_checker).await;
@@ -182,7 +205,19 @@ async fn test_downloader_semaphore_limit() {
     let cache_config = create_test_cache_config(&temp_dir);
     let cache_manager = CacheManager::new(cache_config).await.unwrap();
 
-    let compliance_config = ComplianceConfig::default();
+    let compliance_config = ComplianceConfig {
+        verify_ssl: true,
+        verify_checksums: true,
+        allowed_protocols: vec!["https".to_string(), "http".to_string()],
+        user_agent: "turbo-cdn/1.0".to_string(),
+        custom_headers: std::collections::HashMap::new(),
+        audit_logging: true,
+        audit_log_path: "~/.turbo-cdn/audit.log".to_string(),
+        validate_source: false,
+        verify_open_source: false,
+        strict_mode: false,
+        data_protection: Default::default(),
+    };
     let compliance_checker = ComplianceChecker::new(compliance_config).unwrap();
 
     let downloader = Downloader::new(config, router, cache_manager, compliance_checker)

@@ -6,6 +6,7 @@
 //! Type-safe configuration data structures with zero hardcoding.
 //! All default values are loaded from external configuration files.
 
+use figment::providers::{Format, Toml};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::Duration;
@@ -604,7 +605,7 @@ pub struct ExperimentalConfig {
     pub advanced_analytics: bool,
 }
 
-// Default value functions to avoid hardcoding
+// Default value functions for serde defaults
 fn default_true() -> bool {
     true
 }
@@ -638,115 +639,31 @@ fn default_download_dir() -> std::path::PathBuf {
 fn default_region() -> String {
     "Global".to_string()
 }
-fn default_audit_log_path() -> String {
-    "~/.turbo-cdn/audit.log".to_string()
-}
-fn default_retention_days() -> u32 {
-    30
-}
 fn default_api_base_url() -> String {
     "https://api.github.com".to_string()
 }
 fn default_base_url() -> String {
     "https://github.com".to_string()
 }
+fn default_audit_log_path() -> String {
+    "~/.turbo-cdn/audit.log".to_string()
+}
+fn default_retention_days() -> u32 {
+    30
+}
 
 impl Default for GlobalConfig {
     fn default() -> Self {
-        use std::collections::HashMap;
-        use std::time::Duration;
+        // Load default configuration from embedded TOML
+        const DEFAULT_CONFIG: &str = include_str!("default.toml");
 
-        Self {
-            meta: MetaConfig {
-                version: "1.0".to_string(),
-                schema_version: "2025.1".to_string(),
-                last_updated: None,
-                auto_update: true,
-                description: Some("Default configuration".to_string()),
-            },
-            general: GeneralConfig {
-                enabled: true,
-                config_check_interval: Duration::from_secs(3600),
-                config_cache_ttl: Duration::from_secs(300),
-                debug_mode: false,
-                app_name: Some("turbo-cdn".to_string()),
-                user_agent_template: Some("turbo-cdn/{version}".to_string()),
-                user_agent: default_user_agent(),
-                max_concurrent_downloads: default_max_concurrent(),
-                download_dir: default_download_dir(),
-                default_region: default_region(),
-            },
-            regions: RegionConfig {
-                auto_detect: true,
-                default: "Global".to_string(),
-                china_optimization: true,
-                detection_timeout: Duration::from_secs(5),
-                network_test_timeout: Duration::from_secs(3),
-                regions: HashMap::new(),
-            },
-            mirrors: MirrorConfigs {
-                enabled: true,
-                health_check_interval: Duration::from_secs(600),
-                sync_check_enabled: true,
-                max_concurrent_health_checks: 5,
-                default_timeout: Duration::from_secs(30),
-                configs: HashMap::new(),
-            },
-            domains: DomainConfig {
-                validation_enabled: true,
-                strict_mode: false,
-                allow_subdomains: true,
-                min_trust_level: 50,
-                cache_ttl: Duration::from_secs(3600),
-                trusted: HashMap::new(),
-                categories: HashMap::new(),
-            },
-            performance: PerformanceConfig {
-                max_concurrent_downloads: 8,
-                chunk_size: "1MB".to_string(),
-                timeout: Duration::from_secs(30),
-                retry_attempts: 3,
-                retry_delay: Duration::from_secs(1),
-                connection_pool_size: 20,
-                keep_alive_timeout: Duration::from_secs(30),
-                cache: CacheConfig {
-                    enabled: true,
-                    max_size: "10GB".to_string(),
-                    ttl: Duration::from_secs(86400),
-                    cleanup_interval: Duration::from_secs(3600),
-                    directory: None,
-                },
-                bandwidth: None,
-            },
-            security: SecurityConfig {
-                verify_ssl: true,
-                verify_checksums: true,
-                allowed_protocols: vec!["https".to_string(), "http".to_string()],
-                user_agent: "turbo-cdn/1.0".to_string(),
-                custom_headers: HashMap::new(),
-                audit_logging: true,
-                audit_log_path: default_audit_log_path(),
-                validate_source: false,
-                verify_open_source: false,
-                strict_mode: false,
-                data_protection: DataProtectionConfig::default(),
-            },
-            logging: LoggingConfig {
-                level: "info".to_string(),
-                format: "json".to_string(),
-                output: "stdout".to_string(),
-                audit_enabled: true,
-                audit_file: Some("~/.turbo-cdn/audit.log".to_string()),
-                rotation: None,
-            },
-            monitoring: MonitoringConfig {
-                enabled: true,
-                metrics_interval: Duration::from_secs(60),
-                health_check_interval: Duration::from_secs(300),
-                export: None,
-            },
-            experimental: ExperimentalConfig::default(),
-        }
+        // Parse with figment
+        let figment = figment::Figment::new().merge(Toml::string(DEFAULT_CONFIG));
+
+        // Extract configuration
+        figment
+            .extract()
+            .expect("Failed to parse embedded default configuration")
     }
 }
 

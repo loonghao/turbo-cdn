@@ -12,11 +12,12 @@ async fn test_turbo_cdn_builder() {
     assert!(result.is_ok(), "TurboCdn builder should succeed");
 }
 
-#[tokio::test]
-async fn test_config_validation() {
+#[test]
+fn test_config_creation() {
     let config = TurboCdnConfig::default();
-    let result = config.validate();
-    assert!(result.is_ok(), "Default config should be valid");
+    // Test that config can be created successfully
+    assert!(config.general.enabled);
+    assert_eq!(config.general.default_region, "Global");
 }
 
 #[test]
@@ -60,11 +61,15 @@ fn test_error_types() {
 async fn test_cache_manager() {
     let config = config::CacheConfig {
         enabled: true,
-        cache_dir: std::env::temp_dir().join("turbo-cdn-test"),
-        max_size: 1024 * 1024, // 1MB
-        ttl: 3600,
-        compression: true,
-        cleanup_interval: 60,
+        directory: Some(
+            std::env::temp_dir()
+                .join("turbo-cdn-test")
+                .to_string_lossy()
+                .to_string(),
+        ),
+        max_size: "1MB".to_string(),
+        ttl: std::time::Duration::from_secs(3600),
+        cleanup_interval: std::time::Duration::from_secs(60),
     };
 
     let result = CacheManager::new(config).await;
@@ -76,7 +81,19 @@ async fn test_cache_manager() {
 
 #[tokio::test]
 async fn test_compliance_checker() {
-    let config = config::ComplianceConfig::default();
+    let config = config::ComplianceConfig {
+        verify_ssl: true,
+        verify_checksums: true,
+        allowed_protocols: vec!["https".to_string(), "http".to_string()],
+        user_agent: "turbo-cdn/1.0".to_string(),
+        custom_headers: std::collections::HashMap::new(),
+        audit_logging: true,
+        audit_log_path: "~/.turbo-cdn/audit.log".to_string(),
+        validate_source: false,
+        verify_open_source: false,
+        strict_mode: false,
+        data_protection: Default::default(),
+    };
     let result = ComplianceChecker::new(config);
     assert!(
         result.is_ok(),

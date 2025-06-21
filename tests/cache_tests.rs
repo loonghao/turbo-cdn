@@ -12,11 +12,10 @@ use turbo_cdn::error::TurboCdnError;
 fn create_test_cache_config(temp_dir: &TempDir) -> CacheConfig {
     CacheConfig {
         enabled: true,
-        cache_dir: temp_dir.path().to_path_buf(),
-        max_size: 1024 * 1024, // 1MB
-        ttl: 3600,             // 1 hour
-        compression: true,
-        cleanup_interval: 60,
+        directory: Some(temp_dir.path().to_string_lossy().to_string()),
+        max_size: "1MB".to_string(),
+        ttl: Duration::from_secs(3600), // 1 hour
+        cleanup_interval: Duration::from_secs(60),
     }
 }
 
@@ -24,11 +23,15 @@ fn create_test_cache_config(temp_dir: &TempDir) -> CacheConfig {
 fn create_disabled_cache_config() -> CacheConfig {
     CacheConfig {
         enabled: false,
-        cache_dir: std::env::temp_dir().join("disabled-cache"),
-        max_size: 1024 * 1024,
-        ttl: 3600,
-        compression: false,
-        cleanup_interval: 60,
+        directory: Some(
+            std::env::temp_dir()
+                .join("disabled-cache")
+                .to_string_lossy()
+                .to_string(),
+        ),
+        max_size: "1MB".to_string(),
+        ttl: Duration::from_secs(3600),
+        cleanup_interval: Duration::from_secs(60),
     }
 }
 
@@ -306,7 +309,7 @@ async fn test_cache_stats_tracking() {
 async fn test_cache_ttl_expiration() {
     let temp_dir = TempDir::new().expect("Failed to create temp dir");
     let mut config = create_test_cache_config(&temp_dir);
-    config.ttl = 1; // 1 second TTL for testing
+    config.ttl = Duration::from_secs(1); // 1 second TTL for testing
     let mut cache_manager = CacheManager::new(config).await.unwrap();
 
     let test_data = b"TTL test data";
@@ -341,7 +344,7 @@ async fn test_cache_ttl_expiration() {
 async fn test_cache_cleanup() {
     let temp_dir = TempDir::new().expect("Failed to create temp dir");
     let mut config = create_test_cache_config(&temp_dir);
-    config.ttl = 1; // 1 second TTL
+    config.ttl = Duration::from_secs(1); // 1 second TTL
     let mut cache_manager = CacheManager::new(config).await.unwrap();
 
     // Store multiple entries
@@ -373,8 +376,8 @@ async fn test_cache_cleanup() {
 async fn test_cache_size_limit_and_lru() {
     let temp_dir = TempDir::new().expect("Failed to create temp dir");
     let mut config = create_test_cache_config(&temp_dir);
-    config.max_size = 100; // Very small cache size
-    config.ttl = 3600; // Long TTL to avoid expiration during test
+    config.max_size = "100B".to_string(); // Very small cache size
+    config.ttl = Duration::from_secs(3600); // Long TTL to avoid expiration during test
     let mut cache_manager = CacheManager::new(config).await.unwrap();
 
     // Store entries that exceed the cache size limit

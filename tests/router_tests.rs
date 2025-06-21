@@ -9,7 +9,14 @@ use turbo_cdn::sources::{DownloadUrl, SourceManager};
 /// Helper function to create a test config
 fn create_test_config(region: Region) -> TurboCdnConfig {
     let mut config = TurboCdnConfig::default();
-    config.general.default_region = region;
+    config.general.default_region = match region {
+        Region::China => "China".to_string(),
+        Region::Global => "Global".to_string(),
+        Region::AsiaPacific => "AsiaPacific".to_string(),
+        Region::Europe => "Europe".to_string(),
+        Region::NorthAmerica => "NorthAmerica".to_string(),
+        Region::Custom(s) => s,
+    };
     config
 }
 
