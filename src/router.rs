@@ -3,8 +3,10 @@
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::path::PathBuf;
 use std::time::Duration;
-use tracing::{debug, info};
+use tokio::fs;
+use tracing::{debug, info, warn};
 
 use crate::config::{Region, TurboCdnConfig};
 use crate::error::{Result, TurboCdnError};
@@ -24,6 +26,8 @@ pub struct SmartRouter {
 pub struct PerformanceTracker {
     source_metrics: HashMap<String, SourceMetrics>,
     url_metrics: HashMap<String, UrlMetrics>,
+    data_file: PathBuf,
+    auto_save: bool,
 }
 
 /// Region-based optimization
@@ -86,7 +90,15 @@ impl SmartRouter {
     /// Create a new smart router
     pub fn new(config: TurboCdnConfig, source_manager: SourceManager) -> Self {
         let performance_tracker = PerformanceTracker::new();
-        let region_optimizer = RegionOptimizer::new(config.general.default_region);
+        let region = match config.general.default_region.as_str() {
+            "China" => Region::China,
+            "AsiaPacific" => Region::AsiaPacific,
+            "Europe" => Region::Europe,
+            "NorthAmerica" => Region::NorthAmerica,
+            "Global" => Region::Global,
+            custom => Region::Custom(custom.to_string()),
+        };
+        let region_optimizer = RegionOptimizer::new(region);
 
         Self {
             config,
@@ -94,6 +106,30 @@ impl SmartRouter {
             performance_tracker,
             region_optimizer,
         }
+    }
+
+    /// Create a new smart router with performance data loading
+    pub async fn new_with_data(
+        config: TurboCdnConfig,
+        source_manager: SourceManager,
+    ) -> Result<Self> {
+        let performance_tracker = PerformanceTracker::new_with_data().await?;
+        let region = match config.general.default_region.as_str() {
+            "China" => Region::China,
+            "AsiaPacific" => Region::AsiaPacific,
+            "Europe" => Region::Europe,
+            "NorthAmerica" => Region::NorthAmerica,
+            "Global" => Region::Global,
+            custom => Region::Custom(custom.to_string()),
+        };
+        let region_optimizer = RegionOptimizer::new(region);
+
+        Ok(Self {
+            config,
+            source_manager,
+            performance_tracker,
+            region_optimizer,
+        })
     }
 
     /// Route a download request to optimal sources
@@ -176,7 +212,16 @@ impl SmartRouter {
         score -= url.priority as f64 * 5.0;
 
         // Apply region-specific scoring adjustments
-        match self.config.general.default_region {
+        let region = match self.config.general.default_region.as_str() {
+            "China" => Region::China,
+            "AsiaPacific" => Region::AsiaPacific,
+            "Europe" => Region::Europe,
+            "NorthAmerica" => Region::NorthAmerica,
+            "Global" => Region::Global,
+            custom => Region::Custom(custom.to_string()),
+        };
+
+        match region {
             Region::China => {
                 // Prefer sources that work well in China
                 if url.source == "fastly" || url.source == "jsdelivr" {
@@ -201,7 +246,7 @@ impl SmartRouter {
                     score += 15.0;
                 }
             }
-            Region::Global => {
+            Region::Global | Region::Custom(_) => {
                 // No regional preference
             }
         }
@@ -305,8 +350,13 @@ impl SmartRouter {
 
     /// Update region preference
     pub fn set_region(&mut self, region: Region) {
-        self.region_optimizer.current_region = region;
         info!("Updated router region to {:?}", region);
+        self.region_optimizer.current_region = region;
+    }
+
+    /// Save performance data
+    pub async fn save_performance_data(&self) -> Result<()> {
+        self.performance_tracker.save_data().await
     }
 
     /// Get reference to the source manager
@@ -317,9 +367,31 @@ impl SmartRouter {
 
 impl PerformanceTracker {
     fn new() -> Self {
+        let data_file = Self::get_data_file_path();
         Self {
             source_metrics: HashMap::new(),
             url_metrics: HashMap::new(),
+            data_file,
+            auto_save: true,
+        }
+    }
+
+    /// Create a new performance tracker with data loading
+    pub async fn new_with_data() -> Result<Self> {
+        let mut tracker = Self::new();
+        if let Err(e) = tracker.load_data().await {
+            warn!("Failed to load performance data: {}", e);
+        }
+        Ok(tracker)
+    }
+
+    /// Get the path for performance data file
+    fn get_data_file_path() -> PathBuf {
+        if let Some(config_dir) = dirs::config_dir() {
+            let turbo_cdn_dir = config_dir.join("turbo-cdn");
+            turbo_cdn_dir.join("performance.json")
+        } else {
+            PathBuf::from("performance.json")
         }
     }
 
@@ -358,6 +430,118 @@ impl PerformanceTracker {
             performance.success,
             performance.download_speed / 1_000_000.0
         );
+
+        // Auto-save if enabled
+        if self.auto_save {
+            if let Err(e) = self.save_data_sync() {
+                warn!("Failed to auto-save performance data: {}", e);
+            }
+        }
+    }
+
+    /// Load performance data from file
+    async fn load_data(&mut self) -> Result<()> {
+        if !self.data_file.exists() {
+            debug!("Performance data file does not exist, starting fresh");
+            return Ok(());
+        }
+
+        let content = fs::read_to_string(&self.data_file).await.map_err(|e| {
+            TurboCdnError::internal(format!("Failed to read performance data: {}", e))
+        })?;
+
+        #[derive(Deserialize)]
+        struct PerformanceData {
+            source_metrics: HashMap<String, SourceMetrics>,
+            url_metrics: HashMap<String, UrlMetrics>,
+        }
+
+        let data: PerformanceData = serde_json::from_str(&content).map_err(|e| {
+            TurboCdnError::internal(format!("Failed to parse performance data: {}", e))
+        })?;
+
+        self.source_metrics = data.source_metrics;
+        self.url_metrics = data.url_metrics;
+
+        info!(
+            "Loaded performance data: {} sources, {} URLs",
+            self.source_metrics.len(),
+            self.url_metrics.len()
+        );
+
+        Ok(())
+    }
+
+    /// Save performance data to file (async)
+    pub async fn save_data(&self) -> Result<()> {
+        // Ensure directory exists
+        if let Some(parent) = self.data_file.parent() {
+            fs::create_dir_all(parent).await.map_err(|e| {
+                TurboCdnError::internal(format!("Failed to create config directory: {}", e))
+            })?;
+        }
+
+        #[derive(Serialize)]
+        struct PerformanceData<'a> {
+            source_metrics: &'a HashMap<String, SourceMetrics>,
+            url_metrics: &'a HashMap<String, UrlMetrics>,
+            saved_at: chrono::DateTime<chrono::Utc>,
+        }
+
+        let data = PerformanceData {
+            source_metrics: &self.source_metrics,
+            url_metrics: &self.url_metrics,
+            saved_at: chrono::Utc::now(),
+        };
+
+        let content = serde_json::to_string_pretty(&data).map_err(|e| {
+            TurboCdnError::internal(format!("Failed to serialize performance data: {}", e))
+        })?;
+
+        fs::write(&self.data_file, content).await.map_err(|e| {
+            TurboCdnError::internal(format!("Failed to write performance data: {}", e))
+        })?;
+
+        debug!("Saved performance data to {:?}", self.data_file);
+        Ok(())
+    }
+
+    /// Save performance data synchronously (for auto-save)
+    fn save_data_sync(&self) -> Result<()> {
+        // Ensure directory exists
+        if let Some(parent) = self.data_file.parent() {
+            std::fs::create_dir_all(parent).map_err(|e| {
+                TurboCdnError::internal(format!("Failed to create config directory: {}", e))
+            })?;
+        }
+
+        #[derive(Serialize)]
+        struct PerformanceData<'a> {
+            source_metrics: &'a HashMap<String, SourceMetrics>,
+            url_metrics: &'a HashMap<String, UrlMetrics>,
+            saved_at: chrono::DateTime<chrono::Utc>,
+        }
+
+        let data = PerformanceData {
+            source_metrics: &self.source_metrics,
+            url_metrics: &self.url_metrics,
+            saved_at: chrono::Utc::now(),
+        };
+
+        let content = serde_json::to_string_pretty(&data).map_err(|e| {
+            TurboCdnError::internal(format!("Failed to serialize performance data: {}", e))
+        })?;
+
+        std::fs::write(&self.data_file, content).map_err(|e| {
+            TurboCdnError::internal(format!("Failed to write performance data: {}", e))
+        })?;
+
+        Ok(())
+    }
+
+    /// Enable or disable auto-save
+    pub fn set_auto_save(&mut self, enabled: bool) {
+        self.auto_save = enabled;
     }
 }
 

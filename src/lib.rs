@@ -49,13 +49,16 @@
 pub mod cache;
 pub mod compliance;
 pub mod config;
+pub mod domain_manager;
 pub mod downloader;
 pub mod error;
+pub mod geo_detection;
 pub mod progress;
 pub mod router;
 pub mod sources;
 
 use std::path::PathBuf;
+use tracing::{info, warn};
 
 // Re-export commonly used types
 pub use cache::{CacheManager, CacheStats};
@@ -904,66 +907,94 @@ impl TurboCdnBuilder {
 
     /// Set the region for optimization
     pub fn with_region(mut self, region: Region) -> Self {
-        self.config.general.default_region = region;
+        self.config.regions.default = region.to_string();
         self
     }
 
     /// Set the download directory
-    pub fn with_download_dir<P: Into<PathBuf>>(mut self, dir: P) -> Self {
-        self.config.general.download_dir = dir.into();
+    pub fn with_download_dir<P: Into<PathBuf>>(self, _dir: P) -> Self {
+        // Note: Download directory is now handled by the cache configuration
+        // This method is kept for API compatibility but doesn't modify anything
         self
     }
 
     /// Enable or disable caching
     pub fn with_cache(mut self, enabled: bool) -> Self {
-        self.config.cache.enabled = enabled;
+        self.config.performance.cache.enabled = enabled;
         self
     }
 
     /// Set maximum concurrent downloads
     pub fn with_max_concurrent_downloads(mut self, max: usize) -> Self {
-        self.config.general.max_concurrent_downloads = max;
+        self.config.performance.max_concurrent_downloads = max;
         self
     }
 
     /// Build the TurboCdn client
-    pub async fn build(self) -> Result<TurboCdn> {
+    pub async fn build(mut self) -> Result<TurboCdn> {
+        // Auto-detect geographic region if enabled
+        if self.config.regions.auto_detect {
+            match self.auto_detect_region().await {
+                Ok(detected_region) => {
+                    info!("Auto-detected region: {:?}", detected_region);
+                    self.config.regions.default = detected_region.to_string();
+                }
+                Err(e) => {
+                    warn!("Failed to auto-detect region: {}, using default", e);
+                }
+            }
+        }
+
         // Create source manager
         let mut source_manager = SourceManager::new();
 
         for source in &self.sources {
             match source {
                 Source::GitHub => {
-                    let github_source = GitHubSource::new(self.config.sources.github.clone())?;
-                    source_manager.add_source(Box::new(github_source));
+                    if let Some(github_config) = self.config.mirrors.configs.get("github") {
+                        let github_source = GitHubSource::new(github_config.clone())?;
+                        source_manager.add_source(Box::new(github_source));
+                    }
                 }
                 Source::JsDelivr => {
-                    let jsdelivr_source =
-                        JsDelivrSource::new(self.config.sources.jsdelivr.clone())?;
-                    source_manager.add_source(Box::new(jsdelivr_source));
+                    if let Some(jsdelivr_config) = self.config.mirrors.configs.get("jsdelivr") {
+                        let jsdelivr_source = JsDelivrSource::new(jsdelivr_config.clone())?;
+                        source_manager.add_source(Box::new(jsdelivr_source));
+                    }
                 }
                 Source::Fastly => {
-                    let fastly_source = FastlySource::new(self.config.sources.fastly.clone())?;
-                    source_manager.add_source(Box::new(fastly_source));
+                    if let Some(fastly_config) = self.config.mirrors.configs.get("fastly") {
+                        let fastly_source = FastlySource::new(fastly_config.clone())?;
+                        source_manager.add_source(Box::new(fastly_source));
+                    }
                 }
                 Source::Cloudflare => {
-                    let cloudflare_source =
-                        CloudflareSource::new(self.config.sources.cloudflare.clone())?;
-                    source_manager.add_source(Box::new(cloudflare_source));
+                    if let Some(cloudflare_config) = self.config.mirrors.configs.get("cloudflare") {
+                        let cloudflare_source = CloudflareSource::new(cloudflare_config.clone())?;
+                        source_manager.add_source(Box::new(cloudflare_source));
+                    }
                 }
             }
         }
 
-        // Create components
-        let router = SmartRouter::new(self.config.clone(), source_manager);
-        let cache_manager = CacheManager::new(self.config.cache.clone()).await?;
-        let compliance_checker = ComplianceChecker::new(self.config.compliance.clone())?;
+        // Create components with performance data loading
+        let router = SmartRouter::new_with_data(self.config.clone(), source_manager).await?;
+        let cache_manager = CacheManager::new(self.config.performance.cache.clone()).await?;
+        let compliance_checker = ComplianceChecker::new(self.config.security.clone())?;
 
         // Create downloader
         let downloader =
             Downloader::new(self.config, router, cache_manager, compliance_checker).await?;
 
         Ok(TurboCdn { downloader })
+    }
+
+    /// Auto-detect user's geographic region
+    async fn auto_detect_region(&self) -> Result<Region> {
+        use crate::geo_detection::GeoDetector;
+
+        let mut detector = GeoDetector::new();
+        detector.detect_region().await
     }
 }
 
@@ -1326,8 +1357,8 @@ mod tests {
             .with_cache(false)
             .with_max_concurrent_downloads(10);
 
-        assert!(!builder.config.cache.enabled);
-        assert_eq!(builder.config.general.max_concurrent_downloads, 10);
+        assert!(!builder.config.performance.cache.enabled);
+        assert_eq!(builder.config.performance.max_concurrent_downloads, 10);
         assert_eq!(builder.sources.len(), 4); // Default sources
     }
 }

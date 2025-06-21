@@ -99,13 +99,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("📥 Downloading: {}", demo_url);
 
     let _download_options = DownloadOptions {
-        progress_callback: Some(Box::new(|progress| {
-            println!(
-                "   📊 Progress: {:.1}% ({:.2} MB/s)",
-                progress.percentage,
-                progress.speed_mbps()
-            );
-        })),
+        verify_checksum: true,
+        use_cache: true,
         ..Default::default()
     };
 
