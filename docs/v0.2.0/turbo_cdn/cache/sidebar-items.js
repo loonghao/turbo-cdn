@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["CacheLookup"],"struct":["CacheEntry","CacheManager","CacheStats","MetadataStore"]};

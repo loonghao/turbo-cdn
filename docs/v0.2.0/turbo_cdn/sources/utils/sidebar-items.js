@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["get_file_extension","is_binary_file","parse_repository","validate_url"]};
