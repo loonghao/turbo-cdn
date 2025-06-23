@@ -95,8 +95,8 @@ toml = "0.8"
 # Human-readable time parsing
 humantime-serde = "1.1"
 
-# Directory utilities
-dirs = "6.0"
+# Directory utilities - better cross-platform support similar to Python's platform_dirs
+directories = "5.0"
 
 [dev-dependencies]
 # Testing

@@ -88,7 +88,7 @@ async fn test_compliance_checker() {
         user_agent: "turbo-cdn/1.0".to_string(),
         custom_headers: std::collections::HashMap::new(),
         audit_logging: true,
-        audit_log_path: "~/.turbo-cdn/audit.log".to_string(),
+        audit_log_path: Some("~/.turbo-cdn/audit.log".to_string()),
         validate_source: false,
         verify_open_source: false,
         strict_mode: false,
