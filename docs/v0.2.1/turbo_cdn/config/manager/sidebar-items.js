@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["ConfigEvent"],"struct":["ConfigBuilder","ConfigManager"]};

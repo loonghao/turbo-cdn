@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["DomainCategory"],"struct":["DomainEntry","DomainManager","DomainStats","DomainValidationConfig"]};
