@@ -15,11 +15,13 @@ fn create_test_compliance_config(temp_dir: &TempDir) -> ComplianceConfig {
         user_agent: "turbo-cdn/1.0".to_string(),
         custom_headers: std::collections::HashMap::new(),
         audit_logging: true,
-        audit_log_path: temp_dir
-            .path()
-            .join("audit.log")
-            .to_string_lossy()
-            .to_string(),
+        audit_log_path: Some(
+            temp_dir
+                .path()
+                .join("audit.log")
+                .to_string_lossy()
+                .to_string(),
+        ),
         validate_source: true,
         verify_open_source: true,
         strict_mode: true,

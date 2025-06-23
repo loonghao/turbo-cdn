@@ -112,10 +112,8 @@ pub enum AuditEventType {
 impl ComplianceChecker {
     /// Create a new compliance checker
     pub fn new(config: ComplianceConfig) -> Result<Self> {
-        let audit_logger = AuditLogger::new(
-            config.audit_log_path.as_deref(),
-            config.audit_logging,
-        )?;
+        let audit_logger =
+            AuditLogger::new(config.audit_log_path.as_deref(), config.audit_logging)?;
         let license_validator = LicenseValidator::new();
         let content_validator = ContentValidator::new()?;
         let domain_manager = DomainManager::new();
@@ -134,10 +132,8 @@ impl ComplianceChecker {
         config: ComplianceConfig,
         domain_manager: DomainManager,
     ) -> Result<Self> {
-        let audit_logger = AuditLogger::new(
-            config.audit_log_path.as_deref(),
-            config.audit_logging,
-        )?;
+        let audit_logger =
+            AuditLogger::new(config.audit_log_path.as_deref(), config.audit_logging)?;
         let license_validator = LicenseValidator::new();
         let content_validator = ContentValidator::new()?;
 
@@ -318,10 +314,7 @@ impl AuditLogger {
             }
         }
 
-        Ok(Self {
-            log_path,
-            enabled,
-        })
+        Ok(Self { log_path, enabled })
     }
 
     async fn log_entry(&self, entry: &AuditLogEntry) -> Result<()> {

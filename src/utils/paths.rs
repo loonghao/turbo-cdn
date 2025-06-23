@@ -7,6 +7,7 @@
 //! directory usage according to platform standards and avoiding creation
 //! of directories in inappropriate locations.
 
+use directories::{ProjectDirs, UserDirs};
 use std::path::{Path, PathBuf};
 use tracing::{debug, warn};
 
@@ -14,21 +15,20 @@ use crate::error::{Result, TurboCdnError};
 
 /// Cross-platform path manager for turbo-cdn
 ///
-/// This manager ensures that all paths follow platform conventions:
-/// - Uses standard system directories (config, cache, data)
+/// This manager ensures that all paths follow platform conventions using the
+/// `directories` crate which provides better cross-platform support similar
+/// to Python's platform_dirs:
+/// - Uses standard system directories (config, cache, data, runtime, etc.)
 /// - Avoids creating directories in current working directory
+/// - Follows platform-specific conventions (XDG on Linux, Library on macOS, AppData on Windows)
 /// - Provides consistent fallback behavior
 /// - Handles path expansion and validation
 #[derive(Debug, Clone)]
 pub struct PathManager {
-    /// Application name for directory creation
-    app_name: String,
-    /// Base configuration directory
-    config_dir: Option<PathBuf>,
-    /// Base cache directory
-    cache_dir: Option<PathBuf>,
-    /// Base data directory
-    data_dir: Option<PathBuf>,
+    /// Project directories for application-specific paths
+    project_dirs: Option<ProjectDirs>,
+    /// User directories for standard user paths
+    user_dirs: Option<UserDirs>,
 }
 
 impl Default for PathManager {
@@ -39,37 +39,44 @@ impl Default for PathManager {
 
 impl PathManager {
     /// Create a new path manager with the specified application name
+    ///
+    /// Uses reverse domain notation for better cross-platform compatibility:
+    /// - Qualifier: "com" (organization domain)
+    /// - Organization: "turbo-cdn" (project organization)
+    /// - Application: app_name (specific application name)
     pub fn new(app_name: &str) -> Self {
-        let config_dir = dirs::config_dir();
-        let cache_dir = dirs::cache_dir();
-        let data_dir = dirs::data_dir();
+        // Create project directories using reverse domain notation
+        // This follows platform conventions better than simple app names
+        let project_dirs = ProjectDirs::from("com", "turbo-cdn", app_name);
+        let user_dirs = UserDirs::new();
 
         debug!(
-            "PathManager initialized - config: {:?}, cache: {:?}, data: {:?}",
-            config_dir, cache_dir, data_dir
+            "PathManager initialized for app '{}' - project_dirs: {:?}",
+            app_name,
+            project_dirs
+                .as_ref()
+                .map(|pd| (pd.config_dir(), pd.cache_dir(), pd.data_dir()))
         );
 
         Self {
-            app_name: app_name.to_string(),
-            config_dir,
-            cache_dir,
-            data_dir,
+            project_dirs,
+            user_dirs,
         }
     }
 
     /// Get the application's configuration directory
     ///
     /// Returns the standard configuration directory for the current platform:
-    /// - Linux: `$XDG_CONFIG_HOME/turbo-cdn` or `~/.config/turbo-cdn`
-    /// - macOS: `~/Library/Application Support/turbo-cdn`
-    /// - Windows: `%APPDATA%\turbo-cdn`
+    /// - Linux: `$XDG_CONFIG_HOME/turbo-cdn/app` or `~/.config/turbo-cdn/app`
+    /// - macOS: `~/Library/Application Support/com.turbo-cdn.app`
+    /// - Windows: `%APPDATA%\turbo-cdn\app\config`
     ///
     /// If the standard directory is not available, returns an error rather
     /// than falling back to inappropriate locations.
     pub fn config_dir(&self) -> Result<PathBuf> {
-        self.config_dir
+        self.project_dirs
             .as_ref()
-            .map(|dir| dir.join(&self.app_name))
+            .map(|pd| pd.config_dir().to_path_buf())
             .ok_or_else(|| {
                 TurboCdnError::config(
                     "Unable to determine configuration directory for this platform".to_string(),
@@ -80,13 +87,13 @@ impl PathManager {
     /// Get the application's cache directory
     ///
     /// Returns the standard cache directory for the current platform:
-    /// - Linux: `$XDG_CACHE_HOME/turbo-cdn` or `~/.cache/turbo-cdn`
-    /// - macOS: `~/Library/Caches/turbo-cdn`
-    /// - Windows: `%LOCALAPPDATA%\turbo-cdn\cache`
+    /// - Linux: `$XDG_CACHE_HOME/turbo-cdn/app` or `~/.cache/turbo-cdn/app`
+    /// - macOS: `~/Library/Caches/com.turbo-cdn.app`
+    /// - Windows: `%LOCALAPPDATA%\turbo-cdn\app\cache`
     pub fn cache_dir(&self) -> Result<PathBuf> {
-        self.cache_dir
+        self.project_dirs
             .as_ref()
-            .map(|dir| dir.join(&self.app_name))
+            .map(|pd| pd.cache_dir().to_path_buf())
             .ok_or_else(|| {
                 TurboCdnError::config(
                     "Unable to determine cache directory for this platform".to_string(),
@@ -97,16 +104,62 @@ impl PathManager {
     /// Get the application's data directory
     ///
     /// Returns the standard data directory for the current platform:
-    /// - Linux: `$XDG_DATA_HOME/turbo-cdn` or `~/.local/share/turbo-cdn`
-    /// - macOS: `~/Library/Application Support/turbo-cdn`
-    /// - Windows: `%APPDATA%\turbo-cdn`
+    /// - Linux: `$XDG_DATA_HOME/turbo-cdn/app` or `~/.local/share/turbo-cdn/app`
+    /// - macOS: `~/Library/Application Support/com.turbo-cdn.app`
+    /// - Windows: `%APPDATA%\turbo-cdn\app\data`
     pub fn data_dir(&self) -> Result<PathBuf> {
-        self.data_dir
+        self.project_dirs
             .as_ref()
-            .map(|dir| dir.join(&self.app_name))
+            .map(|pd| pd.data_dir().to_path_buf())
             .ok_or_else(|| {
                 TurboCdnError::config(
                     "Unable to determine data directory for this platform".to_string(),
+                )
+            })
+    }
+
+    /// Get the application's local data directory
+    ///
+    /// Returns the local data directory (for machine-specific data):
+    /// - Linux: `$XDG_DATA_HOME/turbo-cdn/app` or `~/.local/share/turbo-cdn/app`
+    /// - macOS: `~/Library/Application Support/com.turbo-cdn.app`
+    /// - Windows: `%LOCALAPPDATA%\turbo-cdn\app\data`
+    pub fn data_local_dir(&self) -> Result<PathBuf> {
+        self.project_dirs
+            .as_ref()
+            .map(|pd| pd.data_local_dir().to_path_buf())
+            .ok_or_else(|| {
+                TurboCdnError::config(
+                    "Unable to determine local data directory for this platform".to_string(),
+                )
+            })
+    }
+
+    /// Get the application's runtime directory
+    ///
+    /// Returns the runtime directory for temporary files:
+    /// - Linux: `$XDG_RUNTIME_DIR/turbo-cdn/app` or `/tmp/turbo-cdn/app`
+    /// - macOS: Same as cache directory
+    /// - Windows: Same as cache directory
+    pub fn runtime_dir(&self) -> Result<PathBuf> {
+        if let Some(pd) = &self.project_dirs {
+            if let Some(runtime_dir) = pd.runtime_dir() {
+                return Ok(runtime_dir.to_path_buf());
+            }
+        }
+
+        // Fallback to cache directory if runtime directory is not available
+        self.cache_dir()
+    }
+
+    /// Get the user's home directory
+    pub fn home_dir(&self) -> Result<PathBuf> {
+        self.user_dirs
+            .as_ref()
+            .map(|ud| ud.home_dir().to_path_buf())
+            .ok_or_else(|| {
+                TurboCdnError::config(
+                    "Unable to determine home directory for this platform".to_string(),
                 )
             })
     }
@@ -230,14 +283,9 @@ impl PathManager {
         let path_str = path_str.trim();
 
         // Handle tilde expansion
-        if path_str.starts_with("~/") {
-            if let Some(home) = dirs::home_dir() {
-                return Ok(home.join(&path_str[2..]));
-            } else {
-                return Err(TurboCdnError::config(
-                    "Cannot expand ~ path: home directory not found".to_string(),
-                ));
-            }
+        if let Some(stripped) = path_str.strip_prefix("~/") {
+            let home = self.home_dir()?;
+            return Ok(home.join(stripped));
         }
 
         // For now, just return the path as-is
@@ -285,7 +333,8 @@ mod tests {
     #[test]
     fn test_path_manager_creation() {
         let manager = PathManager::new("test-app");
-        assert_eq!(manager.app_name, "test-app");
+        // Should have project directories initialized
+        assert!(manager.project_dirs.is_some());
     }
 
     #[test]
@@ -325,7 +374,7 @@ mod tests {
         assert_eq!(result, PathBuf::from("/tmp/test"));
 
         // Test tilde expansion (if home directory is available)
-        if dirs::home_dir().is_some() {
+        if manager.home_dir().is_ok() {
             let result = manager.expand_path("~/test");
             assert!(result.is_ok());
             if let Ok(expanded) = result {
@@ -449,6 +498,60 @@ mod tests {
 
         if let Ok(data_dir) = manager.data_dir() {
             assert!(!data_dir.starts_with(&current_dir));
+        }
+    }
+
+    #[test]
+    fn test_additional_directories() {
+        let manager = PathManager::new("test-app");
+
+        // Test local data directory
+        if let Ok(data_local_dir) = manager.data_local_dir() {
+            assert!(data_local_dir.to_string_lossy().contains("test-app"));
+            assert!(data_local_dir.is_absolute());
+        }
+
+        // Test runtime directory
+        if let Ok(runtime_dir) = manager.runtime_dir() {
+            assert!(runtime_dir.is_absolute());
+        }
+
+        // Test home directory
+        if let Ok(home_dir) = manager.home_dir() {
+            assert!(home_dir.is_absolute());
+        }
+    }
+
+    #[test]
+    fn test_platform_specific_paths() {
+        let manager = PathManager::new("test-app");
+
+        // Test that paths follow platform conventions
+        if let Ok(config_dir) = manager.config_dir() {
+            let path_str = config_dir.to_string_lossy();
+
+            if cfg!(target_os = "windows") {
+                // Windows should use AppData
+                assert!(path_str.contains("AppData") || path_str.contains("turbo-cdn"));
+            } else if cfg!(target_os = "macos") {
+                // macOS should use Library/Application Support
+                assert!(path_str.contains("Library") || path_str.contains("Application Support"));
+            } else {
+                // Linux/Unix should use .config or XDG
+                assert!(path_str.contains(".config") || path_str.contains("turbo-cdn"));
+            }
+        }
+    }
+
+    #[test]
+    fn test_reverse_domain_notation() {
+        let manager = PathManager::new("test-app");
+
+        // Test that paths include proper organization structure
+        if let Ok(config_dir) = manager.config_dir() {
+            let path_str = config_dir.to_string_lossy();
+            // Should contain either the app name or organization structure
+            assert!(path_str.contains("test-app") || path_str.contains("turbo-cdn"));
         }
     }
 }
