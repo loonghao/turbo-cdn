@@ -18,6 +18,7 @@ use tracing::{debug, info, warn};
 
 use super::models::GlobalConfig;
 use crate::error::{Result, TurboCdnError};
+use crate::utils::PathManager;
 
 /// Configuration manager with figment-based loading
 #[derive(Debug)]
@@ -82,44 +83,11 @@ impl ConfigManager {
 
     /// Discover configuration files in standard locations
     fn discover_config_files() -> Vec<PathBuf> {
-        let mut files = Vec::new();
+        let path_manager = PathManager::default();
 
-        // System-wide configuration files
-        let system_paths = [
-            "/etc/turbo-cdn/config.toml",
-            "/usr/local/etc/turbo-cdn/config.toml",
-        ];
-
-        for path in &system_paths {
-            let path = PathBuf::from(path);
-            if path.exists() {
-                files.push(path);
-            }
-        }
-
-        // User configuration files
-        if let Some(home) = dirs::home_dir() {
-            let user_paths = [".config/turbo-cdn/config.toml", ".turbo-cdn/config.toml"];
-
-            for path in &user_paths {
-                let path = home.join(path);
-                if path.exists() {
-                    files.push(path);
-                }
-            }
-        }
-
-        // Project-level configuration files
-        let project_paths = ["turbo-cdn.toml", ".turbo-cdn.toml", "config/default.toml"];
-
-        for filename in &project_paths {
-            let path = PathBuf::from(filename);
-            if path.exists() {
-                files.push(path);
-            }
-        }
-
-        files
+        // Use PathManager's discover_config_files method which handles
+        // cross-platform paths properly and avoids hardcoded paths
+        path_manager.discover_config_files()
     }
 
     /// Load configuration from multiple sources

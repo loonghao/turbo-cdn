@@ -369,7 +369,7 @@ enabled = true
 max_size = "10GB"
 ttl = "24h"
 cleanup_interval = "1h"
-directory = "~/.cache/turbo-cdn"
+# directory = "custom/cache/path"  # Uncomment to override default cache directory
 
 [performance.bandwidth]
 adaptive = true
@@ -385,7 +385,7 @@ verify_checksums = true
 allowed_protocols = ["https", "http"]
 user_agent = "turbo-cdn/1.0"
 audit_logging = true
-audit_log_path = "~/.turbo-cdn/audit.log"
+# audit_log_path = "custom/audit.log"  # Uncomment to override default audit log path
 validate_source = false
 verify_open_source = false
 strict_mode = false
@@ -407,7 +407,7 @@ level = "info"
 format = "json"
 output = "stdout"
 audit_enabled = true
-audit_file = "~/.turbo-cdn/audit.log"
+# audit_file = "custom/audit.log"  # Uncomment to override default audit log file
 
 [logging.rotation]
 max_size = "100MB"

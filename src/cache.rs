@@ -10,6 +10,7 @@ use tracing::{debug, info, warn};
 
 use crate::config::CacheConfig;
 use crate::error::{Result, TurboCdnError};
+use crate::utils::PathManager;
 
 /// Cache manager for downloaded files and metadata
 #[derive(Debug)]
@@ -88,17 +89,18 @@ impl CacheManager {
 
         // Get cache directory from config or use default
         let cache_dir = if let Some(ref dir) = config.directory {
-            PathBuf::from(dir)
+            // If directory is specified in config, expand it properly
+            let path_manager = PathManager::default();
+            path_manager.expand_path(dir)?
         } else {
-            dirs::cache_dir()
-                .unwrap_or_else(|| PathBuf::from(".cache"))
-                .join("turbo-cdn")
+            // Use standard cache directory
+            let path_manager = PathManager::default();
+            path_manager.cache_dir()?
         };
 
         // Ensure cache directory exists
-        fs::create_dir_all(&cache_dir).await.map_err(|e| {
-            TurboCdnError::cache(format!("Failed to create cache directory: {}", e))
-        })?;
+        let path_manager = PathManager::default();
+        path_manager.ensure_dir_exists(&cache_dir).await?;
 
         let metadata_store = MetadataStore::new(&cache_dir).await?;
 

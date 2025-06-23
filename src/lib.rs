@@ -56,6 +56,7 @@ pub mod geo_detection;
 pub mod progress;
 pub mod router;
 pub mod sources;
+pub mod utils;
 
 use std::path::PathBuf;
 use tracing::{info, warn};
@@ -72,6 +73,7 @@ pub use sources::{
     cloudflare::CloudflareSource, fastly::FastlySource, github::GitHubSource,
     jsdelivr::JsDelivrSource, DownloadUrl, SourceManager,
 };
+pub use utils::PathManager;
 
 /// Parsed URL information from various sources
 #[derive(Debug, Clone, PartialEq, Eq)]
