@@ -96,7 +96,7 @@ toml = "0.8"
 humantime-serde = "1.1"
 
 # Directory utilities - better cross-platform support similar to Python's platform_dirs
-directories = "5.0"
+directories = "6.0"
 
 [dev-dependencies]
 # Testing
