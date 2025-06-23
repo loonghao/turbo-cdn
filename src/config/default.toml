@@ -261,7 +261,7 @@ weight = 100
 
 # GitHub Mirrors (Disabled by default - use with caution)
 [mirrors.configs.github]
-enabled = false
+enabled = true
 description = "GitHub content mirrors (use with caution - may have sync delays)"
 warning = "GitHub mirrors may have sync delays and should be used with caution"
 timeout = "30s"

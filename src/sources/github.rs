@@ -272,16 +272,41 @@ impl DownloadSource for GitHubSource {
                     asset.download_count.to_string(),
                 );
 
+                // Add original GitHub URL
                 urls.push(DownloadUrl {
                     url: asset.browser_download_url.clone(),
                     source: self.name().to_string(),
                     priority: self.priority(),
                     size: Some(asset.size),
                     checksum: None, // GitHub doesn't provide checksums in API
-                    metadata,
+                    metadata: metadata.clone(),
                     supports_ranges: true, // GitHub supports range requests
                     estimated_latency: None,
                 });
+
+                // Add GitHub releases mirror URLs for better download speed
+                let mirror_urls = vec![
+                    format!("https://ghfast.top/{}", asset.browser_download_url),
+                    format!("https://mirror.ghproxy.com/{}", asset.browser_download_url),
+                    format!("https://ghproxy.net/{}", asset.browser_download_url),
+                ];
+
+                for (index, mirror_url) in mirror_urls.iter().enumerate() {
+                    let mut mirror_metadata = metadata.clone();
+                    mirror_metadata.insert("mirror_type".to_string(), "github_releases".to_string());
+                    mirror_metadata.insert("mirror_index".to_string(), index.to_string());
+
+                    urls.push(DownloadUrl {
+                        url: mirror_url.clone(),
+                        source: format!("{}_mirror_{}", self.name(), index + 1),
+                        priority: self.priority() + 10 + (index as u8), // Lower priority than original
+                        size: Some(asset.size),
+                        checksum: None,
+                        metadata: mirror_metadata,
+                        supports_ranges: true,
+                        estimated_latency: Some(100), // Assume mirrors might be faster
+                    });
+                }
                 break;
             }
         }
