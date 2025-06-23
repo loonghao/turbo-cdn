@@ -475,9 +475,9 @@ pub struct SecurityConfig {
     #[serde(default)]
     pub audit_logging: bool,
 
-    /// Audit log file path
-    #[serde(default = "default_audit_log_path")]
-    pub audit_log_path: String,
+    /// Audit log file path (optional, uses standard data directory if not specified)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub audit_log_path: Option<String>,
 
     /// Validate source authenticity
     #[serde(default)]
@@ -645,9 +645,7 @@ fn default_api_base_url() -> String {
 fn default_base_url() -> String {
     "https://github.com".to_string()
 }
-fn default_audit_log_path() -> String {
-    "~/.turbo-cdn/audit.log".to_string()
-}
+
 fn default_retention_days() -> u32 {
     30
 }

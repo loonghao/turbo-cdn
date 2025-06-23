@@ -11,6 +11,7 @@ use tracing::{debug, info, warn};
 use crate::config::{Region, TurboCdnConfig};
 use crate::error::{Result, TurboCdnError};
 use crate::sources::{DownloadUrl, SourceManager};
+use crate::utils::PathManager;
 
 /// Intelligent router for selecting optimal download sources
 #[derive(Debug)]
@@ -387,11 +388,16 @@ impl PerformanceTracker {
 
     /// Get the path for performance data file
     fn get_data_file_path() -> PathBuf {
-        if let Some(config_dir) = dirs::config_dir() {
-            let turbo_cdn_dir = config_dir.join("turbo-cdn");
-            turbo_cdn_dir.join("performance.json")
-        } else {
-            PathBuf::from("performance.json")
+        let path_manager = PathManager::default();
+
+        // Use data directory for performance data instead of config directory
+        match path_manager.data_file("performance.json") {
+            Ok(path) => path,
+            Err(e) => {
+                warn!("Failed to get data directory, using fallback: {}", e);
+                // As a last resort, use current directory but warn about it
+                PathBuf::from("performance.json")
+            }
         }
     }
 
@@ -474,11 +480,10 @@ impl PerformanceTracker {
 
     /// Save performance data to file (async)
     pub async fn save_data(&self) -> Result<()> {
-        // Ensure directory exists
+        // Ensure directory exists using PathManager
         if let Some(parent) = self.data_file.parent() {
-            fs::create_dir_all(parent).await.map_err(|e| {
-                TurboCdnError::internal(format!("Failed to create config directory: {}", e))
-            })?;
+            let path_manager = PathManager::default();
+            path_manager.ensure_dir_exists(parent).await?;
         }
 
         #[derive(Serialize)]
@@ -508,10 +513,10 @@ impl PerformanceTracker {
 
     /// Save performance data synchronously (for auto-save)
     fn save_data_sync(&self) -> Result<()> {
-        // Ensure directory exists
+        // Ensure directory exists using standard library (sync version)
         if let Some(parent) = self.data_file.parent() {
             std::fs::create_dir_all(parent).map_err(|e| {
-                TurboCdnError::internal(format!("Failed to create config directory: {}", e))
+                TurboCdnError::internal(format!("Failed to create data directory: {}", e))
             })?;
         }
 

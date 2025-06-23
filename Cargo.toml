@@ -21,15 +21,18 @@ exclude = ["/.github/", "/tests/fixtures/", "/benches/", "*.md"]
 # Async runtime
 tokio = { version = "1.0", features = ["full", "fs"] }
 
-# HTTP client
+# HTTP client - optimized for performance and cross-platform compatibility
 reqwest = { version = "0.12", features = [
     "json",
     "stream",
-    "rustls-tls",
+    "rustls-tls",      # Use rustls instead of OpenSSL to avoid build issues
     "gzip",
     "brotli",
     "deflate",
-] }
+    "http2",           # Enable HTTP/2 support for better performance
+    "charset",         # Better charset handling
+    "trust-dns",       # Use trust-dns for better DNS resolution
+], default-features = false }
 
 # Serialization
 serde = { version = "1.0", features = ["derive"] }

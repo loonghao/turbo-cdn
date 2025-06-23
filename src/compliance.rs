@@ -3,7 +3,6 @@
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
-use std::path::Path;
 use tokio::io::AsyncWriteExt;
 use tracing::{debug, info, warn};
 use uuid::Uuid;
@@ -11,6 +10,7 @@ use uuid::Uuid;
 use crate::config::ComplianceConfig;
 use crate::domain_manager::DomainManager;
 use crate::error::{Result, TurboCdnError};
+use crate::utils::PathManager;
 
 /// Compliance checker for ensuring legal and ethical downloads
 #[derive(Debug)]
@@ -113,7 +113,7 @@ impl ComplianceChecker {
     /// Create a new compliance checker
     pub fn new(config: ComplianceConfig) -> Result<Self> {
         let audit_logger = AuditLogger::new(
-            std::path::Path::new(&config.audit_log_path),
+            config.audit_log_path.as_deref(),
             config.audit_logging,
         )?;
         let license_validator = LicenseValidator::new();
@@ -135,7 +135,7 @@ impl ComplianceChecker {
         domain_manager: DomainManager,
     ) -> Result<Self> {
         let audit_logger = AuditLogger::new(
-            std::path::Path::new(&config.audit_log_path),
+            config.audit_log_path.as_deref(),
             config.audit_logging,
         )?;
         let license_validator = LicenseValidator::new();
@@ -293,10 +293,22 @@ impl ComplianceChecker {
 }
 
 impl AuditLogger {
-    fn new(log_path: &Path, enabled: bool) -> Result<Self> {
+    fn new(log_path_str: Option<&str>, enabled: bool) -> Result<Self> {
+        let path_manager = PathManager::default();
+
+        // Get audit log path - use provided path or default to data directory
+        let log_path = if let Some(path_str) = log_path_str {
+            // Expand the provided path (handles ~ and environment variables)
+            path_manager.expand_path(path_str)?
+        } else {
+            // Use default audit log path in data directory
+            path_manager.data_file("audit.log")?
+        };
+
         if enabled {
-            // Ensure the parent directory exists
+            // Ensure the parent directory exists using PathManager
             if let Some(parent) = log_path.parent() {
+                // Use sync version since this is called from sync context
                 std::fs::create_dir_all(parent).map_err(|e| {
                     TurboCdnError::compliance(format!(
                         "Failed to create audit log directory: {}",
@@ -307,7 +319,7 @@ impl AuditLogger {
         }
 
         Ok(Self {
-            log_path: log_path.to_path_buf(),
+            log_path,
             enabled,
         })
     }
