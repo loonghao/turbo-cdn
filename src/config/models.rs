@@ -234,6 +234,71 @@ pub struct MirrorConfig {
     /// Authentication token (for compatibility)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub token: Option<String>,
+
+    /// API token for GitHub (environment variable support)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub api_token: Option<String>,
+
+    /// GitHub releases mirror configuration
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub releases_mirrors: Option<ReleasesMirrorConfig>,
+}
+
+/// GitHub releases mirror configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ReleasesMirrorConfig {
+    /// Enable releases mirrors
+    #[serde(default = "default_true")]
+    pub enabled: bool,
+
+    /// Auto-select mirrors based on user region
+    #[serde(default = "default_true")]
+    pub auto_select_by_region: bool,
+
+    /// Enable health checks for mirrors
+    #[serde(default = "default_true")]
+    pub health_check_enabled: bool,
+
+    /// Health check timeout in milliseconds
+    #[serde(default = "default_health_check_timeout")]
+    pub health_check_timeout_ms: u64,
+
+    /// Mirror sources
+    #[serde(default)]
+    pub sources: Vec<ReleasesMirrorSource>,
+}
+
+/// GitHub releases mirror source
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ReleasesMirrorSource {
+    /// Mirror name
+    pub name: String,
+
+    /// URL template with {original_url} placeholder
+    pub url_template: String,
+
+    /// Applicable regions
+    pub regions: Vec<String>,
+
+    /// Mirror priority (lower = higher priority)
+    #[serde(default = "default_priority")]
+    pub priority: u32,
+
+    /// Enable this mirror
+    #[serde(default = "default_true")]
+    pub enabled: bool,
+
+    /// Health check URL
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub health_check_url: Option<String>,
+
+    /// Estimated latency in milliseconds
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub estimated_latency_ms: Option<u64>,
+
+    /// Trust level (0-100)
+    #[serde(default = "default_trust_level")]
+    pub trust_level: u8,
 }
 
 /// Mirror source definition
@@ -648,6 +713,10 @@ fn default_base_url() -> String {
 
 fn default_retention_days() -> u32 {
     30
+}
+
+fn default_health_check_timeout() -> u64 {
+    5000
 }
 
 impl Default for GlobalConfig {

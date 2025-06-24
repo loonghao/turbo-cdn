@@ -265,6 +265,39 @@ enabled = true
 description = "GitHub content mirrors (use with caution - may have sync delays)"
 warning = "GitHub mirrors may have sync delays and should be used with caution"
 timeout = "30s"
+api_token = "${GITHUB_TOKEN}"  # Optional: GitHub API token for higher rate limits
+
+# GitHub releases mirror configuration
+[mirrors.configs.github.releases_mirrors]
+enabled = true
+auto_select_by_region = true
+health_check_enabled = true
+health_check_timeout_ms = 5000
+
+# GitHub releases mirror sources
+[[mirrors.configs.github.releases_mirrors.sources]]
+name = "ghfast"
+url_template = "https://ghfast.top/{original_url}"
+regions = ["China", "Asia"]
+priority = 10
+enabled = true
+health_check_url = "https://ghfast.top"
+
+[[mirrors.configs.github.releases_mirrors.sources]]
+name = "ghproxy"
+url_template = "https://mirror.ghproxy.com/{original_url}"
+regions = ["China"]
+priority = 20
+enabled = true
+health_check_url = "https://mirror.ghproxy.com"
+
+[[mirrors.configs.github.releases_mirrors.sources]]
+name = "ghproxy_net"
+url_template = "https://ghproxy.net/{original_url}"
+regions = ["Global"]
+priority = 30
+enabled = true
+health_check_url = "https://ghproxy.net"
 
 [[mirrors.configs.github.sources]]
 url = "https://hub.fastgit.xyz"

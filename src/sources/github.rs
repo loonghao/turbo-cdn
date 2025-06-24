@@ -8,8 +8,9 @@ use tracing::{debug, warn};
 
 use super::{
     DownloadSource, DownloadUrl, FileInfo, HealthStatus, RepositoryMetadata, RepositoryStats,
+    MirrorManager,
 };
-use crate::config::GitHubConfig;
+use crate::config::{GitHubConfig, Region};
 use crate::error::{Result, TurboCdnError};
 
 /// GitHub download source
@@ -17,6 +18,7 @@ use crate::error::{Result, TurboCdnError};
 pub struct GitHubSource {
     config: GitHubConfig,
     client: reqwest::Client,
+    mirror_manager: Option<MirrorManager>,
 }
 
 /// GitHub API response for repository information
@@ -70,6 +72,11 @@ struct GitHubTag {
 impl GitHubSource {
     /// Create a new GitHub source
     pub fn new(config: GitHubConfig) -> Result<Self> {
+        Self::with_region(config, Region::Global)
+    }
+
+    /// Create a new GitHub source with specific region
+    pub fn with_region(config: GitHubConfig, region: Region) -> Result<Self> {
         let mut headers = reqwest::header::HeaderMap::new();
         headers.insert(
             reqwest::header::USER_AGENT,
@@ -91,7 +98,22 @@ impl GitHubSource {
             .build()
             .map_err(|e| TurboCdnError::config(format!("Failed to create HTTP client: {}", e)))?;
 
-        Ok(Self { config, client })
+        // Initialize mirror manager if releases_mirrors is configured
+        let mirror_manager = if let Some(releases_config) = &config.releases_mirrors {
+            if releases_config.enabled {
+                Some(MirrorManager::new(releases_config.clone(), region))
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
+        Ok(Self {
+            config,
+            client,
+            mirror_manager,
+        })
     }
 
     /// Parse repository string into owner and name
@@ -272,40 +294,38 @@ impl DownloadSource for GitHubSource {
                     asset.download_count.to_string(),
                 );
 
-                // Add original GitHub URL
-                urls.push(DownloadUrl {
+                let original_download_url = DownloadUrl {
                     url: asset.browser_download_url.clone(),
                     source: self.name().to_string(),
                     priority: self.priority(),
                     size: Some(asset.size),
                     checksum: None, // GitHub doesn't provide checksums in API
-                    metadata: metadata.clone(),
+                    metadata,
                     supports_ranges: true, // GitHub supports range requests
                     estimated_latency: None,
-                });
+                };
 
-                // Add GitHub releases mirror URLs for better download speed
-                let mirror_urls = vec![
-                    format!("https://ghfast.top/{}", asset.browser_download_url),
-                    format!("https://mirror.ghproxy.com/{}", asset.browser_download_url),
-                    format!("https://ghproxy.net/{}", asset.browser_download_url),
-                ];
+                // Add original GitHub URL
+                urls.push(original_download_url.clone());
 
-                for (index, mirror_url) in mirror_urls.iter().enumerate() {
-                    let mut mirror_metadata = metadata.clone();
-                    mirror_metadata.insert("mirror_type".to_string(), "github_releases".to_string());
-                    mirror_metadata.insert("mirror_index".to_string(), index.to_string());
-
-                    urls.push(DownloadUrl {
-                        url: mirror_url.clone(),
-                        source: format!("{}_mirror_{}", self.name(), index + 1),
-                        priority: self.priority() + 10 + (index as u8), // Lower priority than original
-                        size: Some(asset.size),
-                        checksum: None,
-                        metadata: mirror_metadata,
-                        supports_ranges: true,
-                        estimated_latency: Some(100), // Assume mirrors might be faster
-                    });
+                // Add mirror URLs if mirror manager is available
+                if let Some(mirror_manager) = &self.mirror_manager {
+                    match mirror_manager
+                        .generate_mirror_urls(&asset.browser_download_url, &original_download_url)
+                        .await
+                    {
+                        Ok(mut mirror_urls) => {
+                            debug!(
+                                "Generated {} mirror URLs for {}",
+                                mirror_urls.len(),
+                                asset.browser_download_url
+                            );
+                            urls.append(&mut mirror_urls);
+                        }
+                        Err(e) => {
+                            warn!("Failed to generate mirror URLs: {}", e);
+                        }
+                    }
                 }
                 break;
             }
