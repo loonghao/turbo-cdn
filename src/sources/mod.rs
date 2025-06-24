@@ -12,6 +12,7 @@ pub mod cloudflare;
 pub mod fastly;
 pub mod github;
 pub mod jsdelivr;
+pub mod mirror_manager;
 
 /// Trait for download sources
 #[async_trait]
@@ -354,3 +355,10 @@ pub mod utils {
         }
     }
 }
+
+// Re-exports
+pub use cloudflare::CloudflareSource;
+pub use fastly::FastlySource;
+pub use github::GitHubSource;
+pub use jsdelivr::JsDelivrSource;
+pub use mirror_manager::{MirrorManager, MirrorStats};
