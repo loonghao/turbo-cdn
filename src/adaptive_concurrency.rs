@@ -296,7 +296,7 @@ pub struct ConcurrencyStats {
 
 impl std::fmt::Display for ConcurrencyStats {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, 
+        write!(f,
             "Concurrency: {}/{}-{} | Requests: {}/{} ({:.1}% success) | RTT: {:.1}ms | Congestion: {:.1}%",
             self.current_concurrency,
             self.min_concurrency,

@@ -60,6 +60,7 @@ pub struct ConcurrentDownloader {
     initial_chunk_size: u64,
     min_chunk_size: u64,
     max_chunk_size: u64,
+    #[allow(dead_code)]
     request_timeout: Duration,
     adaptive_chunking_enabled: bool,
     speed_threshold_bytes_per_sec: u64,
