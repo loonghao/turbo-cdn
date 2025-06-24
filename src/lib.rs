@@ -498,6 +498,15 @@ pub mod async_api {
             let client = AsyncTurboCdn::new().await?;
             client.get_optimal_url_async(url).await
         }
+
+        /// Quick download to specific path
+        pub async fn download_url_to_path<P: AsRef<std::path::Path>>(
+            url: &str,
+            output_path: P,
+        ) -> Result<DownloadResult> {
+            let client = AsyncTurboCdn::new().await?;
+            client.download_to_path_async(url, output_path).await
+        }
     }
 }
 

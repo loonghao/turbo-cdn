@@ -51,7 +51,7 @@ async fn main() -> Result<()> {
     let url = "https://github.com/sharkdp/hyperfine/releases/download/v1.18.0/hyperfine-v1.18.0-x86_64-pc-windows-msvc.zip";
     
     println!("\n📥 Downloading with custom options: {}", url);
-    match turbo_cdn.download_from_url_with_options(url, download_options).await {
+    match turbo_cdn.download_with_options(url, std::env::temp_dir().join("download"), download_options).await {
         Ok(result) => {
             println!("✅ Download completed with custom options!");
             println!("   📁 Path: {}", result.path.display());

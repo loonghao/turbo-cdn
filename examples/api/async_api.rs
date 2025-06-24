@@ -246,7 +246,7 @@ async fn custom_download_with_timeout(url: &str, timeout_secs: u64) -> Result<St
         }
         _ = timeout_future => {
             println!("⏰ Operation timed out after {}s", timeout_secs);
-            Err(turbo_cdn::Error::Timeout)
+            Err(turbo_cdn::TurboCdnError::timeout("Operation timed out"))
         }
     }
 }

@@ -95,6 +95,7 @@ impl VxCdnManager {
         
         let total_duration = start.elapsed();
         
+        let was_optimized = optimized_url != url;
         let vx_result = VxDownloadResult {
             original_url: url.to_string(),
             optimized_url,
@@ -102,7 +103,7 @@ impl VxCdnManager {
             size: result.size,
             speed: result.speed,
             duration: total_duration,
-            was_optimized: optimized_url != url,
+            was_optimized,
         };
         
         println!("✅ vx: Download completed!");

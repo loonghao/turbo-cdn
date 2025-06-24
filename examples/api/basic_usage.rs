@@ -74,7 +74,7 @@ async fn main() -> Result<()> {
     println!("Downloading: {}", custom_url);
     println!("Output path: {}", custom_path.display());
     
-    match turbo_cdn.download_from_url_to_path(custom_url, &custom_path).await {
+    match turbo_cdn.download_to_path(custom_url, &custom_path).await {
         Ok(result) => {
             println!("✅ Download completed!");
             println!("   📁 Path: {}", result.path.display());
