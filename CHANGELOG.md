@@ -55,6 +55,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - improve code quality and remove code smells
 ## [Unreleased]
 
+## [0.3.0](https://github.com/loonghao/turbo-cdn/compare/v0.2.1...v0.3.0) - 2025-06-24
+
+### Added
+
+- [**breaking**] BREAKING CHANGES - Complete performance optimization overhaul
+- comprehensive performance optimizations and intelligent CDN system
+- implement configuration-driven GitHub releases mirror system
+
+### Fixed
+
+- enable GitHub source and add GitHub releases mirrors
+
+### Other
+
+- Update README with new intelligent optimization features
+
 ### Added
 - Initial project structure and core architecture
 - Multi-CDN support (GitHub, jsDelivr, Fastly, Cloudflare)
