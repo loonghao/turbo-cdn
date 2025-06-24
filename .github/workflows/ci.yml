@@ -55,25 +55,11 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # MSRV check
-          - build: pinned
-            os: ubuntu-latest
-            rust: 1.75.0
-            target: x86_64-unknown-linux-gnu
           # Stable builds
           - build: stable
             os: ubuntu-latest
             rust: stable
             target: x86_64-unknown-linux-gnu
-          - build: beta
-            os: ubuntu-latest
-            rust: beta
-            target: x86_64-unknown-linux-gnu
-          - build: nightly
-            os: ubuntu-latest
-            rust: nightly
-            target: x86_64-unknown-linux-gnu
-          # Cross-compilation targets
           - build: stable-musl
             os: ubuntu-latest
             rust: stable
