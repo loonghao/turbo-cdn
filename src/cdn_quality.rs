@@ -8,7 +8,7 @@
 
 use crate::config::TurboCdnConfig;
 use crate::error::Result;
-use crate::http_client::{create_best_client, HttpClient};
+use crate::http_client::HttpClient;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -52,7 +52,7 @@ impl Default for CdnMetrics {
 /// CDN quality assessor with real-time monitoring
 pub struct CdnQualityAssessor {
     metrics: Arc<RwLock<HashMap<String, CdnMetrics>>>,
-    http_client: Box<dyn HttpClient>,
+    http_client: HttpClient,
     #[allow(dead_code)]
     config: TurboCdnConfig,
     test_urls: Vec<String>,
@@ -73,7 +73,7 @@ impl CdnQualityAssessor {
     /// Create a new CDN quality assessor
     pub fn new(config: TurboCdnConfig) -> Result<Self> {
         let timeout = Duration::from_secs(config.performance.timeout);
-        let http_client = create_best_client(timeout)?;
+        let http_client = HttpClient::new(timeout)?;
 
         Ok(Self {
             metrics: Arc::new(RwLock::new(HashMap::new())),
