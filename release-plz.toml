@@ -29,9 +29,42 @@ changelog_update = true
 git_release_enable = true
 # Enable processing for releases
 release = true
-# Standard tag format (triggers release workflows)
-git_tag_name = "v{{version}}"
+# Standard tag format (triggers release workflows) - no 'v' prefix to match ripgrep style
+git_tag_name = "{{version}}"
 # Allow major version bumps for breaking changes
 allow_dirty = false
 # Ensure proper semantic versioning
 semver_check = true
+# Custom release body template
+git_release_body = """
+## 🚀 What's Changed
+
+{{changelog}}
+
+## 📦 Installation
+
+### Download Binary
+Download the appropriate binary for your platform from the assets below.
+
+### Using Cargo
+```bash
+cargo install turbo-cdn
+```
+
+### Using Package Managers
+```bash
+# Homebrew (macOS/Linux)
+brew install loonghao/tap/turbo-cdn
+
+# Scoop (Windows)
+scoop bucket add loonghao https://github.com/loonghao/scoop-bucket
+scoop install turbo-cdn
+```
+
+## 🔗 Links
+- [Documentation](https://docs.rs/turbo-cdn)
+- [Examples](https://github.com/loonghao/turbo-cdn/tree/main/examples)
+- [Changelog](https://github.com/loonghao/turbo-cdn/blob/main/CHANGELOG.md)
+
+**Full Changelog**: https://github.com/loonghao/turbo-cdn/compare/{{previous_tag}}...{{version}}
+"""
