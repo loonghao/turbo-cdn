@@ -93,16 +93,22 @@ impl DownloadBenchmark {
             
             // Test different methods
             let methods = vec![
-                ("Turbo CDN (Default)", Self::benchmark_turbo_cdn_default),
-                ("Turbo CDN (Optimized)", Self::benchmark_turbo_cdn_optimized),
-                ("Turbo CDN (Conservative)", Self::benchmark_turbo_cdn_conservative),
-                ("Async API (Quick)", Self::benchmark_async_api),
+                "Turbo CDN (Default)",
+                "Turbo CDN (Optimized)",
+                "Turbo CDN (Conservative)",
+                "Async API (Quick)",
             ];
-            
-            for (method_name, benchmark_fn) in methods {
+
+            for method_name in methods {
                 println!("\n🔍 Testing: {}", method_name);
-                
-                let result = benchmark_fn(url, &self.output_dir).await;
+
+                let result = match method_name {
+                    "Turbo CDN (Default)" => Self::benchmark_turbo_cdn_default(url, &self.output_dir).await,
+                    "Turbo CDN (Optimized)" => Self::benchmark_turbo_cdn_optimized(url, &self.output_dir).await,
+                    "Turbo CDN (Conservative)" => Self::benchmark_turbo_cdn_conservative(url, &self.output_dir).await,
+                    "Async API (Quick)" => Self::benchmark_async_api(url, &self.output_dir).await,
+                    _ => continue,
+                };
                 
                 match &result {
                     Ok(bench_result) if bench_result.success => {
@@ -137,7 +143,7 @@ impl DownloadBenchmark {
     }
 
     /// Benchmark Turbo CDN with default settings
-    async fn benchmark_turbo_cdn_default(url: &str, output_dir: &PathBuf) -> Result<BenchmarkResult> {
+    async fn benchmark_turbo_cdn_default(url: &str, _output_dir: &PathBuf) -> Result<BenchmarkResult> {
         let mut result = BenchmarkResult::new("Turbo CDN (Default)", url);
         
         let start = Instant::now();
@@ -163,12 +169,12 @@ impl DownloadBenchmark {
     }
 
     /// Benchmark Turbo CDN with optimized settings
-    async fn benchmark_turbo_cdn_optimized(url: &str, output_dir: &PathBuf) -> Result<BenchmarkResult> {
+    async fn benchmark_turbo_cdn_optimized(url: &str, _output_dir: &PathBuf) -> Result<BenchmarkResult> {
         let mut result = BenchmarkResult::new("Turbo CDN (Optimized)", url);
-        
+
         let options = DownloadOptions {
-            max_concurrent_chunks: 16,
-            chunk_size: 4 * 1024 * 1024, // 4MB
+            max_concurrent_chunks: Some(16),
+            chunk_size: Some(4 * 1024 * 1024), // 4MB
             enable_resume: true,
             custom_headers: None,
             timeout_override: Some(Duration::from_secs(300)),
@@ -181,7 +187,7 @@ impl DownloadBenchmark {
         
         match TurboCdn::new().await {
             Ok(turbo_cdn) => {
-                match turbo_cdn.download_from_url_with_options(url, options).await {
+                match turbo_cdn.download_with_options(url, std::env::temp_dir().join("benchmark_optimized"), options).await {
                     Ok(download_result) => {
                         let duration = start.elapsed();
                         result = result.with_success(download_result.size, duration);
@@ -200,12 +206,12 @@ impl DownloadBenchmark {
     }
 
     /// Benchmark Turbo CDN with conservative settings
-    async fn benchmark_turbo_cdn_conservative(url: &str, output_dir: &PathBuf) -> Result<BenchmarkResult> {
+    async fn benchmark_turbo_cdn_conservative(url: &str, _output_dir: &PathBuf) -> Result<BenchmarkResult> {
         let mut result = BenchmarkResult::new("Turbo CDN (Conservative)", url);
         
         let options = DownloadOptions {
-            max_concurrent_chunks: 2,
-            chunk_size: 512 * 1024, // 512KB
+            max_concurrent_chunks: Some(2),
+            chunk_size: Some(512 * 1024), // 512KB
             enable_resume: true,
             custom_headers: None,
             timeout_override: Some(Duration::from_secs(120)),
@@ -218,7 +224,7 @@ impl DownloadBenchmark {
         
         match TurboCdn::new().await {
             Ok(turbo_cdn) => {
-                match turbo_cdn.download_from_url_with_options(url, options).await {
+                match turbo_cdn.download_with_options(url, std::env::temp_dir().join("benchmark_conservative"), options).await {
                     Ok(download_result) => {
                         let duration = start.elapsed();
                         result = result.with_success(download_result.size, duration);
@@ -237,7 +243,7 @@ impl DownloadBenchmark {
     }
 
     /// Benchmark async API
-    async fn benchmark_async_api(url: &str, output_dir: &PathBuf) -> Result<BenchmarkResult> {
+    async fn benchmark_async_api(url: &str, _output_dir: &PathBuf) -> Result<BenchmarkResult> {
         let mut result = BenchmarkResult::new("Async API (Quick)", url);
         
         let start = Instant::now();

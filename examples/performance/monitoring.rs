@@ -215,7 +215,7 @@ impl MonitoredTurboCdn {
         }
         
         // Perform download
-        match self.client.download_from_url(url).await {
+        match self.client.download_to_path(url, std::env::temp_dir().join("monitoring_basic")).await {
             Ok(result) => {
                 let duration = start.elapsed();
                 
@@ -244,8 +244,8 @@ impl MonitoredTurboCdn {
         let start = Instant::now();
         
         // Record configuration
-        metric.chunks_used = options.max_concurrent_chunks;
-        metric.chunk_size = options.chunk_size;
+        metric.chunks_used = options.max_concurrent_chunks.unwrap_or(4);
+        metric.chunk_size = options.chunk_size.unwrap_or(1024 * 1024) as usize;
         
         // Check CDN optimization
         match self.client.get_optimal_url(url).await {
@@ -258,7 +258,7 @@ impl MonitoredTurboCdn {
         }
         
         // Perform download
-        match self.client.download_from_url_with_options(url, options).await {
+        match self.client.download_with_options(url, std::env::temp_dir().join("monitoring_download"), options).await {
             Ok(result) => {
                 let duration = start.elapsed();
                 
@@ -418,8 +418,8 @@ async fn main() -> Result<()> {
     
     let configs = vec![
         ("High Performance", DownloadOptions {
-            max_concurrent_chunks: 16,
-            chunk_size: 4 * 1024 * 1024,
+            max_concurrent_chunks: Some(16),
+            chunk_size: Some(4 * 1024 * 1024),
             enable_resume: true,
             custom_headers: None,
             timeout_override: Some(Duration::from_secs(300)),
@@ -428,8 +428,8 @@ async fn main() -> Result<()> {
             progress_callback: None,
         }),
         ("Conservative", DownloadOptions {
-            max_concurrent_chunks: 2,
-            chunk_size: 512 * 1024,
+            max_concurrent_chunks: Some(2),
+            chunk_size: Some(512 * 1024),
             enable_resume: true,
             custom_headers: None,
             timeout_override: Some(Duration::from_secs(120)),
