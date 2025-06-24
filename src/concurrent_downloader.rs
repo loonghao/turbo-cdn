@@ -124,16 +124,18 @@ impl ConcurrentDownloader {
         let output_path = output_path.as_ref();
         let start_time = Instant::now();
 
-        // Use intelligent server selection
+        // Use intelligent server selection - select more URLs for better redundancy
+        let max_urls_to_try = (urls.len()).min(8); // Try up to 8 different URLs
         let selected_urls = {
             let tracker = self.server_performance_tracker.lock().unwrap();
-            tracker.select_best_servers(urls, self.max_concurrent_chunks.min(urls.len()))
+            tracker.select_best_servers(urls, max_urls_to_try)
         };
 
         info!(
-            "Selected {} URLs for download from {} candidates",
+            "Selected {} URLs for download from {} candidates (max_concurrent_chunks: {})",
             selected_urls.len(),
-            urls.len()
+            urls.len(),
+            self.max_concurrent_chunks
         );
 
         // Try each URL with retry logic
@@ -444,32 +446,32 @@ impl ConcurrentDownloader {
 
     /// Calculate optimal chunk size based on file size and current speed
     fn calculate_optimal_chunk_size(&self, file_size: u64, current_speed: Option<u64>) -> u64 {
-        // Base chunk size on file size - 更激进的分块策略
+        // 更激进的分块策略 - 优先考虑并发度而不是块大小
         let size_based_chunk = if file_size > 100 * 1024 * 1024 {
-            // Large files (>100MB): use much larger chunks
-            self.initial_chunk_size * 4
+            // Large files (>100MB): use smaller chunks for maximum parallelism
+            self.initial_chunk_size / 2
         } else if file_size > 10 * 1024 * 1024 {
-            // Medium files (10-100MB): use larger chunks
-            self.initial_chunk_size * 2
+            // Medium files (10-100MB): use smaller chunks
+            self.initial_chunk_size / 2
         } else if file_size > 1024 * 1024 {
-            // Small files (1-10MB): use normal chunks
-            self.initial_chunk_size
+            // Small files (1-10MB): use even smaller chunks for turbo speed
+            self.initial_chunk_size / 4
         } else {
-            // Very small files (<1MB): use smaller chunks but not too small
-            (self.initial_chunk_size / 4).max(self.min_chunk_size)
+            // Very small files (<1MB): use minimum chunk size for maximum concurrency
+            self.min_chunk_size
         };
 
         // Adjust based on current download speed if available
         if let Some(speed) = current_speed {
             if speed > self.speed_threshold_bytes_per_sec * 4 {
-                // Very fast connection: use much larger chunks
-                size_based_chunk * 3
+                // Very fast connection: still use smaller chunks for better parallelism
+                size_based_chunk
             } else if speed > self.speed_threshold_bytes_per_sec * 2 {
-                // Fast connection: use larger chunks
-                size_based_chunk * 2
+                // Fast connection: use smaller chunks
+                size_based_chunk
             } else if speed < self.speed_threshold_bytes_per_sec / 4 {
-                // Very slow connection: use smaller chunks for better parallelism
-                size_based_chunk / 3
+                // Very slow connection: use much smaller chunks for maximum parallelism
+                size_based_chunk / 2
             } else if speed < self.speed_threshold_bytes_per_sec / 2 {
                 // Slow connection: use smaller chunks
                 size_based_chunk / 2
@@ -478,6 +480,7 @@ impl ConcurrentDownloader {
                 size_based_chunk
             }
         } else {
+            // Default to smaller chunks for turbo speed
             size_based_chunk
         }
     }
