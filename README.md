@@ -8,33 +8,39 @@
 
 [中文文档](README_zh.md) | [English](README.md)
 
-**Intelligent download accelerator with automatic CDN optimization, dynamic file segmentation, and smart server selection for maximum speed.**
+**Next-generation intelligent download accelerator with automatic geographic detection, real-time CDN quality assessment, and comprehensive mirror optimization for 6+ package managers.**
 
 ## ✨ Features
 
-### 🌐 Automatic CDN Optimization
-- **GitHub Acceleration**: Automatic ghproxy.net and mirror.ghproxy.com routing
-- **Smart URL Mapping**: Regex-based pattern matching for optimal CDN selection
-- **Geographic Awareness**: Location-based CDN selection for maximum speed
-- **Automatic Failover**: Seamless switching between CDN sources
+### 🌐 Intelligent Geographic Detection
+- **Auto-Region Detection**: Automatic IP geolocation with multiple API fallbacks
+- **Network Performance Testing**: Latency-based region detection when IP fails
+- **Smart Caching**: Intelligent caching to avoid repeated detection calls
+- **Global Coverage**: Optimized for China, Asia-Pacific, Europe, North America, and Global regions
 
-### 🧠 Intelligent Server Selection
-- **Performance Tracking**: Learn from historical download performance
-- **Adaptive Routing**: Select fastest servers based on real-time metrics
-- **Success Rate Monitoring**: Track and optimize based on reliability
-- **Response Time Analysis**: Choose servers with lowest latency
+### 🔗 Extensive CDN Mirror Sources (16+ Rules)
+- **GitHub Mirrors**: 7 high-quality sources (ghfast.top, gh.con.sh, cors.isteed.cc, etc.)
+- **Python PyPI**: Tsinghua, Aliyun, Douban mirrors
+- **Rust Crates**: Tsinghua, USTC mirrors
+- **Go Modules**: goproxy.cn, Aliyun mirrors
+- **Docker Hub**: USTC, NetEase, Docker China mirrors
+- **Maven Central**: Aliyun, Tsinghua mirrors
+- **jsDelivr Enhanced**: 5 high-performance CDN nodes
+- **npm/unpkg/Cloudflare**: Complete frontend resource acceleration
 
-### ⚡ Dynamic File Segmentation
-- **Adaptive Chunking**: IDM-style dynamic chunk size adjustment
-- **Concurrent Downloads**: Multi-threaded parallel downloading
+### 📊 Real-time CDN Quality Assessment
+- **Performance Monitoring**: Latency, bandwidth, and availability testing
+- **Quality Scoring**: Comprehensive 0-100 scoring algorithm
+- **Dynamic Sorting**: URL ranking based on real-time performance
+- **Background Assessment**: Asynchronous quality evaluation
+- **Smart Caching**: Avoid redundant testing with intelligent cache
+
+### ⚡ High-Performance Architecture
+- **mimalloc**: High-performance memory allocator
+- **isahc**: libcurl-based HTTP client for optimal performance
+- **Adaptive Concurrency**: Network condition-based concurrency control
+- **Dynamic Chunking**: IDM-style adaptive chunk size adjustment
 - **Resume Support**: Robust resume capability for interrupted downloads
-- **Speed Optimization**: Automatic chunk size tuning based on connection speed
-
-### 🎯 User-Friendly CLI
-- **Simple Commands**: Easy-to-use download and optimization commands
-- **Rich Output**: Beautiful progress indicators and performance metrics
-- **Multiple Aliases**: Short commands like `dl` for `download`
-- **Helpful Feedback**: Performance tips and optimization suggestions
 
 ## 🚀 Quick Start
 
@@ -54,22 +60,25 @@ cargo build --release
 
 ### CLI Usage
 
-The easiest way to use Turbo CDN is through the command line:
+Experience next-generation download acceleration:
 
 ```bash
-# Download with automatic CDN optimization
-turbo-cdn download "https://github.com/BurntSushi/ripgrep/releases/download/14.1.1/ripgrep-14.1.1-x86_64-pc-windows-msvc.zip"
+# Download with intelligent CDN optimization and geographic detection
+turbo-cdn dl "https://github.com/BurntSushi/ripgrep/releases/download/14.1.1/ripgrep-14.1.1-x86_64-pc-windows-msvc.zip"
 
-# Get optimized CDN URL
+# Get optimized CDN URL with real-time quality assessment
 turbo-cdn optimize "https://github.com/user/repo/releases/download/v1.0/file.zip"
 
-# Download to specific location
-turbo-cdn dl "https://example.com/file.zip" "./downloads/file.zip"
+# Download with verbose output showing geographic detection and CDN selection
+turbo-cdn dl "https://example.com/file.zip" --verbose
 
-# View performance statistics
+# Download to specific location with progress tracking
+turbo-cdn download "https://example.com/file.zip" "./downloads/file.zip"
+
+# View comprehensive performance statistics
 turbo-cdn stats
 
-# Show help
+# Show help with all available options
 turbo-cdn --help
 ```
 
@@ -109,17 +118,22 @@ async fn main() -> turbo_cdn::Result<()> {
 }
 ```
 
-### Supported CDN Optimizations
+### Comprehensive CDN Optimizations
 
-Turbo CDN automatically optimizes URLs from these sources:
+Turbo CDN now supports 16+ optimization rules across 6+ package managers:
 
-| Source | Optimization | Example |
-|--------|-------------|---------|
-| **GitHub Releases** | ghproxy.net mirror | `github.com/user/repo/releases/download/v1.0/file.zip` → `ghproxy.net/https://github.com/...` |
-| **GitHub Raw** | mirror.ghproxy.com | `raw.githubusercontent.com/user/repo/main/file.txt` → `mirror.ghproxy.com/https://raw.githubusercontent.com/...` |
-| **GitHub Archive** | ghproxy.net mirror | `github.com/user/repo/archive/refs/tags/v1.0.zip` → `ghproxy.net/https://github.com/...` |
+| Package Manager | Mirrors Available | Geographic Optimization |
+|----------------|-------------------|------------------------|
+| **GitHub** | 7 mirrors (ghfast.top, gh.con.sh, cors.isteed.cc, etc.) | China, Asia, Global |
+| **Python PyPI** | Tsinghua, Aliyun, Douban | China region optimized |
+| **Rust Crates** | Tsinghua, USTC | China region optimized |
+| **Go Modules** | goproxy.cn, Aliyun | China region optimized |
+| **Docker Hub** | USTC, NetEase, Docker China | China region optimized |
+| **Maven Central** | Aliyun, Tsinghua | China region optimized |
+| **jsDelivr** | 5 global CDN nodes | All regions |
+| **npm/unpkg** | Multiple CDN alternatives | Global optimization |
 
-*More CDN optimizations coming soon for jsDelivr, npm, PyPI, and other sources*
+**Real-time Quality Assessment**: All mirrors are continuously monitored for latency, bandwidth, and availability with dynamic ranking.
 
 ### Advanced Usage
 
@@ -176,25 +190,30 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-## 📊 Performance
+## 📊 Performance Improvements
 
-Turbo CDN delivers significant performance improvements through intelligent optimization:
+Turbo CDN v0.2.1 delivers unprecedented performance through comprehensive optimizations:
 
-- **2-5x faster** downloads with automatic CDN routing
-- **99%+ success rate** with intelligent server selection
-- **Dynamic segmentation** adapts to connection speed and file size
-- **Resume support** for interrupted downloads
-- **Zero configuration** - works out of the box
+### 📈 Quantified Improvements
 
-### Real-World Performance
+| Metric | Before | After | Improvement |
+|--------|--------|-------|-------------|
+| **CDN Rules** | 6 rules | 16 rules | **167% increase** |
+| **GitHub Mirrors** | 2 sources | 7 sources | **250% increase** |
+| **Package Managers** | GitHub only | 6+ managers | **6x expansion** |
+| **Region Detection** | Manual | Automatic | **Full automation** |
+| **Quality Assessment** | None | Real-time | **New feature** |
+| **Configuration** | Mixed languages | English only | **Internationalized** |
 
-| Feature | Benefit | Example |
-|---------|---------|---------|
-| **CDN Optimization** | 2-5x speed improvement | GitHub → ghproxy.net routing |
-| **Dynamic Chunking** | Optimal parallelization | 8 concurrent chunks for 2MB file |
-| **Smart Server Selection** | Best performance tracking | Learns fastest servers over time |
-| **Automatic Resume** | No lost progress | Continues from last byte |
-| **Geographic Routing** | Regional optimization | China users get optimized mirrors |
+### 🚀 Real-World Performance
+
+| Feature | Benefit | Technical Implementation |
+|---------|---------|-------------------------|
+| **Geographic Detection** | Auto-optimal region | IP geolocation + network testing |
+| **CDN Quality Assessment** | Real-time performance ranking | Latency/bandwidth/availability scoring |
+| **Intelligent Concurrency** | Adaptive parallelization | Network condition-based adjustment |
+| **High-Performance Stack** | Memory & HTTP optimization | mimalloc + isahc + dashmap |
+| **Smart Caching** | Reduced redundant operations | DNS cache + connection pooling |
 
 ## 🛡️ Compliance & Legal
 
@@ -223,12 +242,22 @@ Turbo CDN delivers significant performance improvements through intelligent opti
 - **Version Extraction**: Smart version parsing from URLs and filenames
 - **Error Handling**: Comprehensive validation and error reporting
 
-### 🌍 Geographic Optimization
-- **🇨🇳 China**: Optimized for Fastly and jsDelivr (better connectivity)
-- **🇺🇸 North America**: Prioritizes GitHub and Cloudflare (lower latency)
-- **🇪🇺 Europe**: Balanced selection with regional preferences
-- **🌏 Asia-Pacific**: Regional CDN performance optimization
-- **🌐 Global**: Intelligent selection based on real-time performance
+### 🌍 Intelligent Geographic Optimization
+
+#### 🇨🇳 China Region (Comprehensive Coverage)
+- **GitHub**: 7 high-speed mirrors (ghfast.top, gh.con.sh, cors.isteed.cc, github.moeyy.xyz, mirror.ghproxy.com, ghproxy.net)
+- **Python**: Tsinghua, Aliyun, Douban PyPI mirrors
+- **Rust**: Tsinghua, USTC Crates mirrors
+- **Go**: goproxy.cn, Aliyun Go modules
+- **Docker**: USTC, NetEase, Docker China
+- **Maven**: Aliyun, Tsinghua Central mirrors
+
+#### 🌐 Global Regions (High-Performance CDN)
+- **jsDelivr**: 5 global nodes (fastly, gcore, testingcf, jsdelivr.b-cdn)
+- **Cloudflare**: Global edge network optimization
+- **Fastly**: High-performance global CDN
+- **unpkg**: npm package global distribution
+- **Auto-Detection**: IP geolocation + network performance testing
 
 ### ⚡ Performance Features
 - **Automatic Failover**: Seamless switching when primary CDN fails
@@ -237,35 +266,36 @@ Turbo CDN delivers significant performance improvements through intelligent opti
 - **Parallel Downloads**: Multi-threaded chunked downloading
 - **Resume Support**: Robust resume capability for interrupted downloads
 
-## 🏗️ Architecture
+## 🏗️ Next-Generation Architecture
 
-Turbo CDN uses a simplified, high-performance architecture:
+Turbo CDN v0.2.1 features an intelligent, high-performance architecture:
 
 ```
 ┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   Input URL     │───▶│   URL Mapper     │───▶│ CDN Optimization│
-│                 │    │ (Regex Rules)    │    │ & Mirror Select │
+│   Input URL     │───▶│ Geographic       │───▶│ CDN Quality     │
+│                 │    │ Detection        │    │ Assessment      │
 └─────────────────┘    └──────────────────┘    └─────────────────┘
                                 │                        │
                                 ▼                        ▼
 ┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│ Server Tracker  │    │ Intelligent      │    │ Dynamic File    │
-│ (Performance)   │    │ Server Selection │    │ Segmentation    │
+│ URL Mapper      │    │ Real-time        │    │ Dynamic         │
+│ (16+ Rules)     │    │ Performance      │    │ Ranking         │
 └─────────────────┘    └──────────────────┘    └─────────────────┘
                                 │                        │
                                 ▼                        ▼
 ┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│ Concurrent      │    │ Progress         │    │ Downloaded      │
-│ Downloader      │    │ Tracking         │    │ File            │
+│ Intelligent     │    │ High-Performance │    │ Downloaded      │
+│ Concurrency     │    │ HTTP Client      │    │ File            │
 └─────────────────┘    └──────────────────┘    └─────────────────┘
 ```
 
-### Key Components
+### 🔧 Advanced Components
 
-- **URL Mapper**: Regex-based pattern matching for CDN optimization
-- **Server Tracker**: Learns from download performance to select best servers
-- **Dynamic Segmentation**: Adapts chunk sizes based on file size and connection speed
-- **Concurrent Downloader**: Multi-threaded downloads with resume support
+- **Geographic Detection**: Multi-API IP geolocation with network performance fallback
+- **CDN Quality Assessment**: Real-time latency/bandwidth/availability monitoring
+- **URL Mapper**: 16+ regex rules covering 6+ package managers
+- **Intelligent Concurrency**: Adaptive parallelization based on network conditions
+- **High-Performance Stack**: mimalloc + isahc + dashmap for optimal performance
 
 ## 🤝 Contributing
 
@@ -306,10 +336,17 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🙏 Acknowledgments
 
-- [reqwest](https://github.com/seanmonstar/reqwest) - HTTP client
+### High-Performance Stack
+- [isahc](https://github.com/sagebind/isahc) - libcurl-based HTTP client for optimal performance
+- [mimalloc](https://github.com/microsoft/mimalloc) - High-performance memory allocator
+- [dashmap](https://github.com/xacrimon/dashmap) - Concurrent hash maps
 - [tokio](https://github.com/tokio-rs/tokio) - Async runtime
-- [indicatif](https://github.com/console-rs/indicatif) - Progress bars
+
+### Core Dependencies
+- [figment](https://github.com/SergioBenitez/Figment) - Configuration management
+- [tracing](https://github.com/tokio-rs/tracing) - Structured logging
 - [serde](https://github.com/serde-rs/serde) - Serialization
+- [clap](https://github.com/clap-rs/clap) - Command line parsing
 
 ## 📞 Support
 

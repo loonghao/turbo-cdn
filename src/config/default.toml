@@ -62,6 +62,15 @@ min_concurrent_downloads = 4
 max_concurrent_downloads_limit = 32
 network_congestion_threshold = 0.5
 
+# DNS cache settings
+dns_cache_enabled = true
+dns_cache_ttl_seconds = 300
+dns_cache_max_entries = 1000
+
+# Smart chunking settings
+smart_chunking_enabled = true
+chunk_performance_history_size = 100
+
 [security]
 # Verify SSL certificates
 verify_ssl = true

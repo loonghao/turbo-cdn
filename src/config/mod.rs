@@ -90,6 +90,24 @@ pub struct PerformanceConfig {
     pub max_chunk_size: u64,
     /// Speed threshold for adaptive chunking in bytes per second
     pub speed_threshold_bytes_per_sec: u64,
+    /// Enable adaptive concurrency control
+    pub adaptive_concurrency: Option<bool>,
+    /// Minimum concurrent downloads
+    pub min_concurrent_downloads: Option<u32>,
+    /// Maximum concurrent downloads limit
+    pub max_concurrent_downloads_limit: Option<u32>,
+    /// Network congestion threshold (0.0 to 1.0)
+    pub network_congestion_threshold: Option<f64>,
+    /// Enable DNS caching
+    pub dns_cache_enabled: Option<bool>,
+    /// DNS cache TTL in seconds
+    pub dns_cache_ttl_seconds: Option<u64>,
+    /// Maximum DNS cache entries
+    pub dns_cache_max_entries: Option<usize>,
+    /// Enable smart chunking
+    pub smart_chunking_enabled: Option<bool>,
+    /// Chunk performance history size
+    pub chunk_performance_history_size: Option<usize>,
 }
 
 /// Security configuration
@@ -162,6 +180,15 @@ impl Default for PerformanceConfig {
             min_chunk_size: 256 * 1024,                     // 256KB
             max_chunk_size: 10 * 1024 * 1024,               // 10MB
             speed_threshold_bytes_per_sec: 2 * 1024 * 1024, // 2MB/s
+            adaptive_concurrency: Some(true),
+            min_concurrent_downloads: Some(4),
+            max_concurrent_downloads_limit: Some(32),
+            network_congestion_threshold: Some(0.5),
+            dns_cache_enabled: Some(true),
+            dns_cache_ttl_seconds: Some(300),
+            dns_cache_max_entries: Some(1000),
+            smart_chunking_enabled: Some(true),
+            chunk_performance_history_size: Some(100),
         }
     }
 }
