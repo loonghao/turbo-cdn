@@ -177,6 +177,7 @@ impl Clone for DownloadOptions {
 pub struct TurboCdn {
     url_mapper: Arc<Mutex<UrlMapper>>,
     downloader: ConcurrentDownloader,
+    #[allow(dead_code)]
     progress_tracker: Option<std::sync::Arc<ProgressTracker>>,
 }
 

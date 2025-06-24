@@ -249,6 +249,7 @@ impl LoadBalancer {
     }
 
     /// Adaptive selection that changes strategy based on conditions
+    #[allow(dead_code)]
     async fn adaptive_select(&self, servers: &[String]) -> Option<String> {
         // Analyze current conditions and choose best strategy
         let avg_health = self.calculate_average_health(servers);
@@ -323,6 +324,7 @@ impl LoadBalancer {
     }
 
     /// Calculate average health across servers
+    #[allow(dead_code)]
     fn calculate_average_health(&self, servers: &[String]) -> f64 {
         if servers.is_empty() {
             return 0.0;
@@ -342,6 +344,7 @@ impl LoadBalancer {
     }
 
     /// Calculate load variance across servers
+    #[allow(dead_code)]
     fn calculate_load_variance(&self, servers: &[String]) -> f64 {
         if servers.len() < 2 {
             return 0.0;
@@ -420,7 +423,13 @@ impl LoadBalancer {
             healthy_servers,
             total_connections,
             avg_health,
-            strategy: format!("{:?}", self.strategy.try_read().map(|s| *s).unwrap_or(LoadBalancingStrategy::RoundRobin)),
+            strategy: format!(
+                "{:?}",
+                self.strategy
+                    .try_read()
+                    .map(|s| *s)
+                    .unwrap_or(LoadBalancingStrategy::RoundRobin)
+            ),
         }
     }
 }

@@ -139,6 +139,7 @@ pub struct TestingConfig {
     pub speed_test_sizes: Vec<u64>,
 }
 
+#[allow(clippy::derivable_impls)]
 impl Default for TurboCdnConfig {
     fn default() -> Self {
         Self {
@@ -231,6 +232,7 @@ impl Default for TestingConfig {
 
 impl TurboCdnConfig {
     /// Load configuration from multiple sources
+    #[allow(clippy::result_large_err)]
     pub fn load() -> Result<Self, figment::Error> {
         let config_content = include_str!("default.toml");
 
@@ -241,6 +243,7 @@ impl TurboCdnConfig {
     }
 
     /// Create with custom config file
+    #[allow(clippy::result_large_err)]
     pub fn load_from_file<P: Into<PathBuf>>(path: P) -> Result<Self, figment::Error> {
         let config_content = include_str!("default.toml");
 
@@ -275,6 +278,22 @@ impl std::fmt::Display for Region {
             Region::Europe => write!(f, "Europe"),
             Region::NorthAmerica => write!(f, "NorthAmerica"),
             Region::Custom(name) => write!(f, "{}", name),
+        }
+    }
+}
+
+impl std::str::FromStr for Region {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "China" => Ok(Region::China),
+            "Asia" => Ok(Region::Asia),
+            "Global" => Ok(Region::Global),
+            "AsiaPacific" => Ok(Region::AsiaPacific),
+            "Europe" => Ok(Region::Europe),
+            "NorthAmerica" => Ok(Region::NorthAmerica),
+            other => Ok(Region::Custom(other.to_string())),
         }
     }
 }

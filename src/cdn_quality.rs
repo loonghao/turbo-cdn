@@ -53,6 +53,7 @@ impl Default for CdnMetrics {
 pub struct CdnQualityAssessor {
     metrics: Arc<RwLock<HashMap<String, CdnMetrics>>>,
     http_client: Box<dyn HttpClient>,
+    #[allow(dead_code)]
     config: TurboCdnConfig,
     test_urls: Vec<String>,
 }

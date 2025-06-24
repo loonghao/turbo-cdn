@@ -214,7 +214,7 @@ async fn show_spinner() {
     let spinner_chars = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
     for _ in 0..10 {
         for &ch in &spinner_chars {
-            print!("\r{} {}", ch, "Processing...");
+            print!("\r{} Processing...", ch);
             io::stdout().flush().unwrap();
             tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
         }
@@ -226,7 +226,7 @@ async fn handle_stats_command() -> std::result::Result<(), Box<dyn std::error::E
     println!("====================================");
 
     // Create a TurboCdn instance to access stats
-    let turbo_cdn = TurboCdn::new().await?;
+    let _turbo_cdn = TurboCdn::new().await?;
 
     // Note: In a real implementation, we'd need to expose the downloader's stats
     // For now, show basic information

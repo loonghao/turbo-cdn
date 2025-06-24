@@ -70,6 +70,7 @@ pub struct UrlMapper {
     cache_ttl: Duration,
     max_cache_entries: usize,
     server_tracker: Arc<Mutex<ServerTracker>>,
+    #[allow(dead_code)]
     quality_assessor: Option<Arc<CdnQualityAssessor>>,
 }
 
@@ -357,7 +358,7 @@ mod tests {
         let original_url = "https://github.com/BurntSushi/ripgrep/releases/download/14.1.1/ripgrep-14.1.1-x86_64-pc-windows-msvc.zip";
         let mapped_urls = mapper.map_url(original_url).unwrap();
 
-        assert!(mapped_urls.len() >= 1);
+        assert!(!mapped_urls.is_empty());
         assert!(mapped_urls.contains(&original_url.to_string()));
     }
 
@@ -369,7 +370,7 @@ mod tests {
         let original_url = "https://cdn.jsdelivr.net/npm/package@1.0.0/dist/package.min.js";
         let mapped_urls = mapper.map_url(original_url).unwrap();
 
-        assert!(mapped_urls.len() >= 1);
+        assert!(!mapped_urls.is_empty());
         assert!(mapped_urls.contains(&original_url.to_string()));
     }
 

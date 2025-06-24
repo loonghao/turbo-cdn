@@ -20,6 +20,7 @@ pub struct GeoDetector {
     client: reqwest::Client,
     cache: Option<DetectionResult>,
     cache_ttl: Duration,
+    #[allow(dead_code)]
     config: TurboCdnConfig,
 }
 

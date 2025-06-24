@@ -7,7 +7,6 @@
 //! based on file size, network conditions, and server capabilities.
 
 use crate::config::TurboCdnConfig;
-use std::cmp::{max, min};
 use std::time::Duration;
 use tracing::{debug, info};
 
@@ -44,6 +43,7 @@ pub struct ChunkMetrics {
 /// Smart chunking calculator
 #[derive(Debug)]
 pub struct SmartChunking {
+    #[allow(dead_code)]
     config: TurboCdnConfig,
     /// Minimum chunk size
     min_chunk_size: u64,
@@ -138,22 +138,22 @@ impl SmartChunking {
         // Adjust based on file size
         if file_size < 10 * 1024 * 1024 {
             // < 10MB
-            chunk_size = min(chunk_size, file_size / 4);
+            chunk_size = chunk_size.min(file_size / 4);
         } else if file_size > 100 * 1024 * 1024 {
             // > 100MB
-            chunk_size = max(chunk_size, 5 * 1024 * 1024); // At least 5MB chunks
+            chunk_size = chunk_size.max(5 * 1024 * 1024); // At least 5MB chunks
         }
 
         // Adjust based on recent performance
         if let Some(avg_performance) = self.calculate_average_performance() {
             if avg_performance.success_rate < 0.8 {
                 // High failure rate: use smaller chunks
-                chunk_size = max(chunk_size / 2, self.min_chunk_size);
+                chunk_size = (chunk_size / 2).max(self.min_chunk_size);
             } else if avg_performance.success_rate > 0.95
                 && avg_performance.avg_speed > 5.0 * 1024.0 * 1024.0
             {
                 // High success rate and good speed: use larger chunks
-                chunk_size = min(chunk_size * 2, self.max_chunk_size);
+                chunk_size = (chunk_size * 2).min(self.max_chunk_size);
             }
         }
 
@@ -163,11 +163,11 @@ impl SmartChunking {
 
     /// Calculate maximum number of chunks
     fn calculate_max_chunks(&self, file_size: u64, chunk_size: u64) -> u32 {
-        let calculated_chunks = (file_size + chunk_size - 1) / chunk_size;
+        let calculated_chunks = file_size.div_ceil(chunk_size);
         let max_concurrent = self.config.performance.max_concurrent_downloads as u64;
 
         // Limit chunks to reasonable number
-        min(calculated_chunks, max_concurrent * 2).max(1) as u32
+        calculated_chunks.min(max_concurrent * 2).max(1) as u32
     }
 
     /// Generate chunk ranges for a file
@@ -205,7 +205,7 @@ impl SmartChunking {
         let mut index = 0;
 
         while start < file_size {
-            let end = min(start + chunk_size - 1, file_size - 1);
+            let end = (start + chunk_size - 1).min(file_size - 1);
             let size = end - start + 1;
 
             chunks.push(ChunkRange {
@@ -234,7 +234,7 @@ impl SmartChunking {
         base_size: u64,
         max_chunks: u32,
     ) -> Vec<ChunkRange> {
-        let optimal_chunks = min((file_size + base_size - 1) / base_size, max_chunks as u64) as u32;
+        let optimal_chunks = file_size.div_ceil(base_size).min(max_chunks as u64) as u32;
 
         let actual_chunk_size = file_size / optimal_chunks as u64;
         self.generate_fixed_chunks(file_size, actual_chunk_size)
@@ -251,7 +251,7 @@ impl SmartChunking {
         let mut chunks = Vec::new();
         let mut start = 0;
         let mut index = 0;
-        let initial_small_chunks = min(8, max_chunks / 2);
+        let initial_small_chunks = 8_u32.min(max_chunks / 2);
 
         // First few chunks are smaller for quick start
         let small_chunk_size = chunk_size / 2;
@@ -260,7 +260,7 @@ impl SmartChunking {
                 break;
             }
 
-            let end = min(start + small_chunk_size - 1, file_size - 1);
+            let end = (start + small_chunk_size - 1).min(file_size - 1);
             let size = end - start + 1;
 
             chunks.push(ChunkRange {
@@ -276,7 +276,7 @@ impl SmartChunking {
 
         // Remaining chunks are larger
         while start < file_size && index < max_chunks {
-            let end = min(start + chunk_size - 1, file_size - 1);
+            let end = (start + chunk_size - 1).min(file_size - 1);
             let size = end - start + 1;
 
             chunks.push(ChunkRange {
@@ -294,7 +294,7 @@ impl SmartChunking {
             "Generated {} aggressive chunks ({} small + {} large)",
             chunks.len(),
             initial_small_chunks,
-            chunks.len() - initial_small_chunks as usize
+            chunks.len().saturating_sub(initial_small_chunks as usize)
         );
         chunks
     }
@@ -317,16 +317,12 @@ impl SmartChunking {
         if let Some(performance) = self.calculate_average_performance() {
             if performance.success_rate > 0.9 && performance.avg_speed > 2.0 * 1024.0 * 1024.0 {
                 // Good performance: try larger chunks
-                self.optimal_chunk_size = min(
-                    self.optimal_chunk_size + 512 * 1024, // Increase by 512KB
-                    self.max_chunk_size,
-                );
+                self.optimal_chunk_size = (self.optimal_chunk_size + 512 * 1024) // Increase by 512KB
+                    .min(self.max_chunk_size);
             } else if performance.success_rate < 0.7 {
                 // Poor performance: use smaller chunks
-                self.optimal_chunk_size = max(
-                    self.optimal_chunk_size - 256 * 1024, // Decrease by 256KB
-                    self.min_chunk_size,
-                );
+                self.optimal_chunk_size = (self.optimal_chunk_size - 256 * 1024) // Decrease by 256KB
+                    .max(self.min_chunk_size);
             }
         }
     }
