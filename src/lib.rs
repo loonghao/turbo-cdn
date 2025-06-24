@@ -34,14 +34,18 @@
 //! }
 //! ```
 
+pub mod adaptive_concurrency;
 pub mod cdn_quality;
 pub mod concurrent_downloader;
 pub mod config;
+pub mod dns_cache;
 pub mod error;
 pub mod geo_detection;
 pub mod http_client;
+pub mod load_balancer;
 pub mod progress;
 pub mod server_tracker;
+pub mod smart_chunking;
 pub mod url_mapper;
 
 // Note: Imports will be added as needed
