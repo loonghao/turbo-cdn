@@ -115,3 +115,28 @@ debug = true
 [profile.test]
 opt-level = 1
 debug = true
+
+# Examples
+[[example]]
+name = "basic_usage"
+path = "examples/api/basic_usage.rs"
+
+[[example]]
+name = "async_api"
+path = "examples/api/async_api.rs"
+
+[[example]]
+name = "advanced_config"
+path = "examples/api/advanced_config.rs"
+
+[[example]]
+name = "vx_integration"
+path = "examples/integration/vx_integration.rs"
+
+[[example]]
+name = "benchmarks"
+path = "examples/performance/benchmarks.rs"
+
+[[example]]
+name = "monitoring"
+path = "examples/performance/monitoring.rs"
