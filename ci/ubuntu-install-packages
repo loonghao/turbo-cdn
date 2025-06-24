@@ -1,35 +1,26 @@
-#!/bin/bash
+#!/bin/sh
 
-# Install packages needed for cross-compilation and building on Ubuntu
+# Install packages needed for building on Ubuntu
+# Cross-compilation is handled by the 'cross' tool, not system packages
 
 set -e
+
+# Check if sudo exists, install if not (for minimal containers)
+if ! command -v sudo >/dev/null 2>&1; then
+    apt-get update
+    apt-get install -y --no-install-recommends sudo
+fi
 
 # Update package list
 sudo apt-get update
 
-# Install essential build tools
+# Install essential build tools and libraries
 sudo apt-get install -y --no-install-recommends \
     build-essential \
     pkg-config \
     libssl-dev \
     curl \
-    git
-
-# Install cross-compilation toolchains
-sudo apt-get install -y --no-install-recommends \
-    gcc-multilib \
-    gcc-aarch64-linux-gnu \
-    gcc-arm-linux-gnueabihf
-
-# Install musl tools for static linking
-sudo apt-get install -y --no-install-recommends \
-    musl-tools \
-    musl-dev
-
-# Install additional tools that might be needed
-sudo apt-get install -y --no-install-recommends \
-    jq \
-    zip \
-    unzip
+    git \
+    musl-tools
 
 echo "✅ Ubuntu packages installed successfully"
