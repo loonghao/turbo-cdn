@@ -19,10 +19,7 @@ sudo apt-get install -y --no-install-recommends \
 sudo apt-get install -y --no-install-recommends \
     gcc-multilib \
     gcc-aarch64-linux-gnu \
-    gcc-arm-linux-gnueabihf \
-    gcc-arm-linux-musleabihf \
-    gcc-powerpc64-linux-gnu \
-    gcc-s390x-linux-gnu
+    gcc-arm-linux-gnueabihf
 
 # Install musl tools for static linking
 sudo apt-get install -y --no-install-recommends \
