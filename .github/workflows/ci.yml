@@ -58,7 +58,7 @@ jobs:
           # MSRV check
           - build: pinned
             os: ubuntu-latest
-            rust: 1.74.0
+            rust: 1.75.0
             target: x86_64-unknown-linux-gnu
           # Stable builds
           - build: stable
