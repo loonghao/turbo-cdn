@@ -66,20 +66,36 @@ tokio-util = { version = "0.7", features = ["io"] }
 # Configuration
 figment = { version = "0.10", features = ["toml", "env"] }
 
+# CLI
+clap = { version = "4.5", features = ["derive", "color"] }
+
 # Regex
 regex = "1.0"
 
 # High-performance HTTP clients
-isahc = { version = "1.7", features = ["json"] }
+isahc = { version = "1.7", features = ["json", "http2"] }
 ureq = { version = "3.0", features = ["json"], optional = true }
+curl = { version = "0.4", features = ["http2"] }
 
-# Memory optimization
+# Memory optimization and high-performance I/O
 mimalloc = "0.1"
+memmap2 = "0.9"
 
-# Fast hashing
+# Fast hashing and concurrent data structures
 ahash = { version = "0.8", optional = true }
 dashmap = "6.0"
 once_cell = "1.19"
+
+# DNS resolution and caching
+trust-dns-resolver = "0.23"
+lru = "0.12"
+
+# Compression support
+flate2 = "1.0"
+brotli = "8.0"
+
+# Network performance monitoring
+ping = "0.5"
 
 [dev-dependencies]
 # Testing

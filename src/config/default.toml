@@ -300,7 +300,7 @@ regions = ["Global", "China", "Asia", "Europe", "NorthAmerica"]
 priority = 8
 enabled = true
 
-# Cloudflare CDN优化
+# Cloudflare CDN optimization
 [[url_mapping_rules]]
 name = "Cloudflare CDN"
 pattern = "^https://cdnjs\\.cloudflare\\.com/ajax/libs/(.+)$"
@@ -339,8 +339,59 @@ replacements = [
     "https://mirror.ghproxy.com/https://github.com/$1/$2/releases/download/$3/$4",
     "https://github.com/$1/$2/releases/download/$3/$4",
     "https://download.fastgit.org/$1/$2/releases/download/$3/$4",
-    "https://hub.fastgit.xyz/$1/$2/releases/download/$3/$4"
+    "https://hub.fastgit.xyz/$1/$2/releases/download/$3/$4",
+    "https://github.com.cnpmjs.org/$1/$2/releases/download/$3/$4",
+    "https://gitclone.com/github.com/$1/$2/releases/download/$3/$4",
+    "https://kkgithub.com/$1/$2/releases/download/$3/$4"
 ]
 regions = ["Global", "China", "Asia", "Europe", "NorthAmerica", "AsiaPacific"]
 priority = 1
+enabled = true
+
+# Additional high-performance CDN sources
+[[url_mapping_rules]]
+name = "Cloudflare R2 - Global"
+pattern = "^https://github\\.com/([^/]+)/([^/]+)/releases/download/([^/]+)/(.+)$"
+replacements = [
+    "https://r2.dev/github/$1/$2/releases/download/$3/$4",
+    "https://github.com/$1/$2/releases/download/$3/$4"
+]
+regions = ["Global", "Europe", "NorthAmerica"]
+priority = 2
+enabled = true
+
+# AWS CloudFront mirrors
+[[url_mapping_rules]]
+name = "AWS CloudFront - Global"
+pattern = "^https://github\\.com/([^/]+)/([^/]+)/releases/download/([^/]+)/(.+)$"
+replacements = [
+    "https://d1234567890.cloudfront.net/github/$1/$2/releases/download/$3/$4",
+    "https://github.com/$1/$2/releases/download/$3/$4"
+]
+regions = ["Global", "NorthAmerica"]
+priority = 3
+enabled = false  # Disabled by default, enable when CDN is available
+
+# European CDN mirrors
+[[url_mapping_rules]]
+name = "European CDN Mirrors"
+pattern = "^https://github\\.com/([^/]+)/([^/]+)/releases/download/([^/]+)/(.+)$"
+replacements = [
+    "https://eu.ghproxy.com/https://github.com/$1/$2/releases/download/$3/$4",
+    "https://github.com/$1/$2/releases/download/$3/$4"
+]
+regions = ["Europe"]
+priority = 5
+enabled = true
+
+# Asia-Pacific CDN mirrors
+[[url_mapping_rules]]
+name = "Asia-Pacific CDN Mirrors"
+pattern = "^https://github\\.com/([^/]+)/([^/]+)/releases/download/([^/]+)/(.+)$"
+replacements = [
+    "https://ap.ghproxy.com/https://github.com/$1/$2/releases/download/$3/$4",
+    "https://github.com/$1/$2/releases/download/$3/$4"
+]
+regions = ["AsiaPacific", "Asia"]
+priority = 5
 enabled = true

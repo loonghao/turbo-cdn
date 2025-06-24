@@ -35,6 +35,7 @@
 //! ```
 
 pub mod adaptive_concurrency;
+pub mod adaptive_speed_controller;
 pub mod cdn_quality;
 pub mod concurrent_downloader;
 pub mod config;
@@ -42,10 +43,14 @@ pub mod dns_cache;
 pub mod error;
 pub mod geo_detection;
 pub mod http_client;
+pub mod http_client_manager;
 pub mod load_balancer;
+pub mod mmap_writer;
 pub mod progress;
+pub mod server_quality_scorer;
 pub mod server_tracker;
 pub mod smart_chunking;
+pub mod smart_downloader;
 pub mod url_mapper;
 
 // Note: Imports will be added as needed
@@ -264,6 +269,51 @@ impl TurboCdn {
     ) -> Result<DownloadResult> {
         let urls = self.url_mapper.lock().unwrap().map_url(url)?;
         self.downloader.download(&urls, output_path, None).await
+    }
+
+    /// Download directly from original URL without CDN optimization
+    pub async fn download_direct_from_url(&self, url: &str) -> Result<DownloadResult> {
+        // Use only the original URL, no CDN mapping
+        let urls = vec![url.to_string()];
+
+        // Generate output filename from URL
+        let filename = self.extract_filename_from_url(url)?;
+        let output_path = std::env::temp_dir().join(&filename);
+
+        // Download with concurrent downloader
+        self.downloader.download(&urls, &output_path, None).await
+    }
+
+    /// Download directly from URL to specific path without CDN optimization
+    pub async fn download_direct_to_path<P: AsRef<std::path::Path>>(
+        &self,
+        url: &str,
+        output_path: P,
+    ) -> Result<DownloadResult> {
+        // Use only the original URL, no CDN mapping
+        let urls = vec![url.to_string()];
+        self.downloader.download(&urls, output_path, None).await
+    }
+
+    /// Smart download that automatically selects the fastest method
+    pub async fn download_smart(&self, url: &str) -> Result<DownloadResult> {
+        use crate::smart_downloader::SmartDownloader;
+
+        // Create smart downloader with current TurboCdn instance
+        let smart_downloader = SmartDownloader::new().await?;
+        smart_downloader.download_smart(url).await
+    }
+
+    /// Smart download to specific path with automatic method selection
+    pub async fn download_smart_to_path<P: AsRef<std::path::Path>>(
+        &self,
+        url: &str,
+        output_path: P,
+    ) -> Result<DownloadResult> {
+        use crate::smart_downloader::SmartDownloader;
+
+        let smart_downloader = SmartDownloader::new().await?;
+        smart_downloader.download_smart_to_path(url, output_path).await
     }
 
     /// Download with custom options
