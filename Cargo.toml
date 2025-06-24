@@ -3,7 +3,7 @@ name = "turbo-cdn"
 version = "0.2.1"
 edition = "2021"
 authors = ["Hal <hal.long@outlook.com>"]
-description = "Revolutionary global download accelerator for open-source software with AI optimization, multi-CDN routing, and P2P acceleration"
+description = "Intelligent download accelerator with automatic CDN optimization and concurrent chunked downloads"
 license = "MIT"
 repository = "https://github.com/loonghao/turbo-cdn"
 homepage = "https://github.com/loonghao/turbo-cdn"
@@ -47,6 +47,7 @@ url = "2.0"
 
 # Async utilities
 futures = "0.3"
+futures-util = "0.3"
 async-trait = "0.1"
 
 # Progress tracking
@@ -56,47 +57,29 @@ indicatif = "0.17"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
-# UUID generation
-uuid = { version = "1.0", features = ["v4", "serde"] }
-
 # Time handling
 chrono = { version = "0.4", features = ["serde"] }
 
 # File system operations
 tokio-util = { version = "0.7", features = ["io"] }
 
-# Hashing
-sha2 = "0.10"
-blake3 = "1.0"
-
 # Configuration
 figment = { version = "0.10", features = ["toml", "env"] }
-config = "0.15"
-
-# File watching for hot reload
-notify = "8.0"
-
-# Compression
-flate2 = "1.0"
 
 # Regex
 regex = "1.0"
 
-# Random
-rand = "0.9"
+# High-performance HTTP clients
+isahc = { version = "1.7", features = ["json"] }
+ureq = { version = "2.10", features = ["json"], optional = true }
 
-# Metrics
-metrics = "0.24"
+# Memory optimization
+mimalloc = "0.1"
 
-# TOML parsing
-toml = "0.8"
-
-
-# Human-readable time parsing
-humantime-serde = "1.1"
-
-# Directory utilities - better cross-platform support similar to Python's platform_dirs
-directories = "6.0"
+# Fast hashing
+ahash = { version = "0.8", optional = true }
+dashmap = "6.0"
+once_cell = "1.19"
 
 [dev-dependencies]
 # Testing
@@ -111,9 +94,12 @@ pretty_assertions = "1.0"
 serial_test = "3.0"
 
 [features]
-default = ["rustls-tls"]
+default = ["rustls-tls", "fast-hash", "high-performance"]
 rustls-tls = ["reqwest/rustls-tls"]
 native-tls = ["reqwest/native-tls"]
+fast-hash = ["ahash"]
+high-performance = []
+ureq-client = ["ureq"]
 
 
 [profile.release]

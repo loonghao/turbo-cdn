@@ -11,15 +11,16 @@ use std::time::Duration;
 use tokio::time::timeout;
 use tracing::{debug, info, warn};
 
-use crate::config::Region;
+use crate::config::{Region, TurboCdnConfig};
 use crate::error::{Result, TurboCdnError};
 
-/// Geographic location detector
+/// Geographic location detector with configuration support
 #[derive(Debug)]
 pub struct GeoDetector {
     client: reqwest::Client,
     cache: Option<DetectionResult>,
     cache_ttl: Duration,
+    config: TurboCdnConfig,
 }
 
 /// Detection result with confidence score
@@ -59,18 +60,20 @@ struct IpApiResponse {
 }
 
 impl GeoDetector {
-    /// Create a new geo detector
-    pub fn new() -> Self {
+    /// Create a new geo detector with configuration
+    pub fn new(config: TurboCdnConfig) -> Self {
+        let timeout = Duration::from_secs(config.geo_detection.ip_detection_timeout);
         let client = reqwest::Client::builder()
-            .timeout(Duration::from_secs(10))
-            .user_agent("turbo-cdn/1.0.0")
+            .timeout(timeout)
+            .user_agent(&config.general.user_agent)
             .build()
             .unwrap_or_else(|_| reqwest::Client::new());
 
         Self {
             client,
             cache: None,
-            cache_ttl: Duration::from_secs(24 * 60 * 60), // 24 hours
+            cache_ttl: Duration::from_secs(config.general.url_cache_ttl),
+            config,
         }
     }
 
@@ -278,6 +281,6 @@ impl GeoDetector {
 
 impl Default for GeoDetector {
     fn default() -> Self {
-        Self::new()
+        Self::new(TurboCdnConfig::default())
     }
 }

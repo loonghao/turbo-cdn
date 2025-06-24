@@ -174,6 +174,13 @@ impl TurboCdnError {
         }
     }
 
+    /// Create a new IO error
+    pub fn io<S: Into<String>>(message: S) -> Self {
+        Self::Internal {
+            message: format!("IO error: {}", message.into()),
+        }
+    }
+
     /// Check if the error is retryable
     pub fn is_retryable(&self) -> bool {
         matches!(
