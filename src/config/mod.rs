@@ -174,17 +174,17 @@ impl Default for PerformanceConfig {
             timeout: 30,
             retry_attempts: 3,
             adaptive_chunking: true,
-            pool_max_idle_per_host: 50,   // 增加连接池大小
+            pool_max_idle_per_host: 50, // 增加连接池大小
             pool_idle_timeout: 90,
             tcp_keepalive: 60,
             http2_prior_knowledge: true,
-            min_chunk_size: 128 * 1024,                     // 128KB for more granular chunks
-            max_chunk_size: 5 * 1024 * 1024,                // 5MB
-            speed_threshold_bytes_per_sec: 1024 * 1024,     // 1MB/s
+            min_chunk_size: 128 * 1024, // 128KB for more granular chunks
+            max_chunk_size: 5 * 1024 * 1024, // 5MB
+            speed_threshold_bytes_per_sec: 1024 * 1024, // 1MB/s
             adaptive_concurrency: Some(true),
-            min_concurrent_downloads: Some(8),              // 更高的最小并发数
-            max_concurrent_downloads_limit: Some(64),       // 更高的最大并发数
-            network_congestion_threshold: Some(0.3),        // 更激进的阈值
+            min_concurrent_downloads: Some(8), // 更高的最小并发数
+            max_concurrent_downloads_limit: Some(64), // 更高的最大并发数
+            network_congestion_threshold: Some(0.3), // 更激进的阈值
             dns_cache_enabled: Some(true),
             dns_cache_ttl_seconds: Some(300),
             dns_cache_max_entries: Some(1000),

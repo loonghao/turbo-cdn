@@ -53,9 +53,11 @@ async-trait = "0.1"
 # Progress tracking
 indicatif = "0.17"
 
-# Logging
+# Logging and tracing
 tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json", "fmt", "ansi"] }
+tracing-appender = "0.2"
+tracing-log = "0.2"
 
 # Time handling
 chrono = { version = "0.4", features = ["serde"] }

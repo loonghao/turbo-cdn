@@ -6,11 +6,12 @@
 //! This module implements intelligent download method selection by
 //! testing multiple approaches and choosing the fastest one.
 
-use crate::error::{Result, TurboCdnError};
 use crate::concurrent_downloader::DownloadResult;
+use crate::error::{Result, TurboCdnError};
+use crate::{api_info, cli_info};
 use std::time::{Duration, Instant};
 use tokio::time::timeout;
-use tracing::{debug, info, warn};
+// Note: tracing macros are used via crate::cli_info! and crate::api_info!
 use std::sync::Arc;
 
 /// Speed test result for a download method
@@ -72,31 +73,51 @@ impl Default for SmartDownloadConfig {
 pub struct SmartDownloader {
     config: SmartDownloadConfig,
     turbo_cdn: Arc<crate::TurboCdn>,
+    verbose: bool,
 }
 
 impl SmartDownloader {
     /// Create a new smart downloader
     pub async fn new() -> Result<Self> {
+        Self::new_with_verbose(false).await
+    }
+
+    /// Create a new smart downloader with verbose flag
+    pub async fn new_with_verbose(verbose: bool) -> Result<Self> {
         let turbo_cdn = Arc::new(crate::TurboCdn::new().await?);
         Ok(Self {
             config: SmartDownloadConfig::default(),
             turbo_cdn,
+            verbose,
         })
     }
 
     /// Create a smart downloader with custom configuration
     pub async fn with_config(config: SmartDownloadConfig) -> Result<Self> {
+        Self::with_config_and_verbose(config, false).await
+    }
+
+    /// Create a smart downloader with custom configuration and verbose flag
+    pub async fn with_config_and_verbose(
+        config: SmartDownloadConfig,
+        verbose: bool,
+    ) -> Result<Self> {
         let turbo_cdn = Arc::new(crate::TurboCdn::new().await?);
         Ok(Self {
             config,
             turbo_cdn,
+            verbose,
         })
     }
 
     /// Smart download that automatically selects the best method
     pub async fn download_smart(&self, url: &str) -> Result<DownloadResult> {
-        info!("🧠 Smart download starting for: {}", url);
-        
+        if self.verbose {
+            cli_info!("🧠 Smart download starting for: {}", url);
+        } else {
+            api_info!("Smart download starting for: {}", url);
+        }
+
         // Step 1: Quick speed test
         let test_results = if self.config.parallel_testing {
             self.parallel_speed_test(url).await?
@@ -106,18 +127,22 @@ impl SmartDownloader {
 
         // Step 2: Analyze results and select best method
         let best_method = self.select_best_method(&test_results);
-        
+
         // Step 3: Show results to user
-        self.display_test_results(&test_results, best_method);
+        self.display_test_results(&test_results, best_method, self.verbose);
 
         // Step 4: Download using the best method
         match best_method {
             DownloadMethod::Direct => {
-                info!("⚡ Using direct download");
+                if self.verbose {
+                    cli_info!("⚡ Using direct download");
+                }
                 self.turbo_cdn.download_direct_from_url(url).await
             }
             DownloadMethod::Cdn | DownloadMethod::CdnFast => {
-                info!("🌐 Using CDN download");
+                if self.verbose {
+                    cli_info!("🌐 Using CDN download");
+                }
                 self.turbo_cdn.download_from_url(url).await
             }
         }
@@ -129,8 +154,12 @@ impl SmartDownloader {
         url: &str,
         output_path: P,
     ) -> Result<DownloadResult> {
-        info!("🧠 Smart download starting for: {}", url);
-        
+        if self.verbose {
+            cli_info!("🧠 Smart download starting for: {}", url);
+        } else {
+            api_info!("Smart download starting for: {}", url);
+        }
+
         let test_results = if self.config.parallel_testing {
             self.parallel_speed_test(url).await?
         } else {
@@ -138,15 +167,21 @@ impl SmartDownloader {
         };
 
         let best_method = self.select_best_method(&test_results);
-        self.display_test_results(&test_results, best_method);
+        self.display_test_results(&test_results, best_method, self.verbose);
 
         match best_method {
             DownloadMethod::Direct => {
-                info!("⚡ Using direct download");
-                self.turbo_cdn.download_direct_to_path(url, output_path).await
+                if self.verbose {
+                    cli_info!("⚡ Using direct download");
+                }
+                self.turbo_cdn
+                    .download_direct_to_path(url, output_path)
+                    .await
             }
             DownloadMethod::Cdn | DownloadMethod::CdnFast => {
-                info!("🌐 Using CDN download");
+                if self.verbose {
+                    cli_info!("🌐 Using CDN download");
+                }
                 self.turbo_cdn.download_to_path(url, output_path).await
             }
         }
@@ -154,32 +189,38 @@ impl SmartDownloader {
 
     /// Perform parallel speed tests
     async fn parallel_speed_test(&self, url: &str) -> Result<Vec<SpeedTestResult>> {
-        info!("🔍 Running parallel speed tests...");
-        
+        if self.verbose {
+            cli_info!("🔍 Running parallel speed tests...");
+        }
+
         let test_timeout = self.config.max_test_time;
-        
+
         let results = timeout(test_timeout, async {
             let direct_test = self.test_direct_speed(url);
             let cdn_test = self.test_cdn_speed(url);
-            
+
             // Run tests in parallel
             let (direct_result, cdn_result) = tokio::join!(direct_test, cdn_test);
-            
+
             vec![direct_result, cdn_result]
-        }).await.map_err(|_| TurboCdnError::network("Speed test timeout".to_string()))?;
+        })
+        .await
+        .map_err(|_| TurboCdnError::network("Speed test timeout".to_string()))?;
 
         Ok(results)
     }
 
     /// Perform sequential speed tests
     async fn sequential_speed_test(&self, url: &str) -> Result<Vec<SpeedTestResult>> {
-        info!("🔍 Running sequential speed tests...");
-        
+        if self.verbose {
+            cli_info!("🔍 Running sequential speed tests...");
+        }
+
         let mut results = Vec::new();
-        
+
         // Test direct first (usually faster to test)
         results.push(self.test_direct_speed(url).await);
-        
+
         // Test CDN only if direct test was successful
         if results[0].success {
             results.push(self.test_cdn_speed(url).await);
@@ -194,12 +235,18 @@ impl SmartDownloader {
     /// Test direct download speed
     async fn test_direct_speed(&self, url: &str) -> SpeedTestResult {
         let start_time = Instant::now();
-        
-        match timeout(self.config.test_timeout, self.perform_range_request(url, true)).await {
+
+        match timeout(
+            self.config.test_timeout,
+            self.perform_range_request(url, true),
+        )
+        .await
+        {
             Ok(Ok(bytes_downloaded)) => {
                 let elapsed = start_time.elapsed();
-                let speed_mbps = (bytes_downloaded as f64 * 8.0) / (elapsed.as_secs_f64() * 1_000_000.0);
-                
+                let speed_mbps =
+                    (bytes_downloaded as f64 * 8.0) / (elapsed.as_secs_f64() * 1_000_000.0);
+
                 SpeedTestResult {
                     method: DownloadMethod::Direct,
                     speed_mbps,
@@ -228,12 +275,18 @@ impl SmartDownloader {
     /// Test CDN download speed
     async fn test_cdn_speed(&self, url: &str) -> SpeedTestResult {
         let start_time = Instant::now();
-        
-        match timeout(self.config.test_timeout, self.perform_range_request(url, false)).await {
+
+        match timeout(
+            self.config.test_timeout,
+            self.perform_range_request(url, false),
+        )
+        .await
+        {
             Ok(Ok(bytes_downloaded)) => {
                 let elapsed = start_time.elapsed();
-                let speed_mbps = (bytes_downloaded as f64 * 8.0) / (elapsed.as_secs_f64() * 1_000_000.0);
-                
+                let speed_mbps =
+                    (bytes_downloaded as f64 * 8.0) / (elapsed.as_secs_f64() * 1_000_000.0);
+
                 SpeedTestResult {
                     method: DownloadMethod::Cdn,
                     speed_mbps,
@@ -273,7 +326,7 @@ impl SmartDownloader {
         };
 
         let range_header = format!("bytes=0-{}", self.config.test_size - 1);
-        
+
         let response = client
             .get(&test_url)
             .header("Range", range_header)
@@ -282,10 +335,15 @@ impl SmartDownloader {
             .map_err(|e| TurboCdnError::network(format!("Request failed: {}", e)))?;
 
         if !response.status().is_success() && response.status() != 206 {
-            return Err(TurboCdnError::network(format!("HTTP error: {}", response.status())));
+            return Err(TurboCdnError::network(format!(
+                "HTTP error: {}",
+                response.status()
+            )));
         }
 
-        let bytes = response.bytes().await
+        let bytes = response
+            .bytes()
+            .await
             .map_err(|e| TurboCdnError::network(format!("Failed to read response: {}", e)))?;
 
         Ok(bytes.len() as u64)
@@ -306,8 +364,12 @@ impl SmartDownloader {
 
         // Apply CDN advantage threshold
         if let (Some(direct), Some(cdn)) = (
-            results.iter().find(|r| r.method == DownloadMethod::Direct && r.success),
-            results.iter().find(|r| r.method == DownloadMethod::Cdn && r.success),
+            results
+                .iter()
+                .find(|r| r.method == DownloadMethod::Direct && r.success),
+            results
+                .iter()
+                .find(|r| r.method == DownloadMethod::Cdn && r.success),
         ) {
             // CDN must be significantly faster to be chosen
             if cdn.speed_mbps > direct.speed_mbps * self.config.cdn_advantage_threshold {
@@ -321,37 +383,23 @@ impl SmartDownloader {
     }
 
     /// Display test results to user
-    fn display_test_results(&self, results: &[SpeedTestResult], selected: DownloadMethod) {
-        println!("🚀 Speed test results:");
-        
-        for result in results {
-            let status = if result.success {
-                if result.method == selected {
-                    "✓ (selected)"
-                } else {
-                    ""
-                }
-            } else {
-                "✗ (failed)"
-            };
+    fn display_test_results(
+        &self,
+        results: &[SpeedTestResult],
+        selected: DownloadMethod,
+        verbose: bool,
+    ) {
+        // Convert to format expected by cli_progress
+        let display_results: Vec<(String, f64, bool)> = results
+            .iter()
+            .map(|r| {
+                let speed = if r.success { r.speed_mbps / 8.0 } else { 0.0 }; // Convert to MB/s
+                let is_selected = r.method == selected;
+                (r.method.name().to_string(), speed, is_selected)
+            })
+            .collect();
 
-            if result.success {
-                println!("   ├─ {}: {:.2} MB/s {}", 
-                    result.method.name(), 
-                    result.speed_mbps / 8.0, // Convert to MB/s
-                    status
-                );
-            } else {
-                println!("   ├─ {}: {} {}", 
-                    result.method.name(), 
-                    result.error.as_deref().unwrap_or("Unknown error"),
-                    status
-                );
-            }
-        }
-        
-        println!("   └─ Using {} method", selected.name());
-        println!();
+        crate::cli_progress::display_speed_test_results(&display_results, verbose);
     }
 }
 

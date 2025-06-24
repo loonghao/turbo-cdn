@@ -6,12 +6,12 @@
 //! This module provides a unified interface for different HTTP clients,
 //! automatically selecting the best client based on performance characteristics.
 
-use crate::error::{Result, TurboCdnError};
 use crate::config::TurboCdnConfig;
-use std::time::Duration;
-use std::sync::Arc;
-use tracing::{debug, info, warn};
+use crate::error::{Result, TurboCdnError};
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
+use std::time::Duration;
+use tracing::{debug, info, warn};
 
 /// HTTP client types available
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -101,8 +101,10 @@ impl HttpClientManager {
         manager.init_isahc_client()?;
         manager.init_metrics();
 
-        info!("HTTP client manager initialized with {} clients", 
-              manager.available_clients().len());
+        info!(
+            "HTTP client manager initialized with {} clients",
+            manager.available_clients().len()
+        );
 
         Ok(manager)
     }
@@ -113,7 +115,9 @@ impl HttpClientManager {
             .timeout(Duration::from_secs(self.config.performance.timeout))
             .user_agent(&self.config.general.user_agent)
             .pool_max_idle_per_host(self.config.performance.pool_max_idle_per_host)
-            .pool_idle_timeout(Duration::from_secs(self.config.performance.pool_idle_timeout))
+            .pool_idle_timeout(Duration::from_secs(
+                self.config.performance.pool_idle_timeout,
+            ))
             .tcp_keepalive(Duration::from_secs(self.config.performance.tcp_keepalive))
             .tcp_nodelay(true)
             .redirect(reqwest::redirect::Policy::limited(10))
@@ -130,9 +134,9 @@ impl HttpClientManager {
             .http2_adaptive_window(true)
             .http2_max_frame_size(Some(32768)); // 32KB frame size
 
-        let client = builder
-            .build()
-            .map_err(|e| TurboCdnError::network(format!("Failed to create Reqwest client: {}", e)))?;
+        let client = builder.build().map_err(|e| {
+            TurboCdnError::network(format!("Failed to create Reqwest client: {}", e))
+        })?;
 
         self.reqwest_client = Some(client);
         debug!("Reqwest client initialized");
@@ -173,7 +177,7 @@ impl HttpClientManager {
     /// Initialize client metrics
     fn init_metrics(&mut self) {
         let mut metrics = self.client_metrics.lock().unwrap();
-        
+
         // Initialize with default metrics for available clients
         for client_type in self.available_clients() {
             metrics.push(ClientMetrics {
@@ -190,21 +194,21 @@ impl HttpClientManager {
     /// Get list of available clients
     pub fn available_clients(&self) -> Vec<HttpClientType> {
         let mut clients = Vec::new();
-        
+
         if self.reqwest_client.is_some() {
             clients.push(HttpClientType::Reqwest);
         }
         if self.isahc_client.is_some() {
             clients.push(HttpClientType::Isahc);
         }
-        
+
         clients
     }
 
     /// Select the best client based on current metrics
     pub fn select_best_client(&self) -> HttpClientType {
         let metrics = self.client_metrics.lock().unwrap();
-        
+
         if metrics.is_empty() {
             return self.preferred_client;
         }
@@ -221,9 +225,12 @@ impl HttpClientManager {
             }
         }
 
-        debug!("Selected {} client (score: {:.2})", 
-               format!("{:?}", best_client), best_score);
-        
+        debug!(
+            "Selected {} client (score: {:.2})",
+            format!("{:?}", best_client),
+            best_score
+        );
+
         best_client
     }
 
@@ -232,7 +239,8 @@ impl HttpClientManager {
         // Weighted scoring: throughput (40%), success rate (30%), response time (20%), connection reuse (10%)
         let throughput_score = (metrics.throughput_mbps / 100.0).min(1.0) * 0.4;
         let success_score = metrics.success_rate * 0.3;
-        let response_time_score = (1.0 - (metrics.avg_response_time.as_millis() as f64 / 1000.0).min(1.0)) * 0.2;
+        let response_time_score =
+            (1.0 - (metrics.avg_response_time.as_millis() as f64 / 1000.0).min(1.0)) * 0.2;
         let connection_score = metrics.connection_reuse_rate * 0.1;
 
         throughput_score + success_score + response_time_score + connection_score
@@ -262,14 +270,21 @@ impl HttpClientManager {
 
     /// Make request with Reqwest client
     async fn request_with_reqwest(&self, config: RequestConfig) -> Result<HttpResponse> {
-        let client = self.reqwest_client.as_ref()
+        let client = self
+            .reqwest_client
+            .as_ref()
             .ok_or_else(|| TurboCdnError::network("Reqwest client not initialized".to_string()))?;
 
         let mut request = match config.method.as_str() {
             "GET" => client.get(&config.url),
             "HEAD" => client.head(&config.url),
             "POST" => client.post(&config.url),
-            _ => return Err(TurboCdnError::network(format!("Unsupported method: {}", config.method))),
+            _ => {
+                return Err(TurboCdnError::network(format!(
+                    "Unsupported method: {}",
+                    config.method
+                )))
+            }
         };
 
         // Add headers
@@ -280,22 +295,28 @@ impl HttpClientManager {
         // Set timeout
         request = request.timeout(config.timeout);
 
-        let response = request.send().await
+        let response = request
+            .send()
+            .await
             .map_err(|e| TurboCdnError::network(format!("Reqwest request failed: {}", e)))?;
 
         let status = response.status().as_u16();
-        let headers: Vec<(String, String)> = response.headers()
+        let headers: Vec<(String, String)> = response
+            .headers()
             .iter()
             .map(|(k, v)| (k.to_string(), v.to_str().unwrap_or("").to_string()))
             .collect();
 
         let content_length = response.content_length();
-        let supports_ranges = response.headers()
+        let supports_ranges = response
+            .headers()
             .get("accept-ranges")
             .map(|v| v.to_str().unwrap_or("").contains("bytes"))
             .unwrap_or(false);
 
-        let body = response.bytes().await
+        let body = response
+            .bytes()
+            .await
             .map_err(|e| TurboCdnError::network(format!("Failed to read response body: {}", e)))?
             .to_vec();
 
@@ -312,7 +333,9 @@ impl HttpClientManager {
 
     /// Make request with Isahc client
     async fn request_with_isahc(&self, config: RequestConfig) -> Result<HttpResponse> {
-        let client = self.isahc_client.as_ref()
+        let client = self
+            .isahc_client
+            .as_ref()
             .ok_or_else(|| TurboCdnError::network("Isahc client not initialized".to_string()))?;
 
         let mut request = isahc::Request::builder()
@@ -324,30 +347,39 @@ impl HttpClientManager {
             request = request.header(&key, &value);
         }
 
-        let request = request.body(())
+        let request = request
+            .body(())
             .map_err(|e| TurboCdnError::network(format!("Failed to build Isahc request: {}", e)))?;
 
-        let mut response = client.send_async(request).await
+        let mut response = client
+            .send_async(request)
+            .await
             .map_err(|e| TurboCdnError::network(format!("Isahc request failed: {}", e)))?;
 
         let status = response.status().as_u16();
-        let headers: Vec<(String, String)> = response.headers()
+        let headers: Vec<(String, String)> = response
+            .headers()
             .iter()
             .map(|(k, v)| (k.to_string(), v.to_str().unwrap_or("").to_string()))
             .collect();
 
-        let content_length = response.headers()
+        let content_length = response
+            .headers()
             .get("content-length")
             .and_then(|v| v.to_str().ok())
             .and_then(|s| s.parse().ok());
 
-        let supports_ranges = response.headers()
+        let supports_ranges = response
+            .headers()
             .get("accept-ranges")
             .map(|v| v.to_str().unwrap_or("").contains("bytes"))
             .unwrap_or(false);
 
-        let body = isahc::AsyncReadResponseExt::bytes(&mut response).await
-            .map_err(|e| TurboCdnError::network(format!("Failed to read Isahc response body: {}", e)))?;
+        let body = isahc::AsyncReadResponseExt::bytes(&mut response)
+            .await
+            .map_err(|e| {
+                TurboCdnError::network(format!("Failed to read Isahc response body: {}", e))
+            })?;
 
         Ok(HttpResponse {
             status,
@@ -361,15 +393,20 @@ impl HttpClientManager {
     }
 
     /// Update client metrics based on request result
-    fn update_client_metrics(&self, client_type: HttpClientType, result: &Result<HttpResponse>, response_time: Duration) {
+    fn update_client_metrics(
+        &self,
+        client_type: HttpClientType,
+        result: &Result<HttpResponse>,
+        response_time: Duration,
+    ) {
         let mut metrics = self.client_metrics.lock().unwrap();
-        
+
         if let Some(metric) = metrics.iter_mut().find(|m| m.client_type == client_type) {
             // Update response time (exponential moving average)
             let alpha = 0.3; // Smoothing factor
             metric.avg_response_time = Duration::from_millis(
-                ((1.0 - alpha) * metric.avg_response_time.as_millis() as f64 + 
-                 alpha * response_time.as_millis() as f64) as u64
+                ((1.0 - alpha) * metric.avg_response_time.as_millis() as f64
+                    + alpha * response_time.as_millis() as f64) as u64,
             );
 
             // Update success rate
@@ -379,7 +416,8 @@ impl HttpClientManager {
             // Update throughput if we have response data
             if let Ok(response) = result {
                 if let Some(content_length) = response.content_length {
-                    let throughput = (content_length as f64 / 1024.0 / 1024.0) / response_time.as_secs_f64();
+                    let throughput =
+                        (content_length as f64 / 1024.0 / 1024.0) / response_time.as_secs_f64();
                     metric.throughput_mbps = metric.throughput_mbps * 0.8 + throughput * 0.2;
                 }
             }

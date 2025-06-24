@@ -3,10 +3,10 @@
 //! This example demonstrates how to integrate Turbo CDN with the vx tool
 //! for optimal download performance and URL optimization.
 
-use turbo_cdn::{async_api, Result};
+use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::time::Instant;
-use serde::{Deserialize, Serialize};
+use turbo_cdn::{async_api, Result};
 
 /// Configuration for vx integration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -54,16 +54,22 @@ impl VxCdnManager {
 
         println!("🔍 vx: Optimizing URL for faster download...");
         let start = Instant::now();
-        
+
         match async_api::quick::optimize_url(url).await {
             Ok(optimized_url) => {
                 let duration = start.elapsed();
                 if optimized_url != url {
-                    println!("✅ vx: CDN optimization found ({:.2}ms)", duration.as_millis());
+                    println!(
+                        "✅ vx: CDN optimization found ({:.2}ms)",
+                        duration.as_millis()
+                    );
                     println!("   Original: {}", url);
                     println!("   Optimized: {}", optimized_url);
                 } else {
-                    println!("ℹ️  vx: No CDN optimization available ({:.2}ms)", duration.as_millis());
+                    println!(
+                        "ℹ️  vx: No CDN optimization available ({:.2}ms)",
+                        duration.as_millis()
+                    );
                 }
                 Ok(optimized_url)
             }
@@ -75,12 +81,16 @@ impl VxCdnManager {
     }
 
     /// Download a file for vx with optimization
-    pub async fn download_for_vx(&self, url: &str, output_path: Option<PathBuf>) -> Result<VxDownloadResult> {
+    pub async fn download_for_vx(
+        &self,
+        url: &str,
+        output_path: Option<PathBuf>,
+    ) -> Result<VxDownloadResult> {
         println!("📥 vx: Starting optimized download...");
-        
+
         // First, optimize the URL
         let optimized_url = self.optimize_url_for_vx(url).await?;
-        
+
         // Download using the optimized URL
         let start = Instant::now();
         let result = if let Some(path) = output_path {
@@ -92,9 +102,9 @@ impl VxCdnManager {
         } else {
             async_api::quick::download_url(&optimized_url).await?
         };
-        
+
         let total_duration = start.elapsed();
-        
+
         let was_optimized = optimized_url != url;
         let vx_result = VxDownloadResult {
             original_url: url.to_string(),
@@ -105,26 +115,26 @@ impl VxCdnManager {
             duration: total_duration,
             was_optimized,
         };
-        
+
         println!("✅ vx: Download completed!");
         println!("   📁 Path: {}", vx_result.path.display());
         println!("   📊 Size: {} bytes", vx_result.size);
         println!("   ⚡ Speed: {:.2} MB/s", vx_result.speed / 1_000_000.0);
         println!("   ⏱️  Duration: {:.2}s", vx_result.duration.as_secs_f64());
         println!("   🚀 CDN optimized: {}", vx_result.was_optimized);
-        
+
         Ok(vx_result)
     }
 
     /// Batch download multiple URLs for vx
     pub async fn batch_download_for_vx(&self, urls: Vec<String>) -> Result<Vec<VxDownloadResult>> {
         println!("📦 vx: Starting batch download of {} files...", urls.len());
-        
+
         let mut results = Vec::new();
-        
+
         for (i, url) in urls.iter().enumerate() {
             println!("\n📋 vx: Processing {}/{}: {}", i + 1, urls.len(), url);
-            
+
             match self.download_for_vx(url, None).await {
                 Ok(result) => {
                     results.push(result);
@@ -136,11 +146,15 @@ impl VxCdnManager {
                 }
             }
         }
-        
+
         println!("\n📊 vx: Batch download summary:");
         println!("   ✅ Successful: {}/{}", results.len(), urls.len());
-        println!("   ❌ Failed: {}/{}", urls.len() - results.len(), urls.len());
-        
+        println!(
+            "   ❌ Failed: {}/{}",
+            urls.len() - results.len(),
+            urls.len()
+        );
+
         Ok(results)
     }
 
@@ -149,7 +163,7 @@ impl VxCdnManager {
         if !self.config.enable_cdn_optimization {
             return false;
         }
-        
+
         match self.optimize_url_for_vx(url).await {
             Ok(optimized_url) => optimized_url != url,
             Err(_) => false,
@@ -160,19 +174,19 @@ impl VxCdnManager {
     pub async fn get_optimization_stats(&self, urls: Vec<String>) -> VxOptimizationStats {
         let mut stats = VxOptimizationStats::default();
         stats.total_urls = urls.len();
-        
+
         for url in urls {
             if self.can_optimize_url(&url).await {
                 stats.optimizable_urls += 1;
             }
         }
-        
+
         stats.optimization_rate = if stats.total_urls > 0 {
             (stats.optimizable_urls as f64 / stats.total_urls as f64) * 100.0
         } else {
             0.0
         };
-        
+
         stats
     }
 }
@@ -208,11 +222,11 @@ async fn main() -> Result<()> {
     // Example 1: Basic vx integration
     println!("\n🚀 Example 1: Basic vx Integration");
     println!("---------------------------------");
-    
+
     let vx_manager = VxCdnManager::default();
-    
+
     let test_url = "https://github.com/BurntSushi/ripgrep/releases/download/14.1.1/ripgrep-14.1.1-x86_64-pc-windows-msvc.zip";
-    
+
     match vx_manager.download_for_vx(test_url, None).await {
         Ok(result) => {
             println!("🎉 vx integration successful!");
@@ -228,7 +242,7 @@ async fn main() -> Result<()> {
     // Example 2: Custom vx configuration
     println!("\n⚙️ Example 2: Custom vx Configuration");
     println!("------------------------------------");
-    
+
     let custom_config = VxConfig {
         enable_cdn_optimization: true,
         max_concurrent_downloads: 8,
@@ -236,31 +250,44 @@ async fn main() -> Result<()> {
         timeout_seconds: 180,
         verify_checksums: true,
     };
-    
+
     let custom_vx_manager = VxCdnManager::new(custom_config);
-    
+
     println!("Custom vx configuration:");
-    println!("  🔧 CDN optimization: {}", custom_vx_manager.config.enable_cdn_optimization);
-    println!("  📊 Max concurrent: {}", custom_vx_manager.config.max_concurrent_downloads);
-    println!("  📁 Cache directory: {}", custom_vx_manager.config.cache_directory.display());
-    println!("  ⏱️  Timeout: {}s", custom_vx_manager.config.timeout_seconds);
+    println!(
+        "  🔧 CDN optimization: {}",
+        custom_vx_manager.config.enable_cdn_optimization
+    );
+    println!(
+        "  📊 Max concurrent: {}",
+        custom_vx_manager.config.max_concurrent_downloads
+    );
+    println!(
+        "  📁 Cache directory: {}",
+        custom_vx_manager.config.cache_directory.display()
+    );
+    println!(
+        "  ⏱️  Timeout: {}s",
+        custom_vx_manager.config.timeout_seconds
+    );
 
     // Example 3: Batch download for vx
     println!("\n📦 Example 3: Batch Download for vx");
     println!("----------------------------------");
-    
+
     let batch_urls = vec![
         "https://github.com/cli/cli/releases/download/v2.40.1/gh_2.40.1_windows_amd64.zip".to_string(),
         "https://github.com/sharkdp/fd/releases/download/v8.7.0/fd-v8.7.0-x86_64-pc-windows-msvc.zip".to_string(),
         "https://github.com/sharkdp/bat/releases/download/v0.24.0/bat-v0.24.0-x86_64-pc-windows-msvc.zip".to_string(),
     ];
-    
+
     match vx_manager.batch_download_for_vx(batch_urls).await {
         Ok(results) => {
             println!("📊 vx batch download results:");
             for (i, result) in results.iter().enumerate() {
-                println!("  {}. {} - {:.2} MB/s (CDN: {})", 
-                    i + 1, 
+                println!(
+                    "  {}. {} - {:.2} MB/s (CDN: {})",
+                    i + 1,
                     result.path.file_name().unwrap().to_string_lossy(),
                     result.speed / 1_000_000.0,
                     result.was_optimized
@@ -275,39 +302,40 @@ async fn main() -> Result<()> {
     // Example 4: URL optimization checking
     println!("\n🔍 Example 4: URL Optimization Analysis");
     println!("--------------------------------------");
-    
+
     let analysis_urls = vec![
-        "https://github.com/microsoft/vscode/releases/download/1.85.0/VSCode-linux-x64.tar.gz".to_string(),
+        "https://github.com/microsoft/vscode/releases/download/1.85.0/VSCode-linux-x64.tar.gz"
+            .to_string(),
         "https://registry.npmjs.org/typescript/-/typescript-5.3.3.tgz".to_string(),
-        "https://files.pythonhosted.org/packages/source/r/requests/requests-2.31.0.tar.gz".to_string(),
+        "https://files.pythonhosted.org/packages/source/r/requests/requests-2.31.0.tar.gz"
+            .to_string(),
         "https://golang.org/dl/go1.21.5.linux-amd64.tar.gz".to_string(),
     ];
-    
-    let stats = vx_manager.get_optimization_stats(analysis_urls.clone()).await;
-    
+
+    let stats = vx_manager
+        .get_optimization_stats(analysis_urls.clone())
+        .await;
+
     println!("📊 vx optimization analysis:");
     println!("  📋 Total URLs analyzed: {}", stats.total_urls);
     println!("  🚀 Optimizable URLs: {}", stats.optimizable_urls);
     println!("  📈 Optimization rate: {:.1}%", stats.optimization_rate);
-    
+
     // Show individual results
     for url in analysis_urls {
         let can_optimize = vx_manager.can_optimize_url(&url).await;
-        println!("  {} {}", 
-            if can_optimize { "✅" } else { "❌" },
-            url
-        );
+        println!("  {} {}", if can_optimize { "✅" } else { "❌" }, url);
     }
 
     // Example 5: vx-style command simulation
     println!("\n💻 Example 5: vx Command Simulation");
     println!("-----------------------------------");
-    
+
     // Simulate: vx install node@20.10.0
     let node_url = "https://nodejs.org/dist/v20.10.0/node-v20.10.0-win-x64.zip";
     println!("🔧 Simulating: vx install node@20.10.0");
     println!("   Resolving to: {}", node_url);
-    
+
     match vx_manager.optimize_url_for_vx(node_url).await {
         Ok(optimized_url) => {
             println!("   🚀 vx would use optimized URL for faster installation");
@@ -322,7 +350,7 @@ async fn main() -> Result<()> {
 
     println!("\n🎉 vx integration examples completed!");
     println!("   Integration ready for production use in vx tool");
-    
+
     Ok(())
 }
 
@@ -340,7 +368,7 @@ mod tests {
     async fn test_url_optimization() {
         let manager = VxCdnManager::default();
         let url = "https://github.com/BurntSushi/ripgrep/releases/download/14.1.1/ripgrep-14.1.1-x86_64-pc-windows-msvc.zip";
-        
+
         let result = manager.optimize_url_for_vx(url).await;
         assert!(result.is_ok());
     }
@@ -349,9 +377,10 @@ mod tests {
     async fn test_optimization_stats() {
         let manager = VxCdnManager::default();
         let urls = vec![
-            "https://github.com/cli/cli/releases/download/v2.40.1/gh_2.40.1_windows_amd64.zip".to_string(),
+            "https://github.com/cli/cli/releases/download/v2.40.1/gh_2.40.1_windows_amd64.zip"
+                .to_string(),
         ];
-        
+
         let stats = manager.get_optimization_stats(urls).await;
         assert_eq!(stats.total_urls, 1);
     }
@@ -363,7 +392,7 @@ mod tests {
             ..Default::default()
         };
         let manager = VxCdnManager::new(config);
-        
+
         let url = "https://example.com/file.zip";
         let result = manager.optimize_url_for_vx(url).await.unwrap();
         assert_eq!(result, url);

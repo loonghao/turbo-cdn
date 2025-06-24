@@ -196,22 +196,22 @@ impl ServerQualityScorer {
 
         // Update metrics with exponential moving average
         let alpha = 0.3; // Smoothing factor
-        
+
         server_metrics.avg_response_time = Duration::from_millis(
-            ((1.0 - alpha) * server_metrics.avg_response_time.as_millis() as f64 + 
-             alpha * response_time.as_millis() as f64) as u64
+            ((1.0 - alpha) * server_metrics.avg_response_time.as_millis() as f64
+                + alpha * response_time.as_millis() as f64) as u64,
         );
 
         server_metrics.avg_speed = (1.0 - alpha) * server_metrics.avg_speed + alpha * speed;
-        
+
         server_metrics.connection_time = Duration::from_millis(
-            ((1.0 - alpha) * server_metrics.connection_time.as_millis() as f64 + 
-             alpha * connection_time.as_millis() as f64) as u64
+            ((1.0 - alpha) * server_metrics.connection_time.as_millis() as f64
+                + alpha * connection_time.as_millis() as f64) as u64,
         );
 
         server_metrics.ttfb = Duration::from_millis(
-            ((1.0 - alpha) * server_metrics.ttfb.as_millis() as f64 + 
-             alpha * ttfb.as_millis() as f64) as u64
+            ((1.0 - alpha) * server_metrics.ttfb.as_millis() as f64
+                + alpha * ttfb.as_millis() as f64) as u64,
         );
 
         server_metrics.total_requests += 1;
@@ -220,9 +220,8 @@ impl ServerQualityScorer {
         server_metrics.last_updated = Instant::now();
 
         // Update success rate
-        server_metrics.success_rate = 
-            server_metrics.total_requests as f64 / 
-            (server_metrics.total_requests + server_metrics.failed_requests) as f64;
+        server_metrics.success_rate = server_metrics.total_requests as f64
+            / (server_metrics.total_requests + server_metrics.failed_requests) as f64;
 
         // Update reliability score
         self.update_reliability_score(server_metrics);
@@ -230,9 +229,13 @@ impl ServerQualityScorer {
         // Recalculate quality score
         server_metrics.quality_score = self.calculate_quality_score(server_metrics);
 
-        debug!("Updated server metrics for {}: score={:.1}, speed={:.1}KB/s, response_time={:?}", 
-               url, server_metrics.quality_score, server_metrics.avg_speed / 1024.0, 
-               server_metrics.avg_response_time);
+        debug!(
+            "Updated server metrics for {}: score={:.1}, speed={:.1}KB/s, response_time={:?}",
+            url,
+            server_metrics.quality_score,
+            server_metrics.avg_speed / 1024.0,
+            server_metrics.avg_response_time
+        );
     }
 
     /// Record a failed request
@@ -246,9 +249,8 @@ impl ServerQualityScorer {
         server_metrics.last_updated = Instant::now();
 
         // Update success rate
-        server_metrics.success_rate = 
-            server_metrics.total_requests as f64 / 
-            (server_metrics.total_requests + server_metrics.failed_requests) as f64;
+        server_metrics.success_rate = server_metrics.total_requests as f64
+            / (server_metrics.total_requests + server_metrics.failed_requests) as f64;
 
         // Apply failure penalty based on error type
         let penalty = match error_type {
@@ -264,8 +266,10 @@ impl ServerQualityScorer {
         // Recalculate quality score
         server_metrics.quality_score = self.calculate_quality_score(server_metrics);
 
-        warn!("Recorded failure for {}: consecutive={}, score={:.1}, error={:?}", 
-              url, server_metrics.consecutive_failures, server_metrics.quality_score, error_type);
+        warn!(
+            "Recorded failure for {}: consecutive={}, score={:.1}, error={:?}",
+            url, server_metrics.consecutive_failures, server_metrics.quality_score, error_type
+        );
     }
 
     /// Calculate quality score for a server
@@ -274,7 +278,7 @@ impl ServerQualityScorer {
         let response_time_score = {
             let max_time = self.config.max_acceptable_response_time.as_millis() as f64;
             let actual_time = metrics.avg_response_time.as_millis() as f64;
-            ((max_time - actual_time) / max_time * 100.0).max(0.0).min(100.0)
+            ((max_time - actual_time) / max_time * 100.0).clamp(0.0, 100.0)
         };
 
         // Success rate score (0-100)
@@ -284,36 +288,36 @@ impl ServerQualityScorer {
         let speed_score = {
             let min_speed = self.config.min_acceptable_speed;
             let actual_speed = metrics.avg_speed;
-            ((actual_speed / min_speed).log2() * 20.0 + 50.0).max(0.0).min(100.0)
+            ((actual_speed / min_speed).log2() * 20.0 + 50.0).clamp(0.0, 100.0)
         };
 
         // Reliability score (0-100)
         let reliability_score = metrics.reliability_score * 100.0;
 
         // Weighted average
-        let weighted_score = 
-            response_time_score * self.config.response_time_weight +
-            success_rate_score * self.config.success_rate_weight +
-            speed_score * self.config.speed_weight +
-            reliability_score * self.config.reliability_weight;
+        let weighted_score = response_time_score * self.config.response_time_weight
+            + success_rate_score * self.config.success_rate_weight
+            + speed_score * self.config.speed_weight
+            + reliability_score * self.config.reliability_weight;
 
         // Apply server type multiplier
         let final_score = weighted_score * metrics.server_type.score_multiplier();
 
         // Apply consecutive failure penalty
         let failure_penalty = metrics.consecutive_failures as f64 * 5.0;
-        
-        (final_score - failure_penalty).max(0.0).min(100.0)
+
+        (final_score - failure_penalty).clamp(0.0, 100.0)
     }
 
     /// Update reliability score based on recent performance
     fn update_reliability_score(&self, metrics: &mut ServerMetrics) {
         let now = Instant::now();
-        
+
         // Boost reliability for recent successes
         if let Some(last_success) = metrics.last_success {
             let time_since_success = now.duration_since(last_success);
-            if time_since_success < Duration::from_secs(300) { // 5 minutes
+            if time_since_success < Duration::from_secs(300) {
+                // 5 minutes
                 metrics.reliability_score = (metrics.reliability_score + 0.01).min(1.0);
             }
         }
@@ -321,7 +325,8 @@ impl ServerQualityScorer {
         // Penalize for recent failures
         if let Some(last_failure) = metrics.last_failure {
             let time_since_failure = now.duration_since(last_failure);
-            if time_since_failure < Duration::from_secs(60) { // 1 minute
+            if time_since_failure < Duration::from_secs(60) {
+                // 1 minute
                 metrics.reliability_score = (metrics.reliability_score - 0.02).max(0.0);
             }
         }
@@ -333,9 +338,7 @@ impl ServerQualityScorer {
         let mut ranked: Vec<(String, f64)> = urls
             .iter()
             .map(|url| {
-                let score = metrics.get(url)
-                    .map(|m| m.quality_score)
-                    .unwrap_or(50.0); // Default score for unknown servers
+                let score = metrics.get(url).map(|m| m.quality_score).unwrap_or(50.0); // Default score for unknown servers
                 (url.clone(), score)
             })
             .collect();
@@ -350,10 +353,11 @@ impl ServerQualityScorer {
     /// Check if server should be failed over
     pub async fn should_failover(&self, url: &str) -> bool {
         let metrics = self.metrics.read().await;
-        
+
         if let Some(server_metrics) = metrics.get(url) {
             // Check consecutive failures
-            if server_metrics.consecutive_failures >= self.failover_config.max_consecutive_failures {
+            if server_metrics.consecutive_failures >= self.failover_config.max_consecutive_failures
+            {
                 return true;
             }
 
@@ -430,13 +434,15 @@ mod tests {
         let url = "https://example.com";
 
         // Record a successful request
-        scorer.record_success(
-            url,
-            Duration::from_millis(100),
-            1024.0 * 1024.0, // 1 MB/s
-            Duration::from_millis(50),
-            Duration::from_millis(80),
-        ).await;
+        scorer
+            .record_success(
+                url,
+                Duration::from_millis(100),
+                1024.0 * 1024.0, // 1 MB/s
+                Duration::from_millis(50),
+                Duration::from_millis(80),
+            )
+            .await;
 
         let metrics = scorer.get_metrics(url).await.unwrap();
         assert!(metrics.quality_score > 50.0);
@@ -465,22 +471,26 @@ mod tests {
         ];
 
         // Make fast server better
-        scorer.record_success(
-            &urls[0],
-            Duration::from_millis(50),
-            10.0 * 1024.0 * 1024.0, // 10 MB/s
-            Duration::from_millis(20),
-            Duration::from_millis(30),
-        ).await;
+        scorer
+            .record_success(
+                &urls[0],
+                Duration::from_millis(50),
+                10.0 * 1024.0 * 1024.0, // 10 MB/s
+                Duration::from_millis(20),
+                Duration::from_millis(30),
+            )
+            .await;
 
         // Make slow server worse
-        scorer.record_success(
-            &urls[1],
-            Duration::from_millis(500),
-            100.0 * 1024.0, // 100 KB/s
-            Duration::from_millis(200),
-            Duration::from_millis(300),
-        ).await;
+        scorer
+            .record_success(
+                &urls[1],
+                Duration::from_millis(500),
+                100.0 * 1024.0, // 100 KB/s
+                Duration::from_millis(200),
+                Duration::from_millis(300),
+            )
+            .await;
 
         let ranked = scorer.get_ranked_servers(&urls).await;
         assert_eq!(ranked[0].0, urls[0]); // Fast server should be first

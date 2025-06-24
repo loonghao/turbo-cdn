@@ -27,19 +27,22 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// Download file with CDN acceleration
+    /// Download file with intelligent method selection (default: smart mode)
     #[command(alias = "dl")]
     Download {
         /// URL to download
         url: String,
         /// Output path (optional)
         output: Option<PathBuf>,
-        /// Disable CDN optimization and download directly
+        /// Force direct download (bypass smart mode and CDN)
         #[arg(long, alias = "direct")]
         no_cdn: bool,
-        /// Use smart mode (automatically select fastest method)
-        #[arg(long, short)]
-        smart: bool,
+        /// Force CDN download (bypass smart mode)
+        #[arg(long)]
+        force_cdn: bool,
+        /// Disable smart mode (use legacy behavior)
+        #[arg(long)]
+        no_smart: bool,
     },
     /// Get optimized CDN URL
     #[command(alias = "optimize")]
@@ -53,17 +56,29 @@ enum Commands {
 
 #[tokio::main]
 async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
-    // Initialize tracing
-    turbo_cdn::init_tracing();
-
     let cli = Cli::parse();
+
+    // Initialize professional logging system
+    if let Err(e) = turbo_cdn::logging::init_cli_logging(cli.verbose) {
+        eprintln!("Failed to initialize logging: {}", e);
+        std::process::exit(1);
+    }
 
     match cli.command {
         Commands::GetOptimalUrl { url } => {
             handle_optimize_command(&url, cli.verbose).await?;
         }
-        Commands::Download { url, output, no_cdn, smart } => {
-            handle_download_command(&url, output, cli.verbose, no_cdn, smart).await?;
+        Commands::Download {
+            url,
+            output,
+            no_cdn,
+            force_cdn,
+            no_smart,
+        } => {
+            // Determine download mode: smart is default unless explicitly disabled
+            let smart_mode = !no_smart && !no_cdn && !force_cdn;
+            handle_download_command(&url, output, cli.verbose, no_cdn, force_cdn, smart_mode)
+                .await?;
         }
         Commands::Stats => {
             handle_stats_command().await?;
@@ -130,18 +145,22 @@ async fn handle_download_command(
     output_path: Option<PathBuf>,
     verbose: bool,
     no_cdn: bool,
+    force_cdn: bool,
     smart: bool,
 ) -> std::result::Result<(), Box<dyn std::error::Error>> {
     if verbose {
         if smart {
-            println!("🧠 Smart Download (Auto-Select Best Method)");
-            println!("==========================================");
+            println!("🧠 Smart Download (Auto-Select Best Method) - Default Mode");
+            println!("=========================================================");
         } else if no_cdn {
             println!("⬇️  Direct Download (CDN Disabled)");
             println!("==================================");
+        } else if force_cdn {
+            println!("🌐 Forced CDN Download");
+            println!("=====================");
         } else {
-            println!("⬇️  Turbo CDN - Accelerated Download");
-            println!("===================================");
+            println!("⬇️  Legacy Download Mode");
+            println!("=======================");
         }
         println!("Source URL: {}", url);
         if let Some(ref path) = output_path {
@@ -150,7 +169,11 @@ async fn handle_download_command(
         if smart {
             println!("Mode: Smart mode (testing and selecting fastest method)");
         } else if no_cdn {
-            println!("Mode: Direct download (bypassing CDN optimization)");
+            println!("Mode: Direct download (bypassing all optimization)");
+        } else if force_cdn {
+            println!("Mode: Forced CDN download (bypassing smart selection)");
+        } else {
+            println!("Mode: Legacy CDN optimization");
         }
         println!();
     } else {
@@ -158,6 +181,8 @@ async fn handle_download_command(
             print!("🧠 Smart downloading");
         } else if no_cdn {
             print!("⬇️  Downloading directly");
+        } else if force_cdn {
+            print!("🌐 Downloading via CDN");
         } else {
             print!("⬇️  Downloading");
         }
@@ -174,28 +199,32 @@ async fn handle_download_command(
             println!("✓ TurboCdn initialized in smart mode (auto-selecting best method)");
         } else if no_cdn {
             println!("✓ TurboCdn initialized in direct mode (CDN disabled)");
+        } else if force_cdn {
+            println!("✓ TurboCdn initialized in forced CDN mode");
         } else {
-            println!("✓ TurboCdn initialized with intelligent CDN selection");
+            println!("✓ TurboCdn initialized with legacy CDN selection");
         }
     }
 
-    // Download file
+    // Download file based on selected mode
     let result = if smart {
-        // Smart download with automatic method selection
+        // Smart download with automatic method selection (DEFAULT)
         if let Some(output_path) = output_path {
-            turbo_cdn.download_smart_to_path(url, output_path).await
+            turbo_cdn
+                .download_smart_to_path_with_verbose(url, output_path, verbose)
+                .await
         } else {
-            turbo_cdn.download_smart(url).await
+            turbo_cdn.download_smart_with_verbose(url, verbose).await
         }
     } else if no_cdn {
-        // Direct download without CDN optimization
+        // Direct download without any optimization
         if let Some(output_path) = output_path {
             turbo_cdn.download_direct_to_path(url, output_path).await
         } else {
             turbo_cdn.download_direct_from_url(url).await
         }
     } else {
-        // Normal CDN-optimized download
+        // Legacy CDN-optimized download (force_cdn or no_smart)
         if let Some(output_path) = output_path {
             turbo_cdn.download_to_path(url, output_path).await
         } else {
@@ -283,5 +312,3 @@ async fn handle_stats_command() -> std::result::Result<(), Box<dyn std::error::E
 
     Ok(())
 }
-
-

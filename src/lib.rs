@@ -37,6 +37,7 @@
 pub mod adaptive_concurrency;
 pub mod adaptive_speed_controller;
 pub mod cdn_quality;
+pub mod cli_progress;
 pub mod concurrent_downloader;
 pub mod config;
 pub mod dns_cache;
@@ -45,6 +46,7 @@ pub mod geo_detection;
 pub mod http_client;
 pub mod http_client_manager;
 pub mod load_balancer;
+pub mod logging;
 pub mod mmap_writer;
 pub mod progress;
 pub mod server_quality_scorer;
@@ -297,10 +299,18 @@ impl TurboCdn {
 
     /// Smart download that automatically selects the fastest method
     pub async fn download_smart(&self, url: &str) -> Result<DownloadResult> {
+        self.download_smart_with_verbose(url, false).await
+    }
+
+    /// Smart download with verbose control
+    pub async fn download_smart_with_verbose(
+        &self,
+        url: &str,
+        verbose: bool,
+    ) -> Result<DownloadResult> {
         use crate::smart_downloader::SmartDownloader;
 
-        // Create smart downloader with current TurboCdn instance
-        let smart_downloader = SmartDownloader::new().await?;
+        let smart_downloader = SmartDownloader::new_with_verbose(verbose).await?;
         smart_downloader.download_smart(url).await
     }
 
@@ -310,10 +320,23 @@ impl TurboCdn {
         url: &str,
         output_path: P,
     ) -> Result<DownloadResult> {
+        self.download_smart_to_path_with_verbose(url, output_path, false)
+            .await
+    }
+
+    /// Smart download to specific path with verbose control
+    pub async fn download_smart_to_path_with_verbose<P: AsRef<std::path::Path>>(
+        &self,
+        url: &str,
+        output_path: P,
+        verbose: bool,
+    ) -> Result<DownloadResult> {
         use crate::smart_downloader::SmartDownloader;
 
-        let smart_downloader = SmartDownloader::new().await?;
-        smart_downloader.download_smart_to_path(url, output_path).await
+        let smart_downloader = SmartDownloader::new_with_verbose(verbose).await?;
+        smart_downloader
+            .download_smart_to_path(url, output_path)
+            .await
     }
 
     /// Download with custom options
@@ -560,17 +583,20 @@ pub mod async_api {
     }
 }
 
-/// Initialize tracing for the library
+/// Initialize tracing for the library (deprecated - use logging module)
+#[deprecated(note = "Use logging::init_api_logging() instead")]
 pub fn init_tracing() {
-    use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+    let _ = logging::init_api_logging();
+}
 
-    tracing_subscriber::registry()
-        .with(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "turbo_cdn=info".into()),
-        )
-        .with(tracing_subscriber::fmt::layer())
-        .init();
+/// Initialize tracing with specific level (deprecated - use logging module)
+#[deprecated(note = "Use logging module functions instead")]
+pub fn init_tracing_with_level(level: &str) {
+    let config = logging::LoggingConfig {
+        level: level.to_string(),
+        ..logging::LoggingConfig::api()
+    };
+    let _ = logging::init_logging(config);
 }
 
 #[cfg(test)]

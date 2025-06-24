@@ -72,11 +72,11 @@ impl NetworkCondition {
     /// Get recommended chunk size for this condition
     pub fn recommended_chunk_size(&self) -> u64 {
         match self {
-            NetworkCondition::Excellent => 8 * 1024 * 1024,  // 8MB
-            NetworkCondition::Good => 4 * 1024 * 1024,       // 4MB
-            NetworkCondition::Fair => 2 * 1024 * 1024,       // 2MB
-            NetworkCondition::Poor => 1024 * 1024,           // 1MB
-            NetworkCondition::VeryPoor => 512 * 1024,        // 512KB
+            NetworkCondition::Excellent => 8 * 1024 * 1024, // 8MB
+            NetworkCondition::Good => 4 * 1024 * 1024,      // 4MB
+            NetworkCondition::Fair => 2 * 1024 * 1024,      // 2MB
+            NetworkCondition::Poor => 1024 * 1024,          // 1MB
+            NetworkCondition::VeryPoor => 512 * 1024,       // 512KB
         }
     }
 }
@@ -146,22 +146,27 @@ impl AdaptiveSpeedController {
     /// Record a speed sample
     pub async fn record_sample(&self, sample: SpeedSample) {
         let mut samples = self.samples.write().await;
-        
+
         // Add new sample
         samples.push_back(sample.clone());
-        
+
         // Remove old samples if we exceed max
         while samples.len() > self.max_samples {
             samples.pop_front();
         }
 
-        debug!("Recorded speed sample: {:.2} MB/s ({} bytes in {:?})", 
-               sample.speed / 1024.0 / 1024.0, sample.bytes, sample.duration);
+        debug!(
+            "Recorded speed sample: {:.2} MB/s ({} bytes in {:?})",
+            sample.speed / 1024.0 / 1024.0,
+            sample.bytes,
+            sample.duration
+        );
 
         // Trigger adaptation if enough samples and time has passed
         let params = self.params.read().await;
-        if samples.len() >= self.min_samples_for_adaptation && 
-           params.last_adjusted.elapsed() >= self.adaptation_interval {
+        if samples.len() >= self.min_samples_for_adaptation
+            && params.last_adjusted.elapsed() >= self.adaptation_interval
+        {
             drop(params);
             drop(samples);
             self.adapt_parameters().await;
@@ -177,7 +182,8 @@ impl AdaptiveSpeedController {
 
         // Analyze recent performance
         let recent_samples: Vec<_> = samples.iter().rev().take(10).cloned().collect();
-        let avg_speed = recent_samples.iter().map(|s| s.speed).sum::<f64>() / recent_samples.len() as f64;
+        let avg_speed =
+            recent_samples.iter().map(|s| s.speed).sum::<f64>() / recent_samples.len() as f64;
         let speed_mbps = avg_speed / 1024.0 / 1024.0;
 
         // Determine network condition
@@ -193,18 +199,25 @@ impl AdaptiveSpeedController {
         params.network_condition = network_condition;
 
         // Adapt concurrent connections based on performance
-        let new_concurrency = self.calculate_optimal_concurrency(&recent_samples, &trend).await;
+        let new_concurrency = self
+            .calculate_optimal_concurrency(&recent_samples, &trend)
+            .await;
         params.concurrent_connections = new_concurrency;
 
         // Adapt chunk size based on network condition and performance
-        let new_chunk_size = self.calculate_optimal_chunk_size(&recent_samples, &trend).await;
+        let new_chunk_size = self
+            .calculate_optimal_chunk_size(&recent_samples, &trend)
+            .await;
         params.chunk_size = new_chunk_size;
 
         // Adapt timeout based on response times
-        let avg_response_time = recent_samples.iter()
+        let avg_response_time = recent_samples
+            .iter()
             .map(|s| s.duration.as_millis() as f64)
-            .sum::<f64>() / recent_samples.len() as f64;
-        params.timeout = Duration::from_millis((avg_response_time * 3.0) as u64).max(Duration::from_secs(10));
+            .sum::<f64>()
+            / recent_samples.len() as f64;
+        params.timeout =
+            Duration::from_millis((avg_response_time * 3.0) as u64).max(Duration::from_secs(10));
 
         // Update confidence based on performance stability
         params.confidence = self.calculate_confidence(&recent_samples);
@@ -217,16 +230,22 @@ impl AdaptiveSpeedController {
     }
 
     /// Calculate optimal concurrency based on recent performance
-    async fn calculate_optimal_concurrency(&self, samples: &[SpeedSample], trend: &SpeedTrend) -> u32 {
+    async fn calculate_optimal_concurrency(
+        &self,
+        samples: &[SpeedSample],
+        trend: &SpeedTrend,
+    ) -> u32 {
         if samples.is_empty() {
             return 16; // Default
         }
 
         // Group samples by concurrency level
-        let mut concurrency_performance: std::collections::HashMap<u32, Vec<f64>> = std::collections::HashMap::new();
+        let mut concurrency_performance: std::collections::HashMap<u32, Vec<f64>> =
+            std::collections::HashMap::new();
         for sample in samples {
-            concurrency_performance.entry(sample.concurrent_connections)
-                .or_insert_with(Vec::new)
+            concurrency_performance
+                .entry(sample.concurrent_connections)
+                .or_default()
                 .push(sample.speed);
         }
 
@@ -247,20 +266,27 @@ impl AdaptiveSpeedController {
             SpeedTrend::Improving => (best_concurrency as f64 * 1.2) as u32,
             SpeedTrend::Declining => (best_concurrency as f64 * 0.8) as u32,
             SpeedTrend::Stable => best_concurrency,
-        }.clamp(4, 128) // Reasonable bounds
+        }
+        .clamp(4, 128) // Reasonable bounds
     }
 
     /// Calculate optimal chunk size based on recent performance
-    async fn calculate_optimal_chunk_size(&self, samples: &[SpeedSample], _trend: &SpeedTrend) -> u64 {
+    async fn calculate_optimal_chunk_size(
+        &self,
+        samples: &[SpeedSample],
+        _trend: &SpeedTrend,
+    ) -> u64 {
         if samples.is_empty() {
             return 2 * 1024 * 1024; // Default 2MB
         }
 
         // Group samples by chunk size
-        let mut chunk_performance: std::collections::HashMap<u64, Vec<f64>> = std::collections::HashMap::new();
+        let mut chunk_performance: std::collections::HashMap<u64, Vec<f64>> =
+            std::collections::HashMap::new();
         for sample in samples {
-            chunk_performance.entry(sample.chunk_size)
-                .or_insert_with(Vec::new)
+            chunk_performance
+                .entry(sample.chunk_size)
+                .or_default()
                 .push(sample.speed);
         }
 
@@ -279,7 +305,7 @@ impl AdaptiveSpeedController {
         // Adjust based on network condition
         let params = self.params.read().await;
         let recommended = params.network_condition.recommended_chunk_size();
-        
+
         // Blend optimal and recommended
         let blended = (best_chunk_size + recommended) / 2;
         blended.clamp(128 * 1024, 16 * 1024 * 1024) // 128KB to 16MB
@@ -315,14 +341,15 @@ impl AdaptiveSpeedController {
         }
 
         let recent_samples: Vec<_> = samples.iter().rev().take(5).collect();
-        let avg_speed = recent_samples.iter().map(|s| s.speed).sum::<f64>() / recent_samples.len() as f64;
+        let avg_speed =
+            recent_samples.iter().map(|s| s.speed).sum::<f64>() / recent_samples.len() as f64;
         Some(avg_speed)
     }
 
     /// Get speed statistics
     pub async fn get_speed_stats(&self) -> SpeedStats {
         let samples = self.samples.read().await;
-        
+
         if samples.is_empty() {
             return SpeedStats::default();
         }
@@ -345,10 +372,10 @@ impl AdaptiveSpeedController {
     pub async fn reset(&self) {
         let mut samples = self.samples.write().await;
         samples.clear();
-        
+
         let mut params = self.params.write().await;
         *params = AdaptiveParams::default();
-        
+
         info!("Adaptive speed controller reset");
     }
 }
@@ -375,8 +402,10 @@ impl SpeedTrendAnalyzer {
         }
 
         let speeds: Vec<f64> = samples.iter().map(|s| s.speed).collect();
-        let first_half_avg = speeds[..speeds.len()/2].iter().sum::<f64>() / (speeds.len()/2) as f64;
-        let second_half_avg = speeds[speeds.len()/2..].iter().sum::<f64>() / (speeds.len() - speeds.len()/2) as f64;
+        let first_half_avg =
+            speeds[..speeds.len() / 2].iter().sum::<f64>() / (speeds.len() / 2) as f64;
+        let second_half_avg = speeds[speeds.len() / 2..].iter().sum::<f64>()
+            / (speeds.len() - speeds.len() / 2) as f64;
 
         let change_ratio = (second_half_avg - first_half_avg) / first_half_avg;
 
@@ -425,7 +454,7 @@ mod tests {
     #[tokio::test]
     async fn test_speed_recording() {
         let controller = AdaptiveSpeedController::new();
-        
+
         let sample = SpeedSample {
             timestamp: Instant::now(),
             speed: 10.0 * 1024.0 * 1024.0, // 10 MB/s
@@ -437,7 +466,7 @@ mod tests {
         };
 
         controller.record_sample(sample).await;
-        
+
         let stats = controller.get_speed_stats().await;
         assert_eq!(stats.sample_count, 1);
         assert!(stats.avg_speed > 0.0);
@@ -445,10 +474,16 @@ mod tests {
 
     #[test]
     fn test_network_condition_classification() {
-        assert_eq!(NetworkCondition::from_speed(100.0), NetworkCondition::Excellent);
+        assert_eq!(
+            NetworkCondition::from_speed(100.0),
+            NetworkCondition::Excellent
+        );
         assert_eq!(NetworkCondition::from_speed(20.0), NetworkCondition::Good);
         assert_eq!(NetworkCondition::from_speed(5.0), NetworkCondition::Fair);
         assert_eq!(NetworkCondition::from_speed(0.5), NetworkCondition::Poor);
-        assert_eq!(NetworkCondition::from_speed(0.05), NetworkCondition::VeryPoor);
+        assert_eq!(
+            NetworkCondition::from_speed(0.05),
+            NetworkCondition::VeryPoor
+        );
     }
 }

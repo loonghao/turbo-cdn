@@ -3,10 +3,10 @@
 //! This example demonstrates how to benchmark Turbo CDN performance
 //! and compare it with other download methods.
 
-use turbo_cdn::{TurboCdn, DownloadOptions, async_api, Result};
-use std::time::{Instant, Duration};
-use std::path::PathBuf;
 use std::collections::HashMap;
+use std::path::PathBuf;
+use std::time::{Duration, Instant};
+use turbo_cdn::{async_api, DownloadOptions, Result, TurboCdn};
 
 /// Benchmark result for a single download
 #[derive(Debug, Clone)]
@@ -81,16 +81,16 @@ impl DownloadBenchmark {
     pub async fn run_comprehensive_benchmark(&self) -> Result<Vec<BenchmarkResult>> {
         println!("🚀 Turbo CDN - Comprehensive Performance Benchmark");
         println!("=================================================");
-        
+
         // Ensure output directory exists
         std::fs::create_dir_all(&self.output_dir)?;
-        
+
         let mut all_results = Vec::new();
-        
+
         for (i, url) in self.test_urls.iter().enumerate() {
             println!("\n📋 Test {}/{}: {}", i + 1, self.test_urls.len(), url);
             println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-            
+
             // Test different methods
             let methods = vec![
                 "Turbo CDN (Default)",
@@ -103,73 +103,88 @@ impl DownloadBenchmark {
                 println!("\n🔍 Testing: {}", method_name);
 
                 let result = match method_name {
-                    "Turbo CDN (Default)" => Self::benchmark_turbo_cdn_default(url, &self.output_dir).await,
-                    "Turbo CDN (Optimized)" => Self::benchmark_turbo_cdn_optimized(url, &self.output_dir).await,
-                    "Turbo CDN (Conservative)" => Self::benchmark_turbo_cdn_conservative(url, &self.output_dir).await,
+                    "Turbo CDN (Default)" => {
+                        Self::benchmark_turbo_cdn_default(url, &self.output_dir).await
+                    }
+                    "Turbo CDN (Optimized)" => {
+                        Self::benchmark_turbo_cdn_optimized(url, &self.output_dir).await
+                    }
+                    "Turbo CDN (Conservative)" => {
+                        Self::benchmark_turbo_cdn_conservative(url, &self.output_dir).await
+                    }
                     "Async API (Quick)" => Self::benchmark_async_api(url, &self.output_dir).await,
                     _ => continue,
                 };
-                
+
                 match &result {
                     Ok(bench_result) if bench_result.success => {
-                        println!("   ✅ Success: {:.2} MB/s ({:.2}s)", 
-                            bench_result.speed_mbps, 
+                        println!(
+                            "   ✅ Success: {:.2} MB/s ({:.2}s)",
+                            bench_result.speed_mbps,
                             bench_result.download_time.as_secs_f64()
                         );
                     }
                     Ok(bench_result) => {
-                        println!("   ❌ Failed: {}", 
-                            bench_result.error.as_ref().unwrap_or(&"Unknown error".to_string())
+                        println!(
+                            "   ❌ Failed: {}",
+                            bench_result
+                                .error
+                                .as_ref()
+                                .unwrap_or(&"Unknown error".to_string())
                         );
                     }
                     Err(e) => {
                         println!("   ❌ Error: {}", e);
                     }
                 }
-                
+
                 if let Ok(bench_result) = result {
                     all_results.push(bench_result);
                 }
-                
+
                 // Small delay between tests
                 tokio::time::sleep(Duration::from_millis(500)).await;
             }
         }
-        
+
         // Print summary
         self.print_benchmark_summary(&all_results);
-        
+
         Ok(all_results)
     }
 
     /// Benchmark Turbo CDN with default settings
-    async fn benchmark_turbo_cdn_default(url: &str, _output_dir: &PathBuf) -> Result<BenchmarkResult> {
+    async fn benchmark_turbo_cdn_default(
+        url: &str,
+        _output_dir: &PathBuf,
+    ) -> Result<BenchmarkResult> {
         let mut result = BenchmarkResult::new("Turbo CDN (Default)", url);
-        
+
         let start = Instant::now();
-        
+
         match TurboCdn::new().await {
-            Ok(turbo_cdn) => {
-                match turbo_cdn.download_from_url(url).await {
-                    Ok(download_result) => {
-                        let duration = start.elapsed();
-                        result = result.with_success(download_result.size, duration);
-                    }
-                    Err(e) => {
-                        result = result.with_error(e.to_string());
-                    }
+            Ok(turbo_cdn) => match turbo_cdn.download_from_url(url).await {
+                Ok(download_result) => {
+                    let duration = start.elapsed();
+                    result = result.with_success(download_result.size, duration);
                 }
-            }
+                Err(e) => {
+                    result = result.with_error(e.to_string());
+                }
+            },
             Err(e) => {
                 result = result.with_error(format!("Failed to create client: {}", e));
             }
         }
-        
+
         Ok(result)
     }
 
     /// Benchmark Turbo CDN with optimized settings
-    async fn benchmark_turbo_cdn_optimized(url: &str, _output_dir: &PathBuf) -> Result<BenchmarkResult> {
+    async fn benchmark_turbo_cdn_optimized(
+        url: &str,
+        _output_dir: &PathBuf,
+    ) -> Result<BenchmarkResult> {
         let mut result = BenchmarkResult::new("Turbo CDN (Optimized)", url);
 
         let options = DownloadOptions {
@@ -182,12 +197,19 @@ impl DownloadBenchmark {
             expected_size: None,
             progress_callback: None,
         };
-        
+
         let start = Instant::now();
-        
+
         match TurboCdn::new().await {
             Ok(turbo_cdn) => {
-                match turbo_cdn.download_with_options(url, std::env::temp_dir().join("benchmark_optimized"), options).await {
+                match turbo_cdn
+                    .download_with_options(
+                        url,
+                        std::env::temp_dir().join("benchmark_optimized"),
+                        options,
+                    )
+                    .await
+                {
                     Ok(download_result) => {
                         let duration = start.elapsed();
                         result = result.with_success(download_result.size, duration);
@@ -201,14 +223,17 @@ impl DownloadBenchmark {
                 result = result.with_error(format!("Failed to create client: {}", e));
             }
         }
-        
+
         Ok(result)
     }
 
     /// Benchmark Turbo CDN with conservative settings
-    async fn benchmark_turbo_cdn_conservative(url: &str, _output_dir: &PathBuf) -> Result<BenchmarkResult> {
+    async fn benchmark_turbo_cdn_conservative(
+        url: &str,
+        _output_dir: &PathBuf,
+    ) -> Result<BenchmarkResult> {
         let mut result = BenchmarkResult::new("Turbo CDN (Conservative)", url);
-        
+
         let options = DownloadOptions {
             max_concurrent_chunks: Some(2),
             chunk_size: Some(512 * 1024), // 512KB
@@ -219,12 +244,19 @@ impl DownloadBenchmark {
             expected_size: None,
             progress_callback: None,
         };
-        
+
         let start = Instant::now();
-        
+
         match TurboCdn::new().await {
             Ok(turbo_cdn) => {
-                match turbo_cdn.download_with_options(url, std::env::temp_dir().join("benchmark_conservative"), options).await {
+                match turbo_cdn
+                    .download_with_options(
+                        url,
+                        std::env::temp_dir().join("benchmark_conservative"),
+                        options,
+                    )
+                    .await
+                {
                     Ok(download_result) => {
                         let duration = start.elapsed();
                         result = result.with_success(download_result.size, duration);
@@ -238,16 +270,16 @@ impl DownloadBenchmark {
                 result = result.with_error(format!("Failed to create client: {}", e));
             }
         }
-        
+
         Ok(result)
     }
 
     /// Benchmark async API
     async fn benchmark_async_api(url: &str, _output_dir: &PathBuf) -> Result<BenchmarkResult> {
         let mut result = BenchmarkResult::new("Async API (Quick)", url);
-        
+
         let start = Instant::now();
-        
+
         match async_api::quick::download_url(url).await {
             Ok(download_result) => {
                 let duration = start.elapsed();
@@ -257,7 +289,7 @@ impl DownloadBenchmark {
                 result = result.with_error(e.to_string());
             }
         }
-        
+
         Ok(result)
     }
 
@@ -265,46 +297,54 @@ impl DownloadBenchmark {
     fn print_benchmark_summary(&self, results: &[BenchmarkResult]) {
         println!("\n📊 Benchmark Summary");
         println!("===================");
-        
+
         // Group results by method
         let mut method_results: HashMap<String, Vec<&BenchmarkResult>> = HashMap::new();
         for result in results {
-            method_results.entry(result.method.clone()).or_insert_with(Vec::new).push(result);
+            method_results
+                .entry(result.method.clone())
+                .or_insert_with(Vec::new)
+                .push(result);
         }
-        
+
         // Calculate statistics for each method
         for (method, method_results) in method_results {
-            let successful_results: Vec<_> = method_results.iter()
-                .filter(|r| r.success)
-                .collect();
-            
+            let successful_results: Vec<_> = method_results.iter().filter(|r| r.success).collect();
+
             if successful_results.is_empty() {
                 println!("\n❌ {}: No successful downloads", method);
                 continue;
             }
-            
-            let avg_speed = successful_results.iter()
-                .map(|r| r.speed_mbps)
-                .sum::<f64>() / successful_results.len() as f64;
-            
-            let avg_time = successful_results.iter()
+
+            let avg_speed = successful_results.iter().map(|r| r.speed_mbps).sum::<f64>()
+                / successful_results.len() as f64;
+
+            let avg_time = successful_results
+                .iter()
                 .map(|r| r.download_time.as_secs_f64())
-                .sum::<f64>() / successful_results.len() as f64;
-            
-            let total_size = successful_results.iter()
-                .map(|r| r.file_size)
-                .sum::<u64>();
-            
-            let success_rate = (successful_results.len() as f64 / method_results.len() as f64) * 100.0;
-            
+                .sum::<f64>()
+                / successful_results.len() as f64;
+
+            let total_size = successful_results.iter().map(|r| r.file_size).sum::<u64>();
+
+            let success_rate =
+                (successful_results.len() as f64 / method_results.len() as f64) * 100.0;
+
             println!("\n🚀 {}", method);
-            println!("   📊 Success rate: {:.1}% ({}/{})", 
-                success_rate, successful_results.len(), method_results.len());
+            println!(
+                "   📊 Success rate: {:.1}% ({}/{})",
+                success_rate,
+                successful_results.len(),
+                method_results.len()
+            );
             println!("   ⚡ Average speed: {:.2} MB/s", avg_speed);
             println!("   ⏱️  Average time: {:.2}s", avg_time);
-            println!("   📦 Total downloaded: {:.2} MB", total_size as f64 / 1_000_000.0);
+            println!(
+                "   📦 Total downloaded: {:.2} MB",
+                total_size as f64 / 1_000_000.0
+            );
         }
-        
+
         // Find best performing method
         if let Some(best_method) = self.find_best_method(results) {
             println!("\n🏆 Best Performing Method: {}", best_method);
@@ -314,16 +354,18 @@ impl DownloadBenchmark {
     /// Find the best performing method
     fn find_best_method(&self, results: &[BenchmarkResult]) -> Option<String> {
         let mut method_speeds: HashMap<String, Vec<f64>> = HashMap::new();
-        
+
         for result in results {
             if result.success {
-                method_speeds.entry(result.method.clone())
+                method_speeds
+                    .entry(result.method.clone())
                     .or_insert_with(Vec::new)
                     .push(result.speed_mbps);
             }
         }
-        
-        method_speeds.into_iter()
+
+        method_speeds
+            .into_iter()
             .map(|(method, speeds)| {
                 let avg_speed = speeds.iter().sum::<f64>() / speeds.len() as f64;
                 (method, avg_speed)
@@ -333,32 +375,38 @@ impl DownloadBenchmark {
     }
 
     /// Run concurrent download benchmark
-    pub async fn run_concurrent_benchmark(&self, concurrency: usize) -> Result<Vec<BenchmarkResult>> {
-        println!("\n🔄 Concurrent Download Benchmark (Concurrency: {})", concurrency);
+    pub async fn run_concurrent_benchmark(
+        &self,
+        concurrency: usize,
+    ) -> Result<Vec<BenchmarkResult>> {
+        println!(
+            "\n🔄 Concurrent Download Benchmark (Concurrency: {})",
+            concurrency
+        );
         println!("================================================");
-        
+
         let mut tasks = Vec::new();
-        
+
         for (i, url) in self.test_urls.iter().enumerate() {
             let url = url.clone();
             let output_dir = self.output_dir.clone();
-            
+
             let task = tokio::spawn(async move {
                 println!("🚀 Starting concurrent download {}: {}", i + 1, url);
                 Self::benchmark_turbo_cdn_default(&url, &output_dir).await
             });
-            
+
             tasks.push(task);
-            
+
             // Limit concurrency
             if tasks.len() >= concurrency {
                 break;
             }
         }
-        
+
         let start = Instant::now();
         let mut results = Vec::new();
-        
+
         for task in tasks {
             match task.await {
                 Ok(Ok(result)) => results.push(result),
@@ -366,19 +414,20 @@ impl DownloadBenchmark {
                 Err(e) => println!("❌ Join error: {}", e),
             }
         }
-        
+
         let total_time = start.elapsed();
-        
+
         println!("\n📊 Concurrent Benchmark Results:");
         println!("   ⏱️  Total time: {:.2}s", total_time.as_secs_f64());
         println!("   📊 Completed downloads: {}", results.len());
-        
+
         if !results.is_empty() {
             let total_size: u64 = results.iter().map(|r| r.file_size).sum();
-            let overall_speed = (total_size as f64 * 8.0) / (total_time.as_secs_f64() * 1_000_000.0);
+            let overall_speed =
+                (total_size as f64 * 8.0) / (total_time.as_secs_f64() * 1_000_000.0);
             println!("   ⚡ Overall speed: {:.2} MB/s", overall_speed);
         }
-        
+
         Ok(results)
     }
 }
@@ -405,19 +454,20 @@ async fn main() -> Result<()> {
     // Custom benchmark with specific URLs
     println!("\n🎯 Running custom benchmark...");
     let custom_urls = vec![
-        "https://github.com/microsoft/vscode/releases/download/1.85.0/VSCode-linux-x64.tar.gz".to_string(),
+        "https://github.com/microsoft/vscode/releases/download/1.85.0/VSCode-linux-x64.tar.gz"
+            .to_string(),
         "https://nodejs.org/dist/v20.10.0/node-v20.10.0-linux-x64.tar.xz".to_string(),
     ];
-    
+
     let custom_benchmark = DownloadBenchmark::new()
         .with_urls(custom_urls)
         .with_output_dir(PathBuf::from("./custom-benchmark"));
-    
+
     let _custom_results = custom_benchmark.run_comprehensive_benchmark().await?;
 
     println!("\n🎉 All benchmarks completed!");
     println!("   📁 Results saved to benchmark directories");
-    
+
     Ok(())
 }
 
@@ -435,7 +485,7 @@ mod tests {
     async fn test_benchmark_result() {
         let result = BenchmarkResult::new("Test", "https://example.com")
             .with_success(1000000, Duration::from_secs(1));
-        
+
         assert!(result.success);
         assert_eq!(result.file_size, 1000000);
         assert!(result.speed_mbps > 0.0);
@@ -445,7 +495,7 @@ mod tests {
     async fn test_single_benchmark() {
         let url = "https://github.com/BurntSushi/ripgrep/releases/download/14.1.1/ripgrep-14.1.1-x86_64-pc-windows-msvc.zip";
         let output_dir = PathBuf::from("./test-benchmark");
-        
+
         let result = DownloadBenchmark::benchmark_async_api(url, &output_dir).await;
         assert!(result.is_ok());
     }
