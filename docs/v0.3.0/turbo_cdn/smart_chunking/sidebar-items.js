@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["ChunkStrategy"],"struct":["ChunkMetrics","ChunkRange","PerformanceSummary","SmartChunking"]};

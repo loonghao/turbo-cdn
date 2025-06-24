@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["Region"],"struct":["GeneralConfig","GeoDetectionConfig","PerformanceConfig","SecurityConfig","TestingConfig","TurboCdnConfig","UrlMappingRuleConfig"]};

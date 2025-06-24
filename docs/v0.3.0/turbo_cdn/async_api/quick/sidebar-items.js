@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["download_url","optimize_url"]};

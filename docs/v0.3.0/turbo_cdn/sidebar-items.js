@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["init_tracing"],"mod":["adaptive_concurrency","async_api","cdn_quality","concurrent_downloader","config","dns_cache","error","geo_detection","http_client","load_balancer","progress","server_tracker","smart_chunking","sync_api","url_mapper"],"struct":["DownloadOptions","TurboCdn","TurboCdnStats"]};

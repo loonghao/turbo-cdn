@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["create_best_client"],"struct":["HttpResponse","IsahcClient","ReqwestClient"],"trait":["HttpClient"]};
