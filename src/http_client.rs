@@ -7,6 +7,8 @@
 //! allowing runtime selection of the best performing client.
 
 use crate::error::{Result, TurboCdnError};
+use futures_util::io::AsyncReadExt;
+use isahc::config::Configurable;
 use std::collections::HashMap;
 use std::time::Duration;
 
@@ -38,49 +40,46 @@ pub trait HttpClient: Send + Sync {
     fn name(&self) -> &'static str;
 }
 
-/// Ureq-based HTTP client (lightweight alternative)
-#[cfg(feature = "ureq-client")]
-pub struct UreqClient {
-    agent: ureq::Agent,
+/// Isahc-based HTTP client (high performance)
+pub struct IsahcClient {
+    client: isahc::HttpClient,
 }
 
-#[cfg(feature = "ureq-client")]
-impl UreqClient {
+impl IsahcClient {
     pub fn new(timeout: Duration) -> Result<Self> {
-        let agent = ureq::AgentBuilder::new()
+        let client = isahc::HttpClient::builder()
             .timeout(timeout)
-            .build();
+            .tcp_keepalive(Duration::from_secs(60))
+            .tcp_nodelay()
+            .max_connections_per_host(20)
+            .build()
+            .map_err(|e| TurboCdnError::network(format!("Failed to create isahc client: {}", e)))?;
 
-        Ok(Self { agent })
+        Ok(Self { client })
     }
 }
 
-#[cfg(feature = "ureq-client")]
 #[async_trait::async_trait]
-impl HttpClient for UreqClient {
+impl HttpClient for IsahcClient {
     async fn get(&self, url: &str) -> Result<HttpResponse> {
-        let response = tokio::task::spawn_blocking({
-            let agent = self.agent.clone();
-            let url = url.to_string();
-            move || agent.get(&url).call()
-        })
-        .await
-        .map_err(|e| TurboCdnError::network(format!("Task join error: {}", e)))?
-        .map_err(|e| TurboCdnError::network(format!("GET request failed: {}", e)))?;
+        let response = self
+            .client
+            .get_async(url)
+            .await
+            .map_err(|e| TurboCdnError::network(format!("GET request failed: {}", e)))?;
 
-        let status = response.status();
+        let status = response.status().as_u16();
         let headers = response
-            .headers_names()
+            .headers()
             .iter()
-            .filter_map(|name| {
-                response.header(name).map(|value| (name.clone(), value.to_string()))
-            })
+            .map(|(k, v)| (k.to_string(), v.to_str().unwrap_or("").to_string()))
             .collect();
 
+        let mut body_reader = response.into_body();
         let mut body = Vec::new();
-        response
-            .into_reader()
+        body_reader
             .read_to_end(&mut body)
+            .await
             .map_err(|e| TurboCdnError::network(format!("Failed to read response body: {}", e)))?;
 
         Ok(HttpResponse {
@@ -95,35 +94,32 @@ impl HttpClient for UreqClient {
         url: &str,
         request_headers: &HashMap<String, String>,
     ) -> Result<HttpResponse> {
-        let response = tokio::task::spawn_blocking({
-            let agent = self.agent.clone();
-            let url = url.to_string();
-            let headers = request_headers.clone();
-            move || {
-                let mut request = agent.get(&url);
-                for (key, value) in headers {
-                    request = request.set(&key, &value);
-                }
-                request.call()
-            }
-        })
-        .await
-        .map_err(|e| TurboCdnError::network(format!("Task join error: {}", e)))?
-        .map_err(|e| TurboCdnError::network(format!("GET request with headers failed: {}", e)))?;
+        let mut request = isahc::Request::get(url);
 
-        let status = response.status();
+        for (key, value) in request_headers {
+            request = request.header(key, value);
+        }
+
+        let response = self
+            .client
+            .send_async(request.body(()).unwrap())
+            .await
+            .map_err(|e| {
+                TurboCdnError::network(format!("GET request with headers failed: {}", e))
+            })?;
+
+        let status = response.status().as_u16();
         let headers = response
-            .headers_names()
+            .headers()
             .iter()
-            .filter_map(|name| {
-                response.header(name).map(|value| (name.clone(), value.to_string()))
-            })
+            .map(|(k, v)| (k.to_string(), v.to_str().unwrap_or("").to_string()))
             .collect();
 
+        let mut body_reader = response.into_body();
         let mut body = Vec::new();
-        response
-            .into_reader()
+        body_reader
             .read_to_end(&mut body)
+            .await
             .map_err(|e| TurboCdnError::network(format!("Failed to read response body: {}", e)))?;
 
         Ok(HttpResponse {
@@ -134,22 +130,17 @@ impl HttpClient for UreqClient {
     }
 
     async fn head(&self, url: &str) -> Result<HttpResponse> {
-        let response = tokio::task::spawn_blocking({
-            let agent = self.agent.clone();
-            let url = url.to_string();
-            move || agent.head(&url).call()
-        })
-        .await
-        .map_err(|e| TurboCdnError::network(format!("Task join error: {}", e)))?
-        .map_err(|e| TurboCdnError::network(format!("HEAD request failed: {}", e)))?;
+        let response = self
+            .client
+            .head_async(url)
+            .await
+            .map_err(|e| TurboCdnError::network(format!("HEAD request failed: {}", e)))?;
 
-        let status = response.status();
+        let status = response.status().as_u16();
         let headers = response
-            .headers_names()
+            .headers()
             .iter()
-            .filter_map(|name| {
-                response.header(name).map(|value| (name.clone(), value.to_string()))
-            })
+            .map(|(k, v)| (k.to_string(), v.to_str().unwrap_or("").to_string()))
             .collect();
 
         Ok(HttpResponse {
@@ -160,7 +151,7 @@ impl HttpClient for UreqClient {
     }
 
     fn name(&self) -> &'static str {
-        "ureq"
+        "isahc"
     }
 }
 
