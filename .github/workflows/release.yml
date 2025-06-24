@@ -1,223 +1,243 @@
 name: Release
 
+# Only do the release on x.y.z tags.
 on:
   push:
     tags:
-      - 'v*'
-  workflow_dispatch:
-    inputs:
-      version:
-        description: 'Version to release (e.g., v1.0.0)'
-        required: true
-        type: string
+      - "v*"
+
+# We need this to be able to create releases.
+permissions:
+  contents: write
 
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
+  # Pin cross version for reproducible builds
+  CROSS_VERSION: v0.2.5
+  # Build static releases with PCRE2 if needed
+  PCRE2_SYS_STATIC: 1
 
 jobs:
+  # The create-release job runs purely to initialize the GitHub release itself,
+  # and names the release after the `x.y.z` tag that was pushed. It's separate
+  # from building the release so that we only create the release once.
   create-release:
-    name: Create Release
+    name: create-release
     runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.get_version.outputs.version }}
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-
-    - name: Get version
-      id: get_version
-      run: |
-        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-          echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
-        else
-          echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
-        fi
-
-    - name: Generate changelog
-      id: changelog
-      run: |
-        # Extract changelog for this version
-        if [ -f CHANGELOG.md ]; then
-          # Get changelog section for this version
-          awk '/^## \[/{if(p) exit; if($0 ~ /\['${{ steps.get_version.outputs.version }}'\]/) p=1} p' CHANGELOG.md > release_notes.md
-          if [ ! -s release_notes.md ]; then
-            echo "No changelog found for version ${{ steps.get_version.outputs.version }}" > release_notes.md
+      - uses: actions/checkout@v4
+      - name: Get the release version from the tag
+        if: env.VERSION == ''
+        run: echo "VERSION=${{ github.ref_name }}" >> $GITHUB_ENV
+      - name: Show the version
+        run: |
+          echo "version is: $VERSION"
+      - name: Check that tag version and Cargo.toml version are the same
+        shell: bash
+        run: |
+          if ! grep -q "version = \"$VERSION\"" Cargo.toml; then
+            echo "version does not match Cargo.toml" >&2
+            exit 1
           fi
-        else
-          echo "Automated release for ${{ steps.get_version.outputs.version }}" > release_notes.md
-        fi
+      - name: Create GitHub release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release create $VERSION --draft --verify-tag --title $VERSION
+    outputs:
+      version: ${{ env.VERSION }}
 
-    - name: Create Release
-      id: create_release
-      uses: softprops/action-gh-release@v2
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: ${{ steps.get_version.outputs.version }}
-        name: Release ${{ steps.get_version.outputs.version }}
-        body_path: release_notes.md
-        draft: false
-        prerelease: ${{ contains(steps.get_version.outputs.version, '-') }}
-
-  build-and-upload:
-    name: Build and Upload
-    needs: create-release
+  build-release:
+    name: build-release
+    needs: ['create-release']
+    runs-on: ${{ matrix.os }}
+    env:
+      # For some builds, we use cross to test on 32-bit and big-endian
+      # systems.
+      CARGO: cargo
+      # When CARGO is set to CROSS, this is set to `--target matrix.target`.
+      TARGET_FLAGS:
+      # When CARGO is set to CROSS, TARGET_DIR includes matrix.target.
+      TARGET_DIR: ./target
+      # Emit backtraces on panics.
+      RUST_BACKTRACE: 1
     strategy:
+      fail-fast: false
       matrix:
         include:
-          - target: x86_64-unknown-linux-gnu
+          - build: linux
             os: ubuntu-latest
-            name: turbo-cdn-linux-x64
-          - target: x86_64-unknown-linux-musl
+            rust: stable
+            target: x86_64-unknown-linux-musl
+            strip: x86_64-linux-musl-strip
+          - build: stable-x86
             os: ubuntu-latest
-            name: turbo-cdn-linux-x64-musl
-          - target: aarch64-unknown-linux-gnu
+            rust: stable
+            target: i686-unknown-linux-gnu
+            strip: x86_64-linux-gnu-strip
+          - build: stable-aarch64
             os: ubuntu-latest
-            name: turbo-cdn-linux-arm64
-          - target: x86_64-pc-windows-msvc
+            rust: stable
+            target: aarch64-unknown-linux-gnu
+            strip: aarch64-linux-gnu-strip
+          - build: stable-arm-gnueabihf
+            os: ubuntu-latest
+            rust: stable
+            target: armv7-unknown-linux-gnueabihf
+            strip: arm-linux-gnueabihf-strip
+          - build: macos
+            os: macos-latest
+            rust: stable
+            target: x86_64-apple-darwin
+          - build: macos-arm
+            os: macos-latest
+            rust: stable
+            target: aarch64-apple-darwin
+          - build: win-msvc
             os: windows-latest
-            name: turbo-cdn-windows-x64.exe
-          - target: x86_64-apple-darwin
-            os: macos-latest
-            name: turbo-cdn-macos-x64
-          - target: aarch64-apple-darwin
-            os: macos-latest
-            name: turbo-cdn-macos-arm64
-
-    runs-on: ${{ matrix.os }}
+            rust: stable
+            target: x86_64-pc-windows-msvc
+          - build: win-gnu
+            os: windows-latest
+            rust: stable-x86_64-gnu
+            target: x86_64-pc-windows-gnu
+          - build: win32-msvc
+            os: windows-latest
+            rust: stable
+            target: i686-pc-windows-msvc
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Install Rust toolchain
-      uses: dtolnay/rust-toolchain@stable
-      with:
-        targets: ${{ matrix.target }}
+      - name: Install packages (Ubuntu)
+        if: matrix.os == 'ubuntu-latest'
+        shell: bash
+        run: |
+          ci/ubuntu-install-packages
 
-    - name: Cache dependencies
-      uses: Swatinem/rust-cache@v2
-      with:
-        key: ${{ matrix.target }}
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.rust }}
+          target: ${{ matrix.target }}
 
-    - name: Install cross-compilation tools
-      if: matrix.target == 'aarch64-unknown-linux-gnu'
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y gcc-aarch64-linux-gnu
+      - name: Use Cross
+        if: matrix.os == 'ubuntu-latest' && matrix.target != ''
+        shell: bash
+        run: |
+          # In the past, new releases of 'cross' have broken CI. So for now, we
+          # pin it. We also use their pre-compiled binary releases because cross
+          # has over 100 dependencies and takes a bit to compile.
+          dir="$RUNNER_TEMP/cross-download"
+          mkdir "$dir"
+          echo "$dir" >> $GITHUB_PATH
+          cd "$dir"
+          curl -LO "https://github.com/cross-rs/cross/releases/download/$CROSS_VERSION/cross-x86_64-unknown-linux-musl.tar.gz"
+          tar xf cross-x86_64-unknown-linux-musl.tar.gz
+          echo "CARGO=cross" >> $GITHUB_ENV
 
-    - name: Install musl tools
-      if: matrix.target == 'x86_64-unknown-linux-musl'
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y musl-tools
+      - name: Set target variables
+        shell: bash
+        run: |
+          echo "TARGET_FLAGS=--target ${{ matrix.target }}" >> $GITHUB_ENV
+          echo "TARGET_DIR=./target/${{ matrix.target }}" >> $GITHUB_ENV
 
-    - name: Build binary
-      run: |
-        cargo build --release --target ${{ matrix.target }} --all-features
+      - name: Show command used for Cargo
+        shell: bash
+        run: |
+          echo "cargo command is: ${{ env.CARGO }}"
+          echo "target flag is: ${{ env.TARGET_FLAGS }}"
+          echo "target dir is: ${{ env.TARGET_DIR }}"
 
-    - name: Prepare binary
-      shell: bash
-      run: |
-        cd target/${{ matrix.target }}/release
-        if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
-          cp turbo-cdn.exe ../../../${{ matrix.name }}
-        else
-          cp turbo-cdn ../../../${{ matrix.name }}
-        fi
-        cd ../../..
+      - name: Build release binary
+        shell: bash
+        run: |
+          ${{ env.CARGO }} build --verbose --release --all-features ${{ env.TARGET_FLAGS }}
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            bin="target/${{ matrix.target }}/release/turbo-cdn.exe"
+          else
+            bin="target/${{ matrix.target }}/release/turbo-cdn"
+          fi
+          echo "BIN=$bin" >> $GITHUB_ENV
 
-    - name: Generate SHA256
-      shell: bash
-      run: |
-        if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
-          certutil -hashfile ${{ matrix.name }} SHA256 | head -2 | tail -1 > ${{ matrix.name }}.sha256
-        else
-          shasum -a 256 ${{ matrix.name }} > ${{ matrix.name }}.sha256
-        fi
+      - name: Strip release binary (macos)
+        if: matrix.os == 'macos-latest'
+        shell: bash
+        run: strip "$BIN"
 
-    - name: Upload Release Assets
-      uses: softprops/action-gh-release@v2
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: ${{ needs.create-release.outputs.version }}
-        files: |
-          ${{ matrix.name }}
-          ${{ matrix.name }}.sha256
+      - name: Strip release binary (cross)
+        if: env.CARGO == 'cross'
+        shell: bash
+        run: |
+          docker run --rm -v \
+            "$PWD/target:/target:Z" \
+            "ghcr.io/cross-rs/${{ matrix.target }}:main" \
+            "${{ matrix.strip }}" \
+            "/$BIN"
+
+      - name: Determine archive name
+        shell: bash
+        run: |
+          version="${{ needs.create-release.outputs.version }}"
+          echo "ARCHIVE=turbo-cdn-$version-${{ matrix.target }}" >> $GITHUB_ENV
+
+      - name: Creating directory for archive
+        shell: bash
+        run: |
+          mkdir -p "$ARCHIVE"
+          cp "$BIN" "$ARCHIVE"/
+          cp {README.md,LICENSE} "$ARCHIVE"/
+
+      - name: Build archive (Windows)
+        shell: bash
+        if: matrix.os == 'windows-latest'
+        run: |
+          7z a "$ARCHIVE.zip" "$ARCHIVE"
+          certutil -hashfile "$ARCHIVE.zip" SHA256 > "$ARCHIVE.zip.sha256"
+          echo "ASSET=$ARCHIVE.zip" >> $GITHUB_ENV
+          echo "ASSET_SUM=$ARCHIVE.zip.sha256" >> $GITHUB_ENV
+
+      - name: Build archive (Unix)
+        shell: bash
+        if: matrix.os != 'windows-latest'
+        run: |
+          tar czf "$ARCHIVE.tar.gz" "$ARCHIVE"
+          shasum -a 256 "$ARCHIVE.tar.gz" > "$ARCHIVE.tar.gz.sha256"
+          echo "ASSET=$ARCHIVE.tar.gz" >> $GITHUB_ENV
+          echo "ASSET_SUM=$ARCHIVE.tar.gz.sha256" >> $GITHUB_ENV
+
+      - name: Upload release archive
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          version="${{ needs.create-release.outputs.version }}"
+          gh release upload "$version" ${{ env.ASSET }} ${{ env.ASSET_SUM }}
 
   publish-crate:
     name: Publish to crates.io
-    needs: [create-release, build-and-upload]
+    needs: [create-release, build-release]
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Install Rust toolchain
-      uses: dtolnay/rust-toolchain@stable
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
 
-    - name: Cache dependencies
-      uses: Swatinem/rust-cache@v2
+      - name: Verify version
+        run: |
+          CARGO_VERSION=$(cargo metadata --format-version 1 | jq -r '.packages[] | select(.name == "turbo-cdn") | .version')
+          TAG_VERSION="${{ needs.create-release.outputs.version }}"
 
-    - name: Verify version
-      run: |
-        CARGO_VERSION=$(cargo metadata --format-version 1 | jq -r '.packages[] | select(.name == "turbo-cdn") | .version')
-        TAG_VERSION="${{ needs.create-release.outputs.version }}"
-        TAG_VERSION="${TAG_VERSION#v}"  # Remove 'v' prefix
-        
-        if [ "$CARGO_VERSION" != "$TAG_VERSION" ]; then
-          echo "Version mismatch: Cargo.toml has $CARGO_VERSION, tag is $TAG_VERSION"
-          exit 1
-        fi
+          if [ "$CARGO_VERSION" != "$TAG_VERSION" ]; then
+            echo "Version mismatch: Cargo.toml has $CARGO_VERSION, tag is $TAG_VERSION"
+            exit 1
+          fi
 
-    - name: Publish to crates.io
-      run: cargo publish --token ${{ secrets.CRATES_TOKEN }}
-
-  update-homebrew:
-    name: Update Homebrew Formula
-    needs: [create-release, build-and-upload]
-    runs-on: ubuntu-latest
-    if: ${{ !contains(needs.create-release.outputs.version, '-') }}  # Only for stable releases
-    steps:
-    - name: Update Homebrew formula
-      uses: mislav/bump-homebrew-formula-action@v3
-      with:
-        formula-name: turbo-cdn
-        formula-path: Formula/turbo-cdn.rb
-        homebrew-tap: loonghao/homebrew-tap
-        download-url: https://github.com/loonghao/turbo-cdn/releases/download/${{ needs.create-release.outputs.version }}/turbo-cdn-macos-x64
-        commit-message: |
-          Update turbo-cdn to ${{ needs.create-release.outputs.version }}
-          
-          Created by release workflow
-      env:
-        COMMITTER_TOKEN: ${{ secrets.HOMEBREW_TOKEN }}
-
-  update-documentation:
-    name: Update Documentation
-    needs: create-release
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Install Rust toolchain
-      uses: dtolnay/rust-toolchain@stable
-
-    - name: Cache dependencies
-      uses: Swatinem/rust-cache@v2
-
-    - name: Build documentation
-      run: cargo doc --all-features --no-deps
-
-    - name: Deploy to GitHub Pages
-      uses: peaceiris/actions-gh-pages@v4
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./target/doc
-        destination_dir: docs/${{ needs.create-release.outputs.version }}
+      - name: Publish to crates.io
+        run: cargo publish --token ${{ secrets.CRATES_TOKEN }}
 
 

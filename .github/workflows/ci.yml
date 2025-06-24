@@ -11,6 +11,8 @@ on:
     branches: [main]
   push:
     branches: [main, develop]
+  schedule:
+    - cron: '00 01 * * *'  # Daily at 1 AM UTC
 
 permissions:
   contents: read
@@ -20,100 +22,131 @@ permissions:
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
+  # Pin cross version for reproducible builds
+  CROSS_VERSION: v0.2.5
 
 jobs:
-  # Code quality checks - formatting, clippy, and documentation
-  code_quality:
-    name: Code Quality
+  # Clippy linting
+  clippy:
+    name: Clippy
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@master
         with:
-          components: rustfmt, clippy
-
-      - name: Cache Rust dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-cargo-quality-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-quality-
-            ${{ runner.os }}-cargo-
-
-      - name: Check formatting
-        run: cargo fmt --all -- --check
+          toolchain: stable
+          components: clippy
 
       - name: Run clippy
         run: cargo clippy --all-targets --all-features -- -D warnings
 
-      - name: Check documentation
-        run: cargo doc --all-features --no-deps --document-private-items
-        env:
-          RUSTDOCFLAGS: "-D warnings"
-
   # Comprehensive testing across platforms
   test:
-    name: Test - ${{ matrix.platform.name }}
-    runs-on: ${{ matrix.platform.os }}
+    name: Test - ${{ matrix.build }}
+    runs-on: ${{ matrix.os }}
+    env:
+      CARGO: cargo
+      TARGET_FLAGS:
+      TARGET_DIR: ./target
     strategy:
+      fail-fast: false
       matrix:
-        platform:
-          # Native compilation platforms - full build and test
-          - name: Linux-x86_64
+        include:
+          # MSRV check
+          - build: pinned
             os: ubuntu-latest
+            rust: 1.74.0
             target: x86_64-unknown-linux-gnu
+          # Stable builds
+          - build: stable
+            os: ubuntu-latest
             rust: stable
-            cross_compile: false
-          - name: Windows-x86_64
-            os: windows-latest
-            target: x86_64-pc-windows-msvc
+            target: x86_64-unknown-linux-gnu
+          - build: beta
+            os: ubuntu-latest
+            rust: beta
+            target: x86_64-unknown-linux-gnu
+          - build: nightly
+            os: ubuntu-latest
+            rust: nightly
+            target: x86_64-unknown-linux-gnu
+          # Cross-compilation targets
+          - build: stable-musl
+            os: ubuntu-latest
             rust: stable
-            cross_compile: false
-          - name: macOS-x86_64
+            target: x86_64-unknown-linux-musl
+          - build: stable-x86
+            os: ubuntu-latest
+            rust: stable
+            target: i686-unknown-linux-gnu
+          - build: stable-aarch64
+            os: ubuntu-latest
+            rust: stable
+            target: aarch64-unknown-linux-gnu
+          - build: stable-arm-gnueabihf
+            os: ubuntu-latest
+            rust: stable
+            target: armv7-unknown-linux-gnueabihf
+          # Native builds
+          - build: macos
             os: macos-latest
-            target: x86_64-apple-darwin
             rust: stable
-            cross_compile: false
+            target: x86_64-apple-darwin
+          - build: win-msvc
+            os: windows-latest
+            rust: stable
+            target: x86_64-pc-windows-msvc
+          - build: win-gnu
+            os: windows-latest
+            rust: stable-x86_64-gnu
+            target: x86_64-pc-windows-gnu
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Install packages (Ubuntu)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          ci/ubuntu-install-packages
+
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: ${{ matrix.platform.rust }}
+          toolchain: ${{ matrix.rust }}
+          targets: ${{ matrix.target }}
 
-      - name: Cache Rust dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-cargo-test-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-test-
-            ${{ runner.os }}-cargo-
+      - name: Use Cross
+        if: matrix.os == 'ubuntu-latest' && matrix.target != '' && matrix.target != 'x86_64-unknown-linux-gnu'
+        run: |
+          dir="$RUNNER_TEMP/cross-download"
+          mkdir "$dir"
+          echo "$dir" >> $GITHUB_PATH
+          cd "$dir"
+          curl -LO "https://github.com/cross-rs/cross/releases/download/$CROSS_VERSION/cross-x86_64-unknown-linux-musl.tar.gz"
+          tar xf cross-x86_64-unknown-linux-musl.tar.gz
+          echo "CARGO=cross" >> $GITHUB_ENV
+          echo "TARGET_FLAGS=--target ${{ matrix.target }}" >> $GITHUB_ENV
+          echo "TARGET_DIR=./target/${{ matrix.target }}" >> $GITHUB_ENV
 
-      - name: Run tests and build
-        uses: houseabsolute/actions-rust-cross@v1
-        with:
-          command: both
-          target: ${{ matrix.platform.target }}
-          toolchain: ${{ matrix.platform.rust }}
-          args: "--locked --all-features"
-          use-rust-cache: true
+      - name: Show command used for Cargo
+        run: |
+          echo "cargo command is: ${{ env.CARGO }}"
+          echo "target flag is: ${{ env.TARGET_FLAGS }}"
+          echo "target dir is: ${{ env.TARGET_DIR }}"
+
+      - name: Build turbo-cdn and all crates
+        run: ${{ env.CARGO }} build --verbose --workspace ${{ env.TARGET_FLAGS }}
+
+      - name: Run tests (sans cross)
+        if: matrix.target == '' || matrix.target == 'x86_64-unknown-linux-gnu' || matrix.os != 'ubuntu-latest'
+        run: ${{ env.CARGO }} test --verbose --workspace ${{ env.TARGET_FLAGS }}
+
+      - name: Run tests (with cross)
+        if: matrix.target != '' && matrix.target != 'x86_64-unknown-linux-gnu' && matrix.os == 'ubuntu-latest'
+        run: ${{ env.CARGO }} test --verbose --workspace ${{ env.TARGET_FLAGS }}
 
   # Security audit using rustsec database
   security_audit:
@@ -128,71 +161,40 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
-  # Check minimum supported Rust version
-  msrv:
-    name: MSRV
+  # Formatting check
+  rustfmt:
+    name: Rustfmt
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Cache Rust dependencies
-        uses: actions/cache@v4
+        uses: dtolnay/rust-toolchain@master
         with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-cargo-msrv-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-msrv-
-            ${{ runner.os }}-cargo-
+          toolchain: stable
+          components: rustfmt
 
-      - name: Check MSRV
-        run: cargo check --all-features
+      - name: Check formatting
+        run: cargo fmt --all --check
 
-  # Build verification for key platforms only
-  build-check:
-    name: Build Check
-    strategy:
-      matrix:
-        include:
-          # Native builds only - no cross-compilation
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
-          - os: macos-latest
-            target: x86_64-apple-darwin
-          - os: windows-latest
-            target: x86_64-pc-windows-msvc
-    runs-on: ${{ matrix.os }}
+  # Documentation check
+  docs:
+    name: Docs
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Cache Rust dependencies
-        uses: actions/cache@v4
+        uses: dtolnay/rust-toolchain@master
         with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-cargo-build-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-build-
-            ${{ runner.os }}-cargo-
+          toolchain: stable
 
-      - name: Build verification (native target)
-        run: cargo build --release
+      - name: Check documentation
+        env:
+          RUSTDOCFLAGS: -D warnings
+        run: cargo doc --no-deps --document-private-items --workspace
 
   # Code coverage reporting (only on PR)
   coverage:
@@ -204,24 +206,12 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
 
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
-
-      - name: Cache Rust dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-cargo-coverage-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-coverage-
-            ${{ runner.os }}-cargo-
 
       - name: Generate code coverage
         run: cargo llvm-cov --all-features --workspace --lcov --output-path lcov.info

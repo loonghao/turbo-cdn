@@ -1,0 +1,38 @@
+#!/bin/bash
+
+# Install packages needed for cross-compilation and building on Ubuntu
+
+set -e
+
+# Update package list
+sudo apt-get update
+
+# Install essential build tools
+sudo apt-get install -y --no-install-recommends \
+    build-essential \
+    pkg-config \
+    libssl-dev \
+    curl \
+    git
+
+# Install cross-compilation toolchains
+sudo apt-get install -y --no-install-recommends \
+    gcc-multilib \
+    gcc-aarch64-linux-gnu \
+    gcc-arm-linux-gnueabihf \
+    gcc-arm-linux-musleabihf \
+    gcc-powerpc64-linux-gnu \
+    gcc-s390x-linux-gnu
+
+# Install musl tools for static linking
+sudo apt-get install -y --no-install-recommends \
+    musl-tools \
+    musl-dev
+
+# Install additional tools that might be needed
+sudo apt-get install -y --no-install-recommends \
+    jq \
+    zip \
+    unzip
+
+echo "✅ Ubuntu packages installed successfully"
