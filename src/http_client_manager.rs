@@ -64,6 +64,7 @@ pub struct HttpResponse {
 /// HTTP client manager using reqwest
 #[derive(Debug)]
 pub struct HttpClientManager {
+    #[allow(dead_code)]
     config: Arc<TurboCdnConfig>,
     client: HttpClient,
     metrics: Arc<std::sync::Mutex<ClientMetrics>>,
