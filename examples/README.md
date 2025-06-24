@@ -49,6 +49,12 @@ examples/
 ```bash
 # Follow the commands in the markdown files
 cat examples/cli/basic_download.md
+
+# Basic download example
+turbo-cdn dl "https://github.com/BurntSushi/ripgrep/releases/download/14.1.1/ripgrep-14.1.1-x86_64-pc-windows-msvc.zip"
+
+# URL optimization example
+turbo-cdn optimize "https://github.com/sharkdp/fd/releases/download/v8.7.0/fd-v8.7.0-x86_64-pc-windows-msvc.zip"
 ```
 
 ### API Examples
@@ -57,6 +63,7 @@ cat examples/cli/basic_download.md
 cargo run --example basic_usage
 cargo run --example async_api
 cargo run --example advanced_config
+cargo run --example vx_integration
 ```
 
 ### Performance Examples
@@ -64,6 +71,30 @@ cargo run --example advanced_config
 # Run benchmarks
 cargo run --example benchmarks
 cargo run --example monitoring
+```
+
+### Example Output
+When you run `cargo run --example basic_usage`, you'll see:
+```
+🚀 Turbo CDN - Basic Usage Example
+==================================
+📡 Initializing Turbo CDN client...
+✅ Client initialized successfully!
+
+🔍 Example 1: URL Optimization
+------------------------------
+Original URL: https://github.com/BurntSushi/ripgrep/releases/download/14.1.1/ripgrep-14.1.1-x86_64-pc-windows-msvc.zip
+✅ Optimized URL: https://ghproxy.net/https://github.com/BurntSushi/ripgrep/releases/download/14.1.1/ripgrep-14.1.1-x86_64-pc-windows-msvc.zip
+🚀 CDN optimization available!
+
+📥 Example 2: Simple Download
+-----------------------------
+Downloading: https://github.com/sharkdp/fd/releases/download/v8.7.0/fd-v8.7.0-x86_64-pc-windows-msvc.zip
+✅ Download completed!
+   📁 Path: C:\Users\user\AppData\Local\Temp\fd-v8.7.0-x86_64-pc-windows-msvc.zip
+   📊 Size: 1125481 bytes
+   ⚡ Speed: 0.87 MB/s
+   ⏱️  Duration: 1.29s
 ```
 
 ## 📚 Documentation
