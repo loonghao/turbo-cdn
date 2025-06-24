@@ -71,7 +71,7 @@ regex = "1.0"
 
 # High-performance HTTP clients
 isahc = { version = "1.7", features = ["json"] }
-ureq = { version = "2.10", features = ["json"], optional = true }
+ureq = { version = "3.0", features = ["json"], optional = true }
 
 # Memory optimization
 mimalloc = "0.1"
