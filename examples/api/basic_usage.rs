@@ -8,7 +8,7 @@ use turbo_cdn::{Result, TurboCdn};
 #[tokio::main]
 async fn main() -> Result<()> {
     // Initialize tracing for better debugging
-    turbo_cdn::init_tracing();
+    let _ = turbo_cdn::logging::init_api_logging();
 
     println!("🚀 Turbo CDN - Basic Usage Example");
     println!("==================================");
@@ -90,7 +90,7 @@ async fn main() -> Result<()> {
     println!("\n🌐 Example 4: Multiple URL Optimizations");
     println!("----------------------------------------");
 
-    let urls = vec![
+    let urls = [
         "https://github.com/cli/cli/releases/download/v2.40.1/gh_2.40.1_windows_amd64.zip",
         "https://registry.npmjs.org/typescript/-/typescript-5.3.3.tgz",
         "https://files.pythonhosted.org/packages/source/r/requests/requests-2.31.0.tar.gz",

@@ -4,7 +4,7 @@
 //! in real-time, including metrics collection and analysis.
 
 use serde::{Deserialize, Serialize};
-use std::collections::{HashMap, VecDeque};
+use std::collections::VecDeque;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use turbo_cdn::{DownloadOptions, Result, TurboCdn};
@@ -351,7 +351,7 @@ impl PerformanceDashboard {
                     status,
                     cdn_status,
                     metric.speed_mbps,
-                    metric.url.split('/').last().unwrap_or("unknown"),
+                    metric.url.split('/').next_back().unwrap_or("unknown"),
                     if let Some(ref error) = metric.error {
                         format!("({})", error)
                     } else {
@@ -397,7 +397,7 @@ impl PerformanceDashboard {
 #[tokio::main]
 async fn main() -> Result<()> {
     // Initialize tracing
-    turbo_cdn::init_tracing();
+    let _ = turbo_cdn::logging::init_api_logging();
 
     println!("📊 Turbo CDN - Performance Monitoring Example");
     println!("=============================================");
@@ -410,7 +410,7 @@ async fn main() -> Result<()> {
     let dashboard = PerformanceDashboard::new(monitor.clone());
 
     // Test URLs for monitoring
-    let test_urls = vec![
+    let test_urls = [
         "https://github.com/BurntSushi/ripgrep/releases/download/14.1.1/ripgrep-14.1.1-x86_64-pc-windows-msvc.zip",
         "https://github.com/sharkdp/fd/releases/download/v8.7.0/fd-v8.7.0-x86_64-pc-windows-msvc.zip",
         "https://github.com/sharkdp/bat/releases/download/v0.24.0/bat-v0.24.0-x86_64-pc-windows-msvc.zip",

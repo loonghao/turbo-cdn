@@ -35,16 +35,19 @@ pub struct VxCdnManager {
     config: VxConfig,
 }
 
+impl Default for VxCdnManager {
+    fn default() -> Self {
+        Self::new(VxConfig::default())
+    }
+}
+
 impl VxCdnManager {
     /// Create a new vx CDN manager
     pub fn new(config: VxConfig) -> Self {
         Self { config }
     }
 
-    /// Create with default configuration
-    pub fn default() -> Self {
-        Self::new(VxConfig::default())
-    }
+
 
     /// Optimize a URL for vx downloads
     pub async fn optimize_url_for_vx(&self, url: &str) -> Result<String> {
@@ -172,8 +175,10 @@ impl VxCdnManager {
 
     /// Get optimization statistics for multiple URLs
     pub async fn get_optimization_stats(&self, urls: Vec<String>) -> VxOptimizationStats {
-        let mut stats = VxOptimizationStats::default();
-        stats.total_urls = urls.len();
+        let mut stats = VxOptimizationStats {
+            total_urls: urls.len(),
+            ..Default::default()
+        };
 
         for url in urls {
             if self.can_optimize_url(&url).await {
@@ -214,7 +219,7 @@ pub struct VxOptimizationStats {
 #[tokio::main]
 async fn main() -> Result<()> {
     // Initialize tracing
-    turbo_cdn::init_tracing();
+    let _ = turbo_cdn::logging::init_api_logging();
 
     println!("🔗 Turbo CDN - vx Integration Example");
     println!("====================================");

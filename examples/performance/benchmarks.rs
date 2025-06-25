@@ -4,7 +4,7 @@
 //! and compare it with other download methods.
 
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 use turbo_cdn::{async_api, DownloadOptions, Result, TurboCdn};
 
@@ -52,6 +52,12 @@ impl BenchmarkResult {
 pub struct DownloadBenchmark {
     test_urls: Vec<String>,
     output_dir: PathBuf,
+}
+
+impl Default for DownloadBenchmark {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl DownloadBenchmark {
@@ -156,7 +162,7 @@ impl DownloadBenchmark {
     /// Benchmark Turbo CDN with default settings
     async fn benchmark_turbo_cdn_default(
         url: &str,
-        _output_dir: &PathBuf,
+        _output_dir: &Path,
     ) -> Result<BenchmarkResult> {
         let mut result = BenchmarkResult::new("Turbo CDN (Default)", url);
 
@@ -183,7 +189,7 @@ impl DownloadBenchmark {
     /// Benchmark Turbo CDN with optimized settings
     async fn benchmark_turbo_cdn_optimized(
         url: &str,
-        _output_dir: &PathBuf,
+        _output_dir: &Path,
     ) -> Result<BenchmarkResult> {
         let mut result = BenchmarkResult::new("Turbo CDN (Optimized)", url);
 
@@ -230,7 +236,7 @@ impl DownloadBenchmark {
     /// Benchmark Turbo CDN with conservative settings
     async fn benchmark_turbo_cdn_conservative(
         url: &str,
-        _output_dir: &PathBuf,
+        _output_dir: &Path,
     ) -> Result<BenchmarkResult> {
         let mut result = BenchmarkResult::new("Turbo CDN (Conservative)", url);
 
@@ -275,7 +281,7 @@ impl DownloadBenchmark {
     }
 
     /// Benchmark async API
-    async fn benchmark_async_api(url: &str, _output_dir: &PathBuf) -> Result<BenchmarkResult> {
+    async fn benchmark_async_api(url: &str, _output_dir: &Path) -> Result<BenchmarkResult> {
         let mut result = BenchmarkResult::new("Async API (Quick)", url);
 
         let start = Instant::now();
@@ -303,7 +309,7 @@ impl DownloadBenchmark {
         for result in results {
             method_results
                 .entry(result.method.clone())
-                .or_insert_with(Vec::new)
+                .or_default()
                 .push(result);
         }
 
@@ -359,7 +365,7 @@ impl DownloadBenchmark {
             if result.success {
                 method_speeds
                     .entry(result.method.clone())
-                    .or_insert_with(Vec::new)
+                    .or_default()
                     .push(result.speed_mbps);
             }
         }
@@ -435,7 +441,7 @@ impl DownloadBenchmark {
 #[tokio::main]
 async fn main() -> Result<()> {
     // Initialize tracing
-    turbo_cdn::init_tracing();
+    let _ = turbo_cdn::logging::init_api_logging();
 
     println!("🏁 Turbo CDN - Performance Benchmarks");
     println!("=====================================");
