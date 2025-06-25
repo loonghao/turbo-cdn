@@ -47,8 +47,6 @@ impl VxCdnManager {
         Self { config }
     }
 
-
-
     /// Optimize a URL for vx downloads
     pub async fn optimize_url_for_vx(&self, url: &str) -> Result<String> {
         if !self.config.enable_cdn_optimization {

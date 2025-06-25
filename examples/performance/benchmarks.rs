@@ -160,10 +160,7 @@ impl DownloadBenchmark {
     }
 
     /// Benchmark Turbo CDN with default settings
-    async fn benchmark_turbo_cdn_default(
-        url: &str,
-        _output_dir: &Path,
-    ) -> Result<BenchmarkResult> {
+    async fn benchmark_turbo_cdn_default(url: &str, _output_dir: &Path) -> Result<BenchmarkResult> {
         let mut result = BenchmarkResult::new("Turbo CDN (Default)", url);
 
         let start = Instant::now();
