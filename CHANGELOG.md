@@ -55,6 +55,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - improve code quality and remove code smells
 ## [Unreleased]
 
+## [0.4.0](https://github.com/loonghao/turbo-cdn/compare/v0.3.0...v0.4.0) - 2025-06-25
+
+### Added
+
+- implement professional logging system and smart download mode
+- implement smart download mode with automatic method selection
+- optimize download performance for turbo speed
+- enhance release-plz configuration with comprehensive release template
+- improve CI/CD configuration based on ripgrep best practices
+- add comprehensive examples for CLI and API usage
+
+### Fixed
+
+- resolve all clippy warnings to pass strict linting
+- update test expectations to match new default configuration values
+- resolve all compilation errors in examples and core library
+- suppress dead_code warning for config field
+- simplify CI to use stable Rust version only
+- use isahc static-curl and static-ssl features to avoid OpenSSL
+- simplify CI following ripgrep best practices
+- add execute permission to ubuntu-install-packages script
+- resolve CI Ubuntu package installation issues
+- resolve all compilation errors in performance examples
+- resolve compilation errors in examples
+
+### Other
+
+- apply cargo fmt formatting
+- simplify HTTP client to use only reqwest with rustls
+
+### Security
+
+- fix vulnerabilities by updating dependencies
+
 ## [0.3.0](https://github.com/loonghao/turbo-cdn/compare/v0.2.1...v0.3.0) - 2025-06-24
 
 ### Added
