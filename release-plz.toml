@@ -1,7 +1,21 @@
+# Release-plz configuration for turbo-cdn
+#
+# Strategy: release-plz handles crates.io publishing and creates GitHub releases,
+# while .github/workflows/release.yml builds cross-platform binaries using upload-rust-binary-action.
+#
+# Workflow:
+# 1. release-plz creates tag (v1.0.0) and GitHub release with changelog
+# 2. Tag triggers release.yml workflow for cross-platform binary builds
+# 3. upload-rust-binary-action builds and uploads binaries to the existing release
+# 4. release-plz publishes to crates.io
+#
+# This approach leverages release-plz's strengths (version management, changelog, crates.io)
+# while using the specialized upload-rust-binary-action for cross-platform builds.
+
 [workspace]
 # Enable automatic changelog generation
 changelog_update = true
-# Disable GitHub releases at workspace level (handled by release.yml)
+# Disable GitHub releases at workspace level (handled by package level)
 git_release_enable = false
 # Enable automatic tag creation (triggers release.yml)
 git_tag_enable = true
@@ -25,7 +39,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 name = "turbo-cdn"
 # Enable changelog updates
 changelog_update = true
-# Enable GitHub releases (release-plz will create releases with binaries)
+# Enable GitHub releases (release-plz creates draft, release.yml adds binaries and publishes)
 git_release_enable = true
 # Enable processing for releases
 release = true
@@ -35,8 +49,8 @@ git_tag_name = "v{{version}}"
 allow_dirty = false
 # Ensure proper semantic versioning
 semver_check = true
-# Upload release assets (binaries will be built by release.yml and uploaded)
-git_release_draft = true
+# Create published releases (upload-rust-binary-action will add binaries)
+git_release_draft = false
 # Custom release body template
 git_release_body = """
 ## 🚀 What's Changed
