@@ -4,7 +4,7 @@
 //! including custom settings, performance tuning, and specialized use cases.
 
 use std::collections::HashMap;
-use std::path::PathBuf;
+
 use std::time::Duration;
 use turbo_cdn::{DownloadOptions, Result, TurboCdn};
 
@@ -26,8 +26,8 @@ async fn main() -> Result<()> {
     custom_headers.insert("Accept".to_string(), "application/octet-stream".to_string());
 
     let download_options = DownloadOptions {
-        max_concurrent_chunks: 8,
-        chunk_size: 2 * 1024 * 1024, // 2MB chunks
+        max_concurrent_chunks: Some(8),
+        chunk_size: Some(2 * 1024 * 1024), // 2MB chunks
         enable_resume: true,
         custom_headers: Some(custom_headers),
         timeout_override: Some(Duration::from_secs(120)),
@@ -36,7 +36,7 @@ async fn main() -> Result<()> {
         progress_callback: Some(Box::new(|progress| {
             println!(
                 "📊 Progress: {:.1}% ({} bytes)",
-                progress.percentage, progress.downloaded
+                progress.percentage, progress.downloaded_size
             );
         })),
     };
@@ -44,11 +44,11 @@ async fn main() -> Result<()> {
     println!("Custom options configured:");
     println!(
         "  🧩 Max concurrent chunks: {}",
-        download_options.max_concurrent_chunks
+        download_options.max_concurrent_chunks.unwrap_or(4)
     );
     println!(
         "  📦 Chunk size: {} MB",
-        download_options.chunk_size / (1024 * 1024)
+        download_options.chunk_size.unwrap_or(1024 * 1024) / (1024 * 1024)
     );
     println!("  🔄 Resume enabled: {}", download_options.enable_resume);
     println!(
@@ -85,8 +85,8 @@ async fn main() -> Result<()> {
     println!("------------------------------------------------");
 
     let performance_options = DownloadOptions {
-        max_concurrent_chunks: 16,   // More aggressive chunking
-        chunk_size: 4 * 1024 * 1024, // 4MB chunks for better throughput
+        max_concurrent_chunks: Some(16),   // More aggressive chunking
+        chunk_size: Some(4 * 1024 * 1024), // 4MB chunks for better throughput
         enable_resume: true,
         custom_headers: None,
         timeout_override: Some(Duration::from_secs(300)), // Longer timeout for large files
@@ -105,11 +105,11 @@ async fn main() -> Result<()> {
     println!("Performance-optimized settings:");
     println!(
         "  ⚡ Max concurrent chunks: {}",
-        performance_options.max_concurrent_chunks
+        performance_options.max_concurrent_chunks.unwrap_or(16)
     );
     println!(
         "  📦 Chunk size: {} MB",
-        performance_options.chunk_size / (1024 * 1024)
+        performance_options.chunk_size.unwrap_or(4 * 1024 * 1024) / (1024 * 1024)
     );
     println!(
         "  🛡️ Integrity verification: {}",
@@ -121,8 +121,8 @@ async fn main() -> Result<()> {
     println!("------------------------------------------------");
 
     let conservative_options = DownloadOptions {
-        max_concurrent_chunks: 2, // Fewer connections to be gentle on servers
-        chunk_size: 512 * 1024,   // 512KB chunks
+        max_concurrent_chunks: Some(2), // Fewer connections to be gentle on servers
+        chunk_size: Some(512 * 1024),   // 512KB chunks
         enable_resume: true,
         custom_headers: Some({
             let mut headers = HashMap::new();
@@ -147,11 +147,11 @@ async fn main() -> Result<()> {
     println!("Conservative settings:");
     println!(
         "  🐌 Max concurrent chunks: {}",
-        conservative_options.max_concurrent_chunks
+        conservative_options.max_concurrent_chunks.unwrap_or(2)
     );
     println!(
         "  📦 Chunk size: {} KB",
-        conservative_options.chunk_size / 1024
+        conservative_options.chunk_size.unwrap_or(512 * 1024) / 1024
     );
     println!(
         "  🛡️ Integrity verification: {}",
@@ -164,8 +164,8 @@ async fn main() -> Result<()> {
 
     let env_options = create_environment_based_options();
     println!("Environment-based configuration loaded:");
-    println!("  📊 Chunks: {}", env_options.max_concurrent_chunks);
-    println!("  📦 Chunk size: {} bytes", env_options.chunk_size);
+    println!("  📊 Chunks: {}", env_options.max_concurrent_chunks.unwrap_or(4));
+    println!("  📦 Chunk size: {} bytes", env_options.chunk_size.unwrap_or(1024 * 1024));
     println!(
         "  ⏱️  Timeout: {}s",
         env_options
@@ -182,8 +182,8 @@ async fn main() -> Result<()> {
 
     for (file_type, config) in file_configs {
         println!("\n📄 {} files configuration:", file_type);
-        println!("   🧩 Chunks: {}", config.max_concurrent_chunks);
-        println!("   📦 Chunk size: {} KB", config.chunk_size / 1024);
+        println!("   🧩 Chunks: {}", config.max_concurrent_chunks.unwrap_or(4));
+        println!("   📦 Chunk size: {} KB", config.chunk_size.unwrap_or(1024 * 1024) / 1024);
         println!("   🛡️ Verify integrity: {}", config.verify_integrity);
     }
 
@@ -195,11 +195,11 @@ async fn main() -> Result<()> {
     println!("Network-adaptive configuration:");
     println!(
         "  📊 Detected optimal chunks: {}",
-        network_config.max_concurrent_chunks
+        network_config.max_concurrent_chunks.unwrap_or(8)
     );
     println!(
         "  📦 Optimal chunk size: {} KB",
-        network_config.chunk_size / 1024
+        network_config.chunk_size.unwrap_or(2 * 1024 * 1024) / 1024
     );
 
     // Example 7: Configuration validation
@@ -244,8 +244,8 @@ fn create_environment_based_options() -> DownloadOptions {
         .unwrap_or(Duration::from_secs(60));
 
     DownloadOptions {
-        max_concurrent_chunks: max_chunks,
-        chunk_size,
+        max_concurrent_chunks: Some(max_chunks),
+        chunk_size: Some(chunk_size),
         enable_resume: true,
         custom_headers: None,
         timeout_override: Some(timeout),
@@ -263,8 +263,8 @@ fn get_file_type_configurations() -> HashMap<String, DownloadOptions> {
     configs.insert(
         "Large Binary".to_string(),
         DownloadOptions {
-            max_concurrent_chunks: 16,
-            chunk_size: 8 * 1024 * 1024, // 8MB
+            max_concurrent_chunks: Some(16),
+            chunk_size: Some(8 * 1024 * 1024), // 8MB
             enable_resume: true,
             custom_headers: None,
             timeout_override: Some(Duration::from_secs(600)), // 10 minutes
@@ -278,8 +278,8 @@ fn get_file_type_configurations() -> HashMap<String, DownloadOptions> {
     configs.insert(
         "Source Code".to_string(),
         DownloadOptions {
-            max_concurrent_chunks: 4,
-            chunk_size: 1024 * 1024, // 1MB
+            max_concurrent_chunks: Some(4),
+            chunk_size: Some(1024 * 1024), // 1MB
             enable_resume: true,
             custom_headers: None,
             timeout_override: Some(Duration::from_secs(120)),
@@ -293,8 +293,8 @@ fn get_file_type_configurations() -> HashMap<String, DownloadOptions> {
     configs.insert(
         "Small Tools".to_string(),
         DownloadOptions {
-            max_concurrent_chunks: 2,
-            chunk_size: 256 * 1024, // 256KB
+            max_concurrent_chunks: Some(2),
+            chunk_size: Some(256 * 1024), // 256KB
             enable_resume: false,   // Not needed for small files
             custom_headers: None,
             timeout_override: Some(Duration::from_secs(30)),
@@ -329,8 +329,8 @@ async fn create_network_adaptive_config() -> DownloadOptions {
     };
 
     DownloadOptions {
-        max_concurrent_chunks: optimal_chunks,
-        chunk_size: optimal_chunk_size,
+        max_concurrent_chunks: Some(optimal_chunks),
+        chunk_size: Some(optimal_chunk_size),
         enable_resume: true,
         custom_headers: None,
         timeout_override: Some(Duration::from_secs(120)),
@@ -343,8 +343,8 @@ async fn create_network_adaptive_config() -> DownloadOptions {
 /// Create a valid configuration for testing
 fn create_valid_config() -> DownloadOptions {
     DownloadOptions {
-        max_concurrent_chunks: 4,
-        chunk_size: 1024 * 1024,
+        max_concurrent_chunks: Some(4),
+        chunk_size: Some(1024 * 1024),
         enable_resume: true,
         custom_headers: None,
         timeout_override: Some(Duration::from_secs(60)),
@@ -357,8 +357,8 @@ fn create_valid_config() -> DownloadOptions {
 /// Create a high-performance configuration
 fn create_high_performance_config() -> DownloadOptions {
     DownloadOptions {
-        max_concurrent_chunks: 32,
-        chunk_size: 16 * 1024 * 1024,
+        max_concurrent_chunks: Some(32),
+        chunk_size: Some(16 * 1024 * 1024),
         enable_resume: true,
         custom_headers: None,
         timeout_override: Some(Duration::from_secs(300)),
@@ -371,8 +371,8 @@ fn create_high_performance_config() -> DownloadOptions {
 /// Create a low-bandwidth configuration
 fn create_low_bandwidth_config() -> DownloadOptions {
     DownloadOptions {
-        max_concurrent_chunks: 1,
-        chunk_size: 128 * 1024,
+        max_concurrent_chunks: Some(1),
+        chunk_size: Some(128 * 1024),
         enable_resume: true,
         custom_headers: None,
         timeout_override: Some(Duration::from_secs(180)),
@@ -384,20 +384,24 @@ fn create_low_bandwidth_config() -> DownloadOptions {
 
 /// Validate download options
 fn validate_download_options(options: &DownloadOptions) -> std::result::Result<(), String> {
-    if options.max_concurrent_chunks == 0 {
-        return Err("max_concurrent_chunks must be greater than 0".to_string());
+    if let Some(chunks) = options.max_concurrent_chunks {
+        if chunks == 0 {
+            return Err("max_concurrent_chunks must be greater than 0".to_string());
+        }
+
+        if chunks > 64 {
+            return Err("max_concurrent_chunks should not exceed 64 for most use cases".to_string());
+        }
     }
 
-    if options.max_concurrent_chunks > 64 {
-        return Err("max_concurrent_chunks should not exceed 64 for most use cases".to_string());
-    }
+    if let Some(chunk_size) = options.chunk_size {
+        if chunk_size < 1024 {
+            return Err("chunk_size should be at least 1KB".to_string());
+        }
 
-    if options.chunk_size < 1024 {
-        return Err("chunk_size should be at least 1KB".to_string());
-    }
-
-    if options.chunk_size > 32 * 1024 * 1024 {
-        return Err("chunk_size should not exceed 32MB".to_string());
+        if chunk_size > 32 * 1024 * 1024 {
+            return Err("chunk_size should not exceed 32MB".to_string());
+        }
     }
 
     if let Some(timeout) = options.timeout_override {
