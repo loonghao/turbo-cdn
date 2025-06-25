@@ -43,8 +43,8 @@ use std::time::Duration;
 
 // High-speed connections (100+ Mbps)
 let high_speed_config = DownloadOptions {
-    max_concurrent_chunks: 16,
-    chunk_size: 4 * 1024 * 1024, // 4MB
+    max_concurrent_chunks: Some(16),
+    chunk_size: Some(4 * 1024 * 1024), // 4MB
     enable_resume: true,
     timeout_override: Some(Duration::from_secs(300)),
     verify_integrity: false, // Skip for maximum speed
@@ -53,8 +53,8 @@ let high_speed_config = DownloadOptions {
 
 // Medium-speed connections (25-100 Mbps)
 let medium_speed_config = DownloadOptions {
-    max_concurrent_chunks: 8,
-    chunk_size: 2 * 1024 * 1024, // 2MB
+    max_concurrent_chunks: Some(8),
+    chunk_size: Some(2 * 1024 * 1024), // 2MB
     enable_resume: true,
     timeout_override: Some(Duration::from_secs(180)),
     verify_integrity: true,
@@ -63,8 +63,8 @@ let medium_speed_config = DownloadOptions {
 
 // Low-speed connections (<25 Mbps)
 let low_speed_config = DownloadOptions {
-    max_concurrent_chunks: 4,
-    chunk_size: 1024 * 1024, // 1MB
+    max_concurrent_chunks: Some(4),
+    chunk_size: Some(1024 * 1024), // 1MB
     enable_resume: true,
     timeout_override: Some(Duration::from_secs(120)),
     verify_integrity: true,
@@ -146,8 +146,8 @@ export TURBO_CDN_DNS_SERVERS="1.1.1.1,8.8.8.8"
 
 ```rust
 let large_file_config = DownloadOptions {
-    max_concurrent_chunks: 20,
-    chunk_size: 8 * 1024 * 1024, // 8MB chunks
+    max_concurrent_chunks: Some(20),
+    chunk_size: Some(8 * 1024 * 1024), // 8MB chunks
     enable_resume: true,
     verify_integrity: false, // Skip for speed, verify after
     timeout_override: Some(Duration::from_secs(600)), // 10 minutes
@@ -159,8 +159,8 @@ let large_file_config = DownloadOptions {
 
 ```rust
 let small_file_config = DownloadOptions {
-    max_concurrent_chunks: 2, // Overhead not worth it
-    chunk_size: 1024 * 1024, // 1MB
+    max_concurrent_chunks: Some(2), // Overhead not worth it
+    chunk_size: Some(1024 * 1024), // 1MB
     enable_resume: false, // Not needed for small files
     verify_integrity: true,
     timeout_override: Some(Duration::from_secs(30)),
@@ -172,8 +172,8 @@ let small_file_config = DownloadOptions {
 
 ```rust
 let source_code_config = DownloadOptions {
-    max_concurrent_chunks: 6,
-    chunk_size: 2 * 1024 * 1024, // 2MB
+    max_concurrent_chunks: Some(6),
+    chunk_size: Some(2 * 1024 * 1024), // 2MB
     enable_resume: true,
     verify_integrity: true, // Always verify source code
     timeout_override: Some(Duration::from_secs(120)),
@@ -190,20 +190,20 @@ let source_code_config = DownloadOptions {
 fn get_regional_config(region: &str) -> DownloadOptions {
     match region {
         "china" => DownloadOptions {
-            max_concurrent_chunks: 6, // Conservative due to GFW
-            chunk_size: 1024 * 1024,
+            max_concurrent_chunks: Some(6), // Conservative due to GFW
+            chunk_size: Some(1024 * 1024),
             timeout_override: Some(Duration::from_secs(180)),
             ..Default::default()
         },
         "europe" => DownloadOptions {
-            max_concurrent_chunks: 12,
-            chunk_size: 3 * 1024 * 1024,
+            max_concurrent_chunks: Some(12),
+            chunk_size: Some(3 * 1024 * 1024),
             timeout_override: Some(Duration::from_secs(120)),
             ..Default::default()
         },
         "us" => DownloadOptions {
-            max_concurrent_chunks: 16,
-            chunk_size: 4 * 1024 * 1024,
+            max_concurrent_chunks: Some(16),
+            chunk_size: Some(4 * 1024 * 1024),
             timeout_override: Some(Duration::from_secs(90)),
             ..Default::default()
         },
