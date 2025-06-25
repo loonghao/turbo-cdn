@@ -10,7 +10,7 @@ use turbo_cdn::{async_api, Result};
 #[tokio::main]
 async fn main() -> Result<()> {
     // Initialize tracing
-    turbo_cdn::init_tracing();
+    let _ = turbo_cdn::logging::init_api_logging();
 
     println!("🚀 Turbo CDN - Async API Example");
     println!("================================");
@@ -165,7 +165,7 @@ async fn main() -> Result<()> {
     println!("\n⚡ Example 5: Rate-Limited Batch Processing");
     println!("------------------------------------------");
 
-    let batch_urls = vec![
+    let batch_urls = [
         "https://github.com/cli/cli/releases/download/v2.40.1/gh_2.40.1_linux_amd64.tar.gz",
         "https://github.com/neovim/neovim/releases/download/v0.9.4/nvim-linux64.tar.gz",
         "https://github.com/sharkdp/fd/releases/download/v8.7.0/fd-v8.7.0-x86_64-unknown-linux-gnu.tar.gz",
@@ -234,6 +234,7 @@ async fn main() -> Result<()> {
 }
 
 /// Helper function to demonstrate custom async operations
+#[allow(dead_code)]
 async fn custom_download_with_timeout(url: &str, timeout_secs: u64) -> Result<String> {
     println!(
         "🕐 Starting download with {}s timeout: {}",

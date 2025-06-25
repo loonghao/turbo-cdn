@@ -12,7 +12,7 @@ use turbo_cdn::{DownloadOptions, Result, TurboCdn};
 async fn main() -> Result<()> {
     // Initialize tracing with custom level
     std::env::set_var("RUST_LOG", "turbo_cdn=debug");
-    turbo_cdn::init_tracing();
+    let _ = turbo_cdn::logging::init_api_logging();
 
     println!("🔧 Turbo CDN - Advanced Configuration Example");
     println!("=============================================");
@@ -164,8 +164,14 @@ async fn main() -> Result<()> {
 
     let env_options = create_environment_based_options();
     println!("Environment-based configuration loaded:");
-    println!("  📊 Chunks: {}", env_options.max_concurrent_chunks.unwrap_or(4));
-    println!("  📦 Chunk size: {} bytes", env_options.chunk_size.unwrap_or(1024 * 1024));
+    println!(
+        "  📊 Chunks: {}",
+        env_options.max_concurrent_chunks.unwrap_or(4)
+    );
+    println!(
+        "  📦 Chunk size: {} bytes",
+        env_options.chunk_size.unwrap_or(1024 * 1024)
+    );
     println!(
         "  ⏱️  Timeout: {}s",
         env_options
@@ -182,8 +188,14 @@ async fn main() -> Result<()> {
 
     for (file_type, config) in file_configs {
         println!("\n📄 {} files configuration:", file_type);
-        println!("   🧩 Chunks: {}", config.max_concurrent_chunks.unwrap_or(4));
-        println!("   📦 Chunk size: {} KB", config.chunk_size.unwrap_or(1024 * 1024) / 1024);
+        println!(
+            "   🧩 Chunks: {}",
+            config.max_concurrent_chunks.unwrap_or(4)
+        );
+        println!(
+            "   📦 Chunk size: {} KB",
+            config.chunk_size.unwrap_or(1024 * 1024) / 1024
+        );
         println!("   🛡️ Verify integrity: {}", config.verify_integrity);
     }
 
@@ -295,7 +307,7 @@ fn get_file_type_configurations() -> HashMap<String, DownloadOptions> {
         DownloadOptions {
             max_concurrent_chunks: Some(2),
             chunk_size: Some(256 * 1024), // 256KB
-            enable_resume: false,   // Not needed for small files
+            enable_resume: false,         // Not needed for small files
             custom_headers: None,
             timeout_override: Some(Duration::from_secs(30)),
             verify_integrity: true,
@@ -390,7 +402,9 @@ fn validate_download_options(options: &DownloadOptions) -> std::result::Result<(
         }
 
         if chunks > 64 {
-            return Err("max_concurrent_chunks should not exceed 64 for most use cases".to_string());
+            return Err(
+                "max_concurrent_chunks should not exceed 64 for most use cases".to_string(),
+            );
         }
     }
 
