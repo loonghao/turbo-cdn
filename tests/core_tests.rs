@@ -13,12 +13,12 @@ fn test_config_loading() {
     let config = config::TurboCdnConfig::default();
 
     // Test default values
-    assert_eq!(config.performance.max_concurrent_downloads, 16);
-    assert_eq!(config.performance.chunk_size, 2 * 1024 * 1024);
+    assert_eq!(config.performance.max_concurrent_downloads, 32);
+    assert_eq!(config.performance.chunk_size, 1024 * 1024);
     assert_eq!(config.performance.timeout, 30);
     assert!(config.performance.adaptive_chunking);
-    assert_eq!(config.performance.min_chunk_size, 256 * 1024);
-    assert_eq!(config.performance.max_chunk_size, 10 * 1024 * 1024);
+    assert_eq!(config.performance.min_chunk_size, 128 * 1024);
+    assert_eq!(config.performance.max_chunk_size, 5 * 1024 * 1024);
 
     // Test security settings
     assert!(config.security.verify_ssl);
