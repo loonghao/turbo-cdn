@@ -12,6 +12,7 @@ rustflags = [
     "-C", "target-feature=+crt-static",
     "--cfg", "disable_mimalloc"
 ]
+linker = "x86_64-w64-mingw32-gcc"
 
 [target.i686-pc-windows-gnu]
 # 32-bit Windows GNU target
@@ -66,3 +67,6 @@ protocol = "sparse"
 [net]
 retry = 3
 git-fetch-with-cli = true
+
+# Ensure proc-macros work correctly during cross-compilation
+# This is handled automatically by Cargo for most cases

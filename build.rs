@@ -34,12 +34,18 @@ fn main() {
         println!("cargo:warning=Using mimalloc for target: {}", target);
     }
 
+    // Handle proc-macro compatibility issues for cross-compilation
+    // Proc-macros should always be built for the host platform
+
     // Set additional flags for specific targets
     match target_os.as_str() {
         "windows" => {
             if target_env == "gnu" {
                 println!("cargo:rustc-link-arg=-static-libgcc");
                 println!("cargo:rustc-link-arg=-static-libstdc++");
+                // Ensure proper cross-compilation setup
+                println!("cargo:rustc-env=CC_x86_64_pc_windows_gnu=x86_64-w64-mingw32-gcc");
+                println!("cargo:rustc-env=CXX_x86_64_pc_windows_gnu=x86_64-w64-mingw32-g++");
             }
         }
         "linux" => {
