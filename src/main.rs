@@ -8,11 +8,7 @@
     not(disable_mimalloc),
     not(target_env = "musl"),
     not(target_arch = "arm"),
-    any(
-        target_os = "linux",
-        target_os = "macos",
-        target_os = "windows"
-    )
+    any(target_os = "linux", target_os = "macos", target_os = "windows")
 ))]
 #[global_allocator]
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;

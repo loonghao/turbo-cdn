@@ -17,7 +17,7 @@ fn main() {
 
     // Register the custom cfg condition to avoid warnings
     println!("cargo:rustc-check-cfg=cfg(disable_mimalloc)");
-    
+
     // Disable mimalloc for problematic targets
     let disable_mimalloc = target.contains("gnu") 
         || target_env == "musl"
