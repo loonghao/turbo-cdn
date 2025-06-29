@@ -117,6 +117,9 @@ proptest = "1.0"
 pretty_assertions = "1.0"
 serial_test = "3.0"
 
+# Cross-compilation tool for proc-macro support
+cross = "0.2"
+
 [features]
 default = ["rustls-tls", "fast-hash", "high-performance", "mimalloc-allocator"]
 rustls-tls = ["reqwest/rustls-tls"]
