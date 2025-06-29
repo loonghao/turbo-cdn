@@ -11,6 +11,12 @@ fn main() {
 
     println!("cargo:rerun-if-changed=build.rs");
     println!("cargo:rerun-if-env-changed=TARGET");
+
+    // Register the custom cfg condition to avoid warnings
+    println!("cargo:rustc-check-cfg=cfg(disable_mimalloc)");
+
+    // Register the custom cfg condition to avoid warnings
+    println!("cargo:rustc-check-cfg=cfg(disable_mimalloc)");
     
     // Disable mimalloc for problematic targets
     let disable_mimalloc = target.contains("gnu") 
