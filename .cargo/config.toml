@@ -1,0 +1,68 @@
+# Cargo configuration for cross-compilation and build optimization
+# This file helps resolve common cross-compilation issues, especially for GNU targets
+
+[build]
+# Use rustls by default to avoid OpenSSL linking issues
+rustflags = ["-C", "target-feature=+crt-static"]
+
+# Target-specific configurations to handle problematic dependencies
+[target.x86_64-pc-windows-gnu]
+# Windows GNU target - disable mimalloc to avoid build issues
+rustflags = [
+    "-C", "target-feature=+crt-static",
+    "--cfg", "disable_mimalloc"
+]
+
+[target.i686-pc-windows-gnu]
+# 32-bit Windows GNU target
+rustflags = [
+    "-C", "target-feature=+crt-static",
+    "--cfg", "disable_mimalloc"
+]
+
+[target.x86_64-unknown-linux-musl]
+# musl targets - static linking and disable problematic features
+rustflags = [
+    "-C", "target-feature=+crt-static",
+    "--cfg", "disable_mimalloc"
+]
+
+[target.aarch64-unknown-linux-musl]
+# ARM64 musl target
+rustflags = [
+    "-C", "target-feature=+crt-static",
+    "--cfg", "disable_mimalloc"
+]
+
+[target.armv7-unknown-linux-gnueabihf]
+# ARM v7 target - often problematic with mimalloc
+rustflags = [
+    "--cfg", "disable_mimalloc"
+]
+
+[target.aarch64-unknown-linux-gnu]
+# ARM64 GNU target - may have mimalloc issues
+rustflags = [
+    "--cfg", "disable_mimalloc"
+]
+
+# Environment variables for cross-compilation
+[env]
+# Use rustls instead of OpenSSL to avoid linking issues
+CARGO_NET_GIT_FETCH_WITH_CLI = "true"
+# Improve build performance
+CARGO_INCREMENTAL = "0"
+# Better error messages
+RUST_BACKTRACE = "1"
+
+# Registry configuration for better dependency resolution
+[registry]
+default = "crates-io"
+
+[registry.crates-io]
+protocol = "sparse"
+
+# Net configuration for better reliability
+[net]
+retry = 3
+git-fetch-with-cli = true

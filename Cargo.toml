@@ -17,6 +17,13 @@ categories = [
 ]
 exclude = ["/.github/", "/tests/fixtures/", "/benches/", "*.md"]
 
+# Target-specific configurations for cross-compilation
+[target.'cfg(all(not(target_env = "musl"), not(target_os = "windows"), not(target_arch = "arm")))']
+# Use mimalloc on supported platforms (x86_64 Linux/macOS with glibc)
+
+[target.'cfg(any(target_env = "musl", target_arch = "arm", target_arch = "aarch64"))']
+# Disable mimalloc for musl and ARM targets to avoid compilation issues
+
 [dependencies]
 # Async runtime
 tokio = { version = "1.0", features = ["full", "fs"] }
@@ -78,7 +85,8 @@ regex = "1.0"
 # Using only reqwest to simplify the project and avoid OpenSSL compilation issues
 
 # Memory optimization and high-performance I/O
-mimalloc = "0.1"
+# Use mimalloc only on supported platforms to avoid GNU cross-compilation issues
+mimalloc = { version = "0.1", optional = true }
 memmap2 = "0.9"
 
 # Fast hashing and concurrent data structures
@@ -110,11 +118,13 @@ pretty_assertions = "1.0"
 serial_test = "3.0"
 
 [features]
-default = ["rustls-tls", "fast-hash", "high-performance"]
+default = ["rustls-tls", "fast-hash", "high-performance", "mimalloc-allocator"]
 rustls-tls = ["reqwest/rustls-tls"]
 native-tls = ["reqwest/native-tls"]
 fast-hash = ["ahash"]
 high-performance = []
+# Enable mimalloc only on supported platforms (excludes problematic GNU targets)
+mimalloc-allocator = ["mimalloc"]
 
 
 [profile.release]

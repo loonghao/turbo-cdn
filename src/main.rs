@@ -1,7 +1,19 @@
 // Licensed under the MIT License
 // Copyright (c) 2025 Hal <hal.long@outlook.com>
 
-// Use high-performance memory allocator
+// Use high-performance memory allocator on supported platforms
+// Disable on problematic targets (GNU, musl, ARM) to avoid build issues
+#[cfg(all(
+    feature = "mimalloc-allocator",
+    not(disable_mimalloc),
+    not(target_env = "musl"),
+    not(target_arch = "arm"),
+    any(
+        target_os = "linux",
+        target_os = "macos",
+        target_os = "windows"
+    )
+))]
 #[global_allocator]
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
