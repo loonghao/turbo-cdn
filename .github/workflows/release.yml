@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   release:
-    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-release.yml@v2.5.1
+    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-release.yml@v2.5.2
     with:
       binary-name: "turbo-cdn"
       enable-python-wheels: false
