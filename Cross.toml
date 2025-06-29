@@ -1,0 +1,139 @@
+# Cross.toml for turbo-cdn project
+# This configuration specifically addresses proc-macro issues with:
+# - serde (derive)
+# - async-trait
+# - thiserror
+# - clap (derive)
+
+[build]
+# Critical: Do NOT set default-target globally as it affects proc-macros
+
+[build.env]
+# Pass through essential environment variables
+passthrough = [
+    "CARGO_TARGET_DIR",
+    "CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER",
+    "RUSTFLAGS",
+    "OPENSSL_STATIC",
+    "OPENSSL_NO_VENDOR",
+    "PKG_CONFIG_ALLOW_CROSS",
+]
+
+# Windows targets
+[target.x86_64-pc-windows-msvc]
+image = "ghcr.io/cross-rs/x86_64-pc-windows-msvc:main"
+pre-build = [
+    # Ensure host toolchain is available for proc-macros
+    "rustup target add x86_64-unknown-linux-gnu",
+]
+
+[target.x86_64-pc-windows-msvc.env]
+# Critical: Ensure proc-macros use host platform
+CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER = ""
+
+[target.aarch64-pc-windows-msvc]
+image = "ghcr.io/cross-rs/aarch64-pc-windows-msvc:main"
+pre-build = [
+    # Ensure host toolchain is available for proc-macros
+    "rustup target add x86_64-unknown-linux-gnu",
+]
+
+[target.aarch64-pc-windows-msvc.env]
+# Critical: Ensure proc-macros use host platform
+CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER = ""
+
+# Linux ARM64 targets
+[target.aarch64-unknown-linux-gnu]
+image = "ghcr.io/cross-rs/aarch64-unknown-linux-gnu:main"
+pre-build = [
+    # Fix Docker permissions and prepare environment
+    "dpkg --add-architecture arm64",
+    "mkdir -p /var/lib/apt/lists/partial /var/cache/apt/archives/partial",
+    "chmod 755 /var/lib/apt/lists/partial /var/cache/apt/archives/partial",
+    "chown _apt:root /var/lib/apt/lists/partial /var/cache/apt/archives/partial",
+    # Ensure host toolchain is available for proc-macros
+    "rustup target add x86_64-unknown-linux-gnu",
+    # Install ARM64 toolchain
+    "apt-get update && apt-get install -y gcc-aarch64-linux-gnu",
+]
+
+[target.aarch64-unknown-linux-gnu.env]
+# Critical: Ensure proc-macros use host platform
+CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER = ""
+# ARM64-specific configuration
+CC_aarch64_unknown_linux_gnu = "aarch64-linux-gnu-gcc"
+CXX_aarch64_unknown_linux_gnu = "aarch64-linux-gnu-g++"
+AR_aarch64_unknown_linux_gnu = "aarch64-linux-gnu-ar"
+
+# Linux musl targets (static builds)
+[target.x86_64-unknown-linux-musl]
+image = "ghcr.io/cross-rs/x86_64-unknown-linux-musl:main"
+pre-build = [
+    # Fix Docker permissions and prepare environment
+    "mkdir -p /var/lib/apt/lists/partial /var/cache/apt/archives/partial",
+    "chmod 755 /var/lib/apt/lists/partial /var/cache/apt/archives/partial",
+    "chown _apt:root /var/lib/apt/lists/partial /var/cache/apt/archives/partial",
+    # Ensure host toolchain is available for proc-macros
+    "rustup target add x86_64-unknown-linux-gnu",
+    # Install musl toolchain
+    "apt-get update && apt-get install -y musl-tools",
+]
+
+[target.x86_64-unknown-linux-musl.env]
+# Critical: Ensure proc-macros use host platform
+CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER = ""
+# Static linking configuration
+RUSTFLAGS = "-C target-feature=+crt-static"
+
+[target.aarch64-unknown-linux-musl]
+image = "ghcr.io/cross-rs/aarch64-unknown-linux-musl:main"
+pre-build = [
+    # Fix Docker permissions and prepare environment
+    "dpkg --add-architecture arm64",
+    "mkdir -p /var/lib/apt/lists/partial /var/cache/apt/archives/partial",
+    "chmod 755 /var/lib/apt/lists/partial /var/cache/apt/archives/partial",
+    "chown _apt:root /var/lib/apt/lists/partial /var/cache/apt/archives/partial",
+    # Ensure host toolchain is available for proc-macros
+    "rustup target add x86_64-unknown-linux-gnu",
+    # Install ARM64 musl toolchain
+    "apt-get update && apt-get install -y musl-tools gcc-aarch64-linux-gnu",
+]
+
+[target.aarch64-unknown-linux-musl.env]
+# Critical: Ensure proc-macros use host platform
+CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER = ""
+# ARM64 musl configuration
+CC_aarch64_unknown_linux_musl = "aarch64-linux-gnu-gcc"
+CXX_aarch64_unknown_linux_musl = "aarch64-linux-gnu-g++"
+AR_aarch64_unknown_linux_musl = "aarch64-linux-gnu-ar"
+RUSTFLAGS = "-C target-feature=+crt-static"
+
+# macOS targets (for completeness, though cross-compilation from Linux is limited)
+[target.x86_64-apple-darwin]
+image = "ghcr.io/cross-rs/x86_64-apple-darwin:main"
+pre-build = [
+    # Ensure host toolchain is available for proc-macros
+    "rustup target add x86_64-unknown-linux-gnu",
+]
+
+[target.x86_64-apple-darwin.env]
+# Critical: Ensure proc-macros use host platform
+CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER = ""
+
+[target.aarch64-apple-darwin]
+image = "ghcr.io/cross-rs/aarch64-apple-darwin:main"
+pre-build = [
+    # Ensure host toolchain is available for proc-macros
+    "rustup target add x86_64-unknown-linux-gnu",
+]
+
+[target.aarch64-apple-darwin.env]
+# Critical: Ensure proc-macros use host platform
+CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER = ""
+
+# Specific notes for turbo-cdn project:
+# 1. This configuration addresses proc-macro issues with serde, async-trait, thiserror, clap
+# 2. All targets ensure host toolchain availability for proc-macro compilation
+# 3. CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER="" prevents external interference
+# 4. Static linking is configured appropriately for musl targets
+# 5. Cross-compilation toolchains are properly installed for each target

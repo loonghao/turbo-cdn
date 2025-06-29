@@ -10,13 +10,20 @@ permissions:
   contents: read
   actions: read
   security-events: write
+  # Additional permissions for cross-platform testing
+  packages: read
 
 jobs:
   ci:
-    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-ci.yml@v1.1.5
+    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-ci.yml@v3.0.3
     with:
       enable-python-wheel: false
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
-
+  # Cross-platform testing using the same workflow as release
+  cross-platform-test:
+    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-release.yml@v3.0.3
+    with:
+      binary-name: "turbo-cdn"
+      enable-python-wheels: false

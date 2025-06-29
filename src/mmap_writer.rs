@@ -46,12 +46,12 @@ impl MmapWriter {
             .truncate(true)
             .open(&path)
             .map_err(|e| {
-                TurboCdnError::io(format!("Failed to create file {}: {}", path.display(), e))
+                TurboCdnError::io(format!("Failed to create file {}: {e}", path.display()))
             })?;
 
         // Pre-allocate file space
         file.set_len(file_size)
-            .map_err(|e| TurboCdnError::io(format!("Failed to set file size: {}", e)))?;
+            .map_err(|e| TurboCdnError::io(format!("Failed to set file size: {e}")))?;
 
         let file = Arc::new(Mutex::new(file));
         let mmap = Arc::new(Mutex::new(None));

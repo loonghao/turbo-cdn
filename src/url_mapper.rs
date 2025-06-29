@@ -126,7 +126,7 @@ impl UrlMapper {
     /// Create a rule from configuration
     fn create_rule_from_config(config: &UrlMappingRuleConfig) -> Result<UrlMappingRule> {
         let pattern = Regex::new(&config.pattern).map_err(|e| {
-            TurboCdnError::config(format!("Invalid regex pattern '{}': {}", config.pattern, e))
+            TurboCdnError::config(format!("Invalid regex pattern '{}': {e}", config.pattern))
         })?;
 
         Ok(UrlMappingRule {
@@ -239,7 +239,7 @@ impl UrlMapper {
         // Replace $1, $2, etc. with capture groups
         for (i, capture) in captures.iter().enumerate() {
             if let Some(matched) = capture {
-                let placeholder = format!("${}", i);
+                let placeholder = format!("${i}");
                 result = result.replace(&placeholder, matched.as_str());
             }
         }
