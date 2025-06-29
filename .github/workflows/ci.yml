@@ -15,7 +15,7 @@ permissions:
 
 jobs:
   ci:
-    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-ci.yml@v3.0.0
+    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-ci.yml@v3.0.1
     with:
       enable-python-wheel: false
     secrets:
@@ -23,7 +23,7 @@ jobs:
 
   # Cross-platform testing using the same workflow as release
   cross-platform-test:
-    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-release.yml@v3.0.0
+    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-release.yml@v3.0.1
     with:
       binary-name: "turbo-cdn"
       enable-python-wheels: false
