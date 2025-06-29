@@ -21,7 +21,7 @@ passthrough = [
 
 # Windows targets
 [target.x86_64-pc-windows-msvc]
-image = "ghcr.io/loonghao/rust-toolkit:cross-compile"
+image = "ghcr.io/cross-rs/x86_64-pc-windows-msvc:main"
 pre-build = [
     # Ensure host toolchain is available for proc-macros
     "rustup target add x86_64-unknown-linux-gnu",
@@ -32,7 +32,7 @@ pre-build = [
 CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER = ""
 
 [target.aarch64-pc-windows-msvc]
-image = "ghcr.io/loonghao/rust-toolkit:cross-compile"
+image = "ghcr.io/cross-rs/aarch64-pc-windows-msvc:main"
 pre-build = [
     # Ensure host toolchain is available for proc-macros
     "rustup target add x86_64-unknown-linux-gnu",
@@ -44,8 +44,13 @@ CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER = ""
 
 # Linux ARM64 targets
 [target.aarch64-unknown-linux-gnu]
-image = "ghcr.io/loonghao/rust-toolkit:cross-compile"
+image = "ghcr.io/cross-rs/aarch64-unknown-linux-gnu:main"
 pre-build = [
+    # Fix Docker permissions and prepare environment
+    "dpkg --add-architecture arm64",
+    "mkdir -p /var/lib/apt/lists/partial /var/cache/apt/archives/partial",
+    "chmod 755 /var/lib/apt/lists/partial /var/cache/apt/archives/partial",
+    "chown _apt:root /var/lib/apt/lists/partial /var/cache/apt/archives/partial",
     # Ensure host toolchain is available for proc-macros
     "rustup target add x86_64-unknown-linux-gnu",
     # Install ARM64 toolchain
@@ -62,8 +67,12 @@ AR_aarch64_unknown_linux_gnu = "aarch64-linux-gnu-ar"
 
 # Linux musl targets (static builds)
 [target.x86_64-unknown-linux-musl]
-image = "ghcr.io/loonghao/rust-toolkit:cross-compile"
+image = "ghcr.io/cross-rs/x86_64-unknown-linux-musl:main"
 pre-build = [
+    # Fix Docker permissions and prepare environment
+    "mkdir -p /var/lib/apt/lists/partial /var/cache/apt/archives/partial",
+    "chmod 755 /var/lib/apt/lists/partial /var/cache/apt/archives/partial",
+    "chown _apt:root /var/lib/apt/lists/partial /var/cache/apt/archives/partial",
     # Ensure host toolchain is available for proc-macros
     "rustup target add x86_64-unknown-linux-gnu",
     # Install musl toolchain
@@ -77,8 +86,13 @@ CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER = ""
 RUSTFLAGS = "-C target-feature=+crt-static"
 
 [target.aarch64-unknown-linux-musl]
-image = "ghcr.io/loonghao/rust-toolkit:cross-compile"
+image = "ghcr.io/cross-rs/aarch64-unknown-linux-musl:main"
 pre-build = [
+    # Fix Docker permissions and prepare environment
+    "dpkg --add-architecture arm64",
+    "mkdir -p /var/lib/apt/lists/partial /var/cache/apt/archives/partial",
+    "chmod 755 /var/lib/apt/lists/partial /var/cache/apt/archives/partial",
+    "chown _apt:root /var/lib/apt/lists/partial /var/cache/apt/archives/partial",
     # Ensure host toolchain is available for proc-macros
     "rustup target add x86_64-unknown-linux-gnu",
     # Install ARM64 musl toolchain
@@ -96,7 +110,7 @@ RUSTFLAGS = "-C target-feature=+crt-static"
 
 # macOS targets (for completeness, though cross-compilation from Linux is limited)
 [target.x86_64-apple-darwin]
-image = "ghcr.io/loonghao/rust-toolkit:cross-compile"
+image = "ghcr.io/cross-rs/x86_64-apple-darwin:main"
 pre-build = [
     # Ensure host toolchain is available for proc-macros
     "rustup target add x86_64-unknown-linux-gnu",
@@ -107,7 +121,7 @@ pre-build = [
 CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER = ""
 
 [target.aarch64-apple-darwin]
-image = "ghcr.io/loonghao/rust-toolkit:cross-compile"
+image = "ghcr.io/cross-rs/aarch64-apple-darwin:main"
 pre-build = [
     # Ensure host toolchain is available for proc-macros
     "rustup target add x86_64-unknown-linux-gnu",
