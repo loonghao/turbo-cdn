@@ -12,7 +12,6 @@ rustflags = [
     "-C", "target-feature=+crt-static",
     "--cfg", "disable_mimalloc"
 ]
-linker = "x86_64-w64-mingw32-gcc"
 
 [target.i686-pc-windows-gnu]
 # 32-bit Windows GNU target
