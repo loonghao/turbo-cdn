@@ -1,10 +1,12 @@
-# Cross.toml - Ultimate Proc-Macro Cross-Compilation Fix
-# This configuration resolves all proc-macro cross-compilation issues
-# Use this file as Cross.toml in your project root
+# Cross.toml for turbo-cdn project
+# This configuration specifically addresses proc-macro issues with:
+# - serde (derive)
+# - async-trait
+# - thiserror
+# - clap (derive)
 
 [build]
 # Critical: Do NOT set default-target globally as it affects proc-macros
-# Let Cargo handle proc-macro target selection automatically
 
 [build.env]
 # Pass through essential environment variables
@@ -17,25 +19,28 @@ passthrough = [
     "PKG_CONFIG_ALLOW_CROSS",
 ]
 
-# Windows GNU targets (zero-dependency builds)
-[target.x86_64-pc-windows-gnu]
+# Windows targets
+[target.x86_64-pc-windows-msvc]
 image = "ghcr.io/loonghao/rust-toolkit:cross-compile"
 pre-build = [
     # Ensure host toolchain is available for proc-macros
     "rustup target add x86_64-unknown-linux-gnu",
-    # Install Windows GNU toolchain
-    "apt-get update && apt-get install -y gcc-mingw-w64-x86-64",
 ]
 
-[target.x86_64-pc-windows-gnu.env]
+[target.x86_64-pc-windows-msvc.env]
 # Critical: Ensure proc-macros use host platform
 CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER = ""
-# Windows-specific configuration
-CC_x86_64_pc_windows_gnu = "x86_64-w64-mingw32-gcc-posix"
-CXX_x86_64_pc_windows_gnu = "x86_64-w64-mingw32-g++-posix"
-AR_x86_64_pc_windows_gnu = "x86_64-w64-mingw32-ar"
-# Static linking for zero dependencies
-RUSTFLAGS = "-C target-feature=+crt-static -C link-args=-static"
+
+[target.aarch64-pc-windows-msvc]
+image = "ghcr.io/loonghao/rust-toolkit:cross-compile"
+pre-build = [
+    # Ensure host toolchain is available for proc-macros
+    "rustup target add x86_64-unknown-linux-gnu",
+]
+
+[target.aarch64-pc-windows-msvc.env]
+# Critical: Ensure proc-macros use host platform
+CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER = ""
 
 # Linux ARM64 targets
 [target.aarch64-unknown-linux-gnu]
@@ -112,9 +117,9 @@ pre-build = [
 # Critical: Ensure proc-macros use host platform
 CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER = ""
 
-# Key principles for proc-macro cross-compilation:
-# 1. NEVER set global default-target in [build] section
-# 2. ALWAYS ensure x86_64-unknown-linux-gnu toolchain is available
-# 3. ALWAYS set CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER=""
-# 4. Let Cargo automatically handle proc-macro vs binary target selection
-# 5. Only specify target-specific configuration in [target.xxx] sections
+# Specific notes for turbo-cdn project:
+# 1. This configuration addresses proc-macro issues with serde, async-trait, thiserror, clap
+# 2. All targets ensure host toolchain availability for proc-macro compilation
+# 3. CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER="" prevents external interference
+# 4. Static linking is configured appropriately for musl targets
+# 5. Cross-compilation toolchains are properly installed for each target
