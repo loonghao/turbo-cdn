@@ -385,7 +385,7 @@ impl TurboCdn {
     /// Extract filename from URL
     fn extract_filename_from_url(&self, url: &str) -> Result<String> {
         let url_obj = url::Url::parse(url)
-            .map_err(|e| TurboCdnError::config(format!("Invalid URL: {}", e)))?;
+            .map_err(|e| TurboCdnError::config(format!("Invalid URL: {e}")))?;
 
         let path = url_obj.path();
         let filename = path.split('/').next_back().unwrap_or("download");

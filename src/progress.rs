@@ -357,11 +357,11 @@ impl ProgressInfo {
                 let seconds = total_seconds % 60;
 
                 if hours > 0 {
-                    format!("{}h {}m {}s", hours, minutes, seconds)
+                    format!("{hours}h {minutes}m {seconds}s")
                 } else if minutes > 0 {
-                    format!("{}m {}s", minutes, seconds)
+                    format!("{minutes}m {seconds}s")
                 } else {
-                    format!("{}s", seconds)
+                    format!("{seconds}s")
                 }
             }
             None => "Unknown".to_string(),
@@ -382,7 +382,7 @@ impl ProgressInfo {
             } else if size >= 1_000 {
                 format!("{:.2} KB", size as f64 / 1_000.0)
             } else {
-                format!("{} B", size)
+                format!("{size} B")
             }
         };
 
