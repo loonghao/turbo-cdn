@@ -1,50 +1,120 @@
-# Cross.toml - Configuration for cross-compilation with OpenSSL support
-# Place this file at the root of your project to resolve OpenSSL compilation issues
+# Cross.toml - Ultimate Proc-Macro Cross-Compilation Fix
+# This configuration resolves all proc-macro cross-compilation issues
+# Use this file as Cross.toml in your project root
+
+[build]
+# Critical: Do NOT set default-target globally as it affects proc-macros
+# Let Cargo handle proc-macro target selection automatically
 
 [build.env]
+# Pass through essential environment variables
 passthrough = [
+    "CARGO_TARGET_DIR",
+    "CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER",
+    "RUSTFLAGS",
     "OPENSSL_STATIC",
-    "OPENSSL_LIB_DIR",
-    "OPENSSL_INCLUDE_DIR",
+    "OPENSSL_NO_VENDOR",
     "PKG_CONFIG_ALLOW_CROSS",
-    "PKG_CONFIG_PATH",
-    "CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER",
-    "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER"
 ]
 
-# Configuration for musl targets
-[target.x86_64-unknown-linux-musl]
-image = "ghcr.io/cross-rs/x86_64-unknown-linux-musl:main"
+# Windows GNU targets (zero-dependency builds)
+[target.x86_64-pc-windows-gnu]
+image = "ghcr.io/loonghao/rust-toolkit:cross-compile"
 pre-build = [
-    "dpkg --add-architecture amd64",
-    "apt-get update && apt-get install -y libssl-dev:amd64 pkg-config"
+    # Ensure host toolchain is available for proc-macros
+    "rustup target add x86_64-unknown-linux-gnu",
+    # Install Windows GNU toolchain
+    "apt-get update && apt-get install -y gcc-mingw-w64-x86-64",
 ]
+
+[target.x86_64-pc-windows-gnu.env]
+# Critical: Ensure proc-macros use host platform
+CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER = ""
+# Windows-specific configuration
+CC_x86_64_pc_windows_gnu = "x86_64-w64-mingw32-gcc-posix"
+CXX_x86_64_pc_windows_gnu = "x86_64-w64-mingw32-g++-posix"
+AR_x86_64_pc_windows_gnu = "x86_64-w64-mingw32-ar"
+# Static linking for zero dependencies
+RUSTFLAGS = "-C target-feature=+crt-static -C link-args=-static"
+
+# Linux ARM64 targets
+[target.aarch64-unknown-linux-gnu]
+image = "ghcr.io/loonghao/rust-toolkit:cross-compile"
+pre-build = [
+    # Ensure host toolchain is available for proc-macros
+    "rustup target add x86_64-unknown-linux-gnu",
+    # Install ARM64 toolchain
+    "apt-get update && apt-get install -y gcc-aarch64-linux-gnu",
+]
+
+[target.aarch64-unknown-linux-gnu.env]
+# Critical: Ensure proc-macros use host platform
+CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER = ""
+# ARM64-specific configuration
+CC_aarch64_unknown_linux_gnu = "aarch64-linux-gnu-gcc"
+CXX_aarch64_unknown_linux_gnu = "aarch64-linux-gnu-g++"
+AR_aarch64_unknown_linux_gnu = "aarch64-linux-gnu-ar"
+
+# Linux musl targets (static builds)
+[target.x86_64-unknown-linux-musl]
+image = "ghcr.io/loonghao/rust-toolkit:cross-compile"
+pre-build = [
+    # Ensure host toolchain is available for proc-macros
+    "rustup target add x86_64-unknown-linux-gnu",
+    # Install musl toolchain
+    "apt-get update && apt-get install -y musl-tools",
+]
+
+[target.x86_64-unknown-linux-musl.env]
+# Critical: Ensure proc-macros use host platform
+CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER = ""
+# Static linking configuration
+RUSTFLAGS = "-C target-feature=+crt-static"
 
 [target.aarch64-unknown-linux-musl]
-image = "ghcr.io/cross-rs/aarch64-unknown-linux-musl:main"
+image = "ghcr.io/loonghao/rust-toolkit:cross-compile"
 pre-build = [
-    "dpkg --add-architecture arm64",
-    "apt-get update && apt-get install -y libssl-dev:arm64 pkg-config"
+    # Ensure host toolchain is available for proc-macros
+    "rustup target add x86_64-unknown-linux-gnu",
+    # Install ARM64 musl toolchain
+    "apt-get update && apt-get install -y musl-tools gcc-aarch64-linux-gnu",
 ]
 
-# Configuration for GNU targets
-[target.aarch64-unknown-linux-gnu]
-image = "ghcr.io/cross-rs/aarch64-unknown-linux-gnu:main"
-pre-build = [
-    "dpkg --add-architecture arm64",
-    "apt-get update && apt-get install -y libssl-dev:arm64 pkg-config"
-]
+[target.aarch64-unknown-linux-musl.env]
+# Critical: Ensure proc-macros use host platform
+CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER = ""
+# ARM64 musl configuration
+CC_aarch64_unknown_linux_musl = "aarch64-linux-gnu-gcc"
+CXX_aarch64_unknown_linux_musl = "aarch64-linux-gnu-g++"
+AR_aarch64_unknown_linux_musl = "aarch64-linux-gnu-ar"
+RUSTFLAGS = "-C target-feature=+crt-static"
 
-# Windows targets
-[target.x86_64-pc-windows-gnu]
-image = "ghcr.io/cross-rs/x86_64-pc-windows-gnu:main"
-
-[target.aarch64-pc-windows-msvc]
-image = "ghcr.io/cross-rs/aarch64-pc-windows-msvc:main"
-
-# macOS targets (when cross-compiling from Linux)
+# macOS targets (for completeness, though cross-compilation from Linux is limited)
 [target.x86_64-apple-darwin]
-image = "ghcr.io/cross-rs/x86_64-apple-darwin:main"
+image = "ghcr.io/loonghao/rust-toolkit:cross-compile"
+pre-build = [
+    # Ensure host toolchain is available for proc-macros
+    "rustup target add x86_64-unknown-linux-gnu",
+]
+
+[target.x86_64-apple-darwin.env]
+# Critical: Ensure proc-macros use host platform
+CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER = ""
 
 [target.aarch64-apple-darwin]
-image = "ghcr.io/cross-rs/aarch64-apple-darwin:main"
+image = "ghcr.io/loonghao/rust-toolkit:cross-compile"
+pre-build = [
+    # Ensure host toolchain is available for proc-macros
+    "rustup target add x86_64-unknown-linux-gnu",
+]
+
+[target.aarch64-apple-darwin.env]
+# Critical: Ensure proc-macros use host platform
+CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER = ""
+
+# Key principles for proc-macro cross-compilation:
+# 1. NEVER set global default-target in [build] section
+# 2. ALWAYS ensure x86_64-unknown-linux-gnu toolchain is available
+# 3. ALWAYS set CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER=""
+# 4. Let Cargo automatically handle proc-macro vs binary target selection
+# 5. Only specify target-specific configuration in [target.xxx] sections
