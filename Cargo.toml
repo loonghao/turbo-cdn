@@ -107,7 +107,9 @@ ping = "0.5"
 
 [dev-dependencies]
 # Testing
-tokio-test = "0.4"
+# Note: tokio-test includes async-stream-impl which can cause proc-macro issues in CI
+# Temporarily commented out to avoid proc-macro cross-compilation problems
+# tokio-test = "0.4"
 tempfile = "3.0"
 wiremock = "0.6"
 criterion = { version = "0.6", features = ["html_reports"] }

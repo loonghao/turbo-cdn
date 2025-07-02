@@ -8,13 +8,26 @@ param(
 
 Write-Host "🔧 Fixing proc-macro cross-compilation environment..." -ForegroundColor Cyan
 
+# Backup and temporarily disable Cargo config that might interfere
+$CargoConfigBackup = ""
+if (Test-Path ".cargo/config.toml") {
+    Write-Host "📁 Backing up .cargo/config.toml to avoid interference..." -ForegroundColor Yellow
+    $CargoConfigBackup = ".cargo/config.toml.backup.$PID"
+    Copy-Item ".cargo/config.toml" $CargoConfigBackup
+    Move-Item ".cargo/config.toml" ".cargo/config.toml.disabled"
+    Write-Host "✅ Cargo config temporarily disabled" -ForegroundColor Green
+}
+
 # List of environment variables that can cause proc-macro issues
 $ProblematicVars = @(
     "CARGO_BUILD_TARGET",
     "CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER",
     "CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_RUNNER",
     "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_RUNNER",
-    "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_RUNNER"
+    "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_RUNNER",
+    "CARGO_CFG_TARGET_ARCH",
+    "CARGO_CFG_TARGET_OS",
+    "CARGO_CFG_TARGET_FAMILY"
 )
 
 # Unset problematic environment variables
@@ -30,6 +43,10 @@ foreach ($var in $ProblematicVars) {
         }
     }
 }
+
+# Force set correct environment for native compilation
+$env:CARGO_BUILD_TARGET = ""
+$env:CARGO_TARGET_DIR = "target"
 
 # Verify the current environment
 Write-Host ""
