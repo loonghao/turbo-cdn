@@ -70,17 +70,17 @@ pub fn info_message(message: &str, verbose: bool) {
 
 /// Display a success message
 pub fn success_message(message: &str) {
-    println!("✅ {}", message);
+    println!("✅ {message}");
 }
 
 /// Display an error message
 pub fn error_message(message: &str) {
-    println!("❌ {}", message);
+    println!("❌ {message}");
 }
 
 /// Display a warning message
 pub fn warning_message(message: &str) {
-    println!("⚠️  {}", message);
+    println!("⚠️  {message}");
 }
 
 /// Clear current line
@@ -119,14 +119,14 @@ pub fn display_speed_test_results(
         for (method, speed, selected) in results {
             let status = if *selected { " ✓ (selected)" } else { "" };
             if *speed > 0.0 {
-                println!("   ├─ {}: {:.2} MB/s{}", method, speed, status);
+                println!("   ├─ {method}: {speed:.2} MB/s{status}");
             } else {
-                println!("   ├─ {}: failed{}", method, status);
+                println!("   ├─ {method}: failed{status}");
             }
         }
 
         if let Some((selected_method, _, _)) = results.iter().find(|(_, _, selected)| *selected) {
-            println!("   └─ Using {} method", selected_method);
+            println!("   └─ Using {selected_method} method");
         }
         println!();
     } else {
@@ -134,10 +134,7 @@ pub fn display_speed_test_results(
         if let Some((selected_method, speed, _)) = results.iter().find(|(_, _, selected)| *selected)
         {
             if *speed > 0.0 {
-                status_message(
-                    "⚡",
-                    &format!("Using {} ({:.1} MB/s)", selected_method, speed),
-                );
+                status_message("⚡", &format!("Using {selected_method} ({speed:.1} MB/s)"));
             } else {
                 status_message("⚡", &format!("Using {}", selected_method));
             }

@@ -382,7 +382,7 @@ impl ProgressInfo {
             } else if size >= 1_000 {
                 format!("{:.2} KB", size as f64 / 1_000.0)
             } else {
-                format!("{} B", size)
+                format!("{size} B")
             }
         };
 
