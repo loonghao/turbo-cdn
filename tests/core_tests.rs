@@ -282,9 +282,9 @@ fn format_file_size(bytes: u64) -> String {
     }
 
     if unit_index == 0 {
-        format!("{} {}", bytes, UNITS[unit_index])
+        format!("{bytes} {}", UNITS[unit_index])
     } else {
-        format!("{:.2} {}", size, UNITS[unit_index])
+        format!("{size:.2} {}", UNITS[unit_index])
     }
 }
 

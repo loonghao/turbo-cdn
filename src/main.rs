@@ -60,7 +60,7 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
 
     // Initialize professional logging system
     if let Err(e) = turbo_cdn::logging::init_cli_logging(cli.verbose) {
-        eprintln!("Failed to initialize logging: {}", e);
+        eprintln!("Failed to initialize logging: {e}");
         std::process::exit(1);
     }
 
@@ -95,7 +95,7 @@ async fn handle_optimize_command(
     if verbose {
         println!("🔍 Turbo CDN - Finding optimal URL");
         println!("=================================");
-        println!("Source URL: {}", url);
+        println!("Source URL: {url}");
         println!();
     } else {
         print!("🔍 Finding optimal URL");
@@ -117,11 +117,11 @@ async fn handle_optimize_command(
             if optimal_url == url {
                 println!("ℹ️  No CDN optimization available for this URL");
                 if verbose {
-                    println!("   Original URL will be used: {}", url);
+                    println!("   Original URL will be used: {url}");
                 }
             } else {
                 println!("✅ CDN optimization found!");
-                println!("   {}", optimal_url);
+                println!("   {optimal_url}");
                 if verbose {
                     println!("   🚀 This should provide faster download speeds");
                 }
@@ -132,7 +132,7 @@ async fn handle_optimize_command(
                 print!("\r"); // Clear spinner
                 io::stdout().flush().unwrap();
             }
-            println!("❌ Error getting optimal URL: {}", e);
+            println!("❌ Error getting optimal URL: {e}");
             return Err(e.into());
         }
     }
@@ -269,7 +269,7 @@ async fn handle_download_command(
                 print!("\r"); // Clear spinner
                 io::stdout().flush().unwrap();
             }
-            println!("❌ Download failed: {}", e);
+            println!("❌ Download failed: {e}");
             if verbose {
                 println!("💡 Tips:");
                 println!("   • Check your internet connection");
@@ -287,7 +287,7 @@ async fn show_spinner() {
     let spinner_chars = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
     for _ in 0..10 {
         for &ch in &spinner_chars {
-            print!("\r{} Processing...", ch);
+            print!("\r{ch} Processing...");
             io::stdout().flush().unwrap();
             tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
         }
