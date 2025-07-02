@@ -56,32 +56,64 @@ CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER = ""
 
 ### 2. CI/CD 配置
 
-使用 rust-actions-toolkit v4.0.0+，它包含了自动的 proc-macro 修复：
+使用 rust-actions-toolkit v4.0.0 正式版，它包含了增强的 proc-macro 修复：
 
 ```yaml
 jobs:
+  # 原生测试（避免跨平台编译环境变量干扰）
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fix proc-macro environment
+        run: |
+          chmod +x scripts/fix-proc-macro-env.sh
+          ./scripts/fix-proc-macro-env.sh
+      - name: Run tests
+        run: cargo test --all-features --workspace
+
+  # 跨平台编译测试
   cross-platform-test:
+    needs: ci
     uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-release.yml@v4.0.0
     with:
       binary-name: "turbo-cdn"
       enable-python-wheels: false
 ```
 
-### 3. 本地测试
+### 3. 环境修复脚本
 
-使用提供的测试脚本：
+我们创建了专门的脚本 `scripts/fix-proc-macro-env.sh` 来处理环境变量问题：
 
-**Windows PowerShell:**
+```bash
+#!/bin/bash
+# 自动检测和修复可能导致 proc-macro 问题的环境变量
+./scripts/fix-proc-macro-env.sh
+```
+
+### 4. 本地测试
+
+**环境修复测试：**
+```bash
+# 修复 proc-macro 环境
+./scripts/fix-proc-macro-env.sh
+
+# 验证修复效果
+cargo test --all-features --workspace
+```
+
+**跨平台编译测试：**
 ```powershell
+# Windows PowerShell
 .\scripts\test-cross-compilation.ps1 -Target x86_64-unknown-linux-gnu -Verbose
 ```
 
-**Linux/macOS:**
 ```bash
+# Linux/macOS
 ./scripts/test-cross-compilation.sh x86_64-unknown-linux-gnu
 ```
 
-### 4. 手动修复步骤
+### 5. 手动修复步骤
 
 如果自动修复不工作，可以手动执行：
 
