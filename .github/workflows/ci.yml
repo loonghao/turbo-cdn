@@ -22,6 +22,7 @@ jobs:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
   # Cross-platform testing using the same workflow as release
+  # Enhanced proc-macro cross-compilation support (v4.0.0+ includes automatic fix)
   cross-platform-test:
     uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-release.yml@v4.0.0
     with:

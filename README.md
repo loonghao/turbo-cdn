@@ -403,10 +403,40 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [serde](https://github.com/serde-rs/serde) - Serialization
 - [clap](https://github.com/clap-rs/clap) - Command line parsing
 
+## 🔧 Development
+
+### Cross-Platform Compilation
+
+This project supports cross-compilation with automatic proc-macro fixes:
+
+```bash
+# Install cross-compilation tool
+cargo install cross --git https://github.com/cross-rs/cross
+
+# Cross-compile for Linux (from Windows/macOS)
+cross build --target x86_64-unknown-linux-gnu
+
+# Cross-compile for Windows (from Linux/macOS)
+cross build --target x86_64-pc-windows-msvc
+```
+
+**Note**: Our `Cross.toml` configuration automatically handles proc-macro cross-compilation issues. See [docs/PROC_MACRO_CROSS_COMPILATION_SOLUTION.md](docs/PROC_MACRO_CROSS_COMPILATION_SOLUTION.md) for details.
+
+### Testing Cross-Compilation
+
+```bash
+# Test cross-compilation (Linux/macOS)
+./scripts/test-cross-compilation.sh x86_64-unknown-linux-gnu
+
+# Test cross-compilation (Windows PowerShell)
+.\scripts\test-cross-compilation.ps1 -Target x86_64-unknown-linux-gnu -Verbose
+```
+
 ## 📞 Support
 
 - 📖 [Documentation](https://docs.rs/turbo-cdn)
 - 🌐 [URL Optimization Guide](docs/URL_OPTIMIZATION.md)
+- 🔧 [Cross-Compilation Guide](docs/PROC_MACRO_CROSS_COMPILATION_SOLUTION.md)
 - 🐛 [Issue Tracker](https://github.com/loonghao/turbo-cdn/issues)
 - 💬 [Discussions](https://github.com/loonghao/turbo-cdn/discussions)
 - 🚀 [Examples](examples/) - URL parsing and optimization demos

@@ -4,6 +4,7 @@
 # - async-trait
 # - thiserror
 # - clap (derive)
+# - async-stream-impl (from tokio-test)
 
 [build]
 # Critical: Do NOT set default-target globally as it affects proc-macros
@@ -17,6 +18,9 @@ passthrough = [
     "OPENSSL_STATIC",
     "OPENSSL_NO_VENDOR",
     "PKG_CONFIG_ALLOW_CROSS",
+    # Additional environment variables for proc-macro fix
+    "CARGO_BUILD_TARGET",
+    "CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER",
 ]
 
 # Windows targets
