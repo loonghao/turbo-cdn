@@ -344,7 +344,7 @@ impl SmartDownloader {
         let bytes = response
             .bytes()
             .await
-            .map_err(|e| TurboCdnError::network(format!("Failed to read response: {}", e)))?;
+            .map_err(|e| TurboCdnError::network(format!("Failed to read response: {e}")))?;
 
         Ok(bytes.len() as u64)
     }
