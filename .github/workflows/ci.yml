@@ -10,56 +10,12 @@ permissions:
   contents: read
   actions: read
   security-events: write
-  packages: read
-
-env:
-  # Global environment variables to prevent proc-macro cross-compilation issues
-  CARGO_TERM_COLOR: always
 
 jobs:
-  # Use rust-actions-toolkit but with proc-macro fix
+  # 简单的 CI 设置
   ci:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          components: rustfmt, clippy
-
-      - name: Cache dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-
-      - name: Fix proc-macro environment (Aggressive CI Mode)
-        run: |
-          chmod +x scripts/ci-proc-macro-fix.sh
-          ./scripts/ci-proc-macro-fix.sh
-
-      - name: Check formatting
-        run: cargo fmt --all -- --check
-
-      - name: Run clippy
-        run: cargo clippy --all-targets --all-features -- -D warnings
-
-      - name: Run tests (without proc-macro problematic features)
-        run: |
-          echo "Running tests without tokio-test to avoid proc-macro issues..."
-          cargo test --no-default-features --features "rustls-tls,fast-hash,high-performance" --workspace
-
-      - name: Run doc tests
-        run: cargo test --doc --no-default-features --features "rustls-tls,fast-hash,high-performance" --workspace
-
-  # Separate cross-platform compilation testing
-  cross-platform-test:
-    needs: ci  # Run after native tests pass
-    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-release.yml@v4.0.0
+    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-ci.yml@main
     with:
-      binary-name: "turbo-cdn"
-      enable-python-wheels: false
+      rust-toolchain: stable
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

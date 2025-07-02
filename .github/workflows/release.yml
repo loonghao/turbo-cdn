@@ -9,8 +9,8 @@ permissions:
   contents: write
 
 jobs:
+  # 简单的发布设置
   release:
-    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-release.yml@v4.0.0
+    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-release.yml@main
     with:
-      binary-name: "turbo-cdn"
-      enable-python-wheels: false
+      rust-toolchain: stable

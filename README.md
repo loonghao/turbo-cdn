@@ -405,9 +405,22 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🔧 Development
 
+### Building and Testing
+
+```bash
+# Build the project
+cargo build
+
+# Run tests
+cargo test
+
+# Run with specific features
+cargo run --features "native-tls" -- --help
+```
+
 ### Cross-Platform Compilation
 
-This project supports cross-compilation with automatic proc-macro fixes:
+This project supports cross-compilation using our simplified CI setup:
 
 ```bash
 # Install cross-compilation tool
@@ -420,23 +433,13 @@ cross build --target x86_64-unknown-linux-gnu
 cross build --target x86_64-pc-windows-msvc
 ```
 
-**Note**: Our `Cross.toml` configuration automatically handles proc-macro cross-compilation issues. See [docs/PROC_MACRO_CROSS_COMPILATION_SOLUTION.md](docs/PROC_MACRO_CROSS_COMPILATION_SOLUTION.md) for details.
-
-### Testing Cross-Compilation
-
-```bash
-# Test cross-compilation (Linux/macOS)
-./scripts/test-cross-compilation.sh x86_64-unknown-linux-gnu
-
-# Test cross-compilation (Windows PowerShell)
-.\scripts\test-cross-compilation.ps1 -Target x86_64-unknown-linux-gnu -Verbose
-```
+**Note**: Cross-compilation and proc-macro issues are automatically handled by our CI system using [rust-actions-toolkit](https://github.com/loonghao/rust-actions-toolkit).
 
 ## 📞 Support
 
 - 📖 [Documentation](https://docs.rs/turbo-cdn)
 - 🌐 [URL Optimization Guide](docs/URL_OPTIMIZATION.md)
-- 🔧 [Cross-Compilation Guide](docs/PROC_MACRO_CROSS_COMPILATION_SOLUTION.md)
+- 🔧 [Simplified CI Setup](docs/SIMPLIFIED_CI_SETUP.md)
 - 🐛 [Issue Tracker](https://github.com/loonghao/turbo-cdn/issues)
 - 💬 [Discussions](https://github.com/loonghao/turbo-cdn/discussions)
 - 🚀 [Examples](examples/) - URL parsing and optimization demos
