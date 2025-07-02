@@ -384,8 +384,8 @@ impl TurboCdn {
 
     /// Extract filename from URL
     fn extract_filename_from_url(&self, url: &str) -> Result<String> {
-        let url_obj = url::Url::parse(url)
-            .map_err(|e| TurboCdnError::config(format!("Invalid URL: {}", e)))?;
+        let url_obj =
+            url::Url::parse(url).map_err(|e| TurboCdnError::config(format!("Invalid URL: {e}")))?;
 
         let path = url_obj.path();
         let filename = path.split('/').next_back().unwrap_or("download");
@@ -439,7 +439,7 @@ pub mod sync_api {
         /// Create a new synchronous TurboCdn client
         pub fn new() -> Result<Self> {
             let runtime = tokio::runtime::Runtime::new()
-                .map_err(|e| TurboCdnError::internal(format!("Failed to create runtime: {}", e)))?;
+                .map_err(|e| TurboCdnError::internal(format!("Failed to create runtime: {e}")))?;
 
             let inner = runtime.block_on(TurboCdn::new())?;
 
@@ -449,7 +449,7 @@ pub mod sync_api {
         /// Create a synchronous TurboCdn client with custom configuration
         pub fn with_config(config: TurboCdnConfig) -> Result<Self> {
             let runtime = tokio::runtime::Runtime::new()
-                .map_err(|e| TurboCdnError::internal(format!("Failed to create runtime: {}", e)))?;
+                .map_err(|e| TurboCdnError::internal(format!("Failed to create runtime: {e}")))?;
 
             let inner = runtime.block_on(TurboCdn::with_config(config))?;
 

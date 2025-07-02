@@ -239,7 +239,7 @@ impl UrlMapper {
         // Replace $1, $2, etc. with capture groups
         for (i, capture) in captures.iter().enumerate() {
             if let Some(matched) = capture {
-                let placeholder = format!("${}", i);
+                let placeholder = format!("${i}");
                 result = result.replace(&placeholder, matched.as_str());
             }
         }
