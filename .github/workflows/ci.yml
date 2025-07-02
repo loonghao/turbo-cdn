@@ -12,10 +12,7 @@ permissions:
   security-events: write
 
 jobs:
-  # 简单的 CI 设置
   ci:
-    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-ci.yml@main
-    with:
-      rust-toolchain: stable
+    uses: loonghao/rust-actions-toolkit/.github/workflows/core-ci.yml@v4.0.0
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

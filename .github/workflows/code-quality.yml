@@ -12,9 +12,5 @@ permissions:
   security-events: write
 
 jobs:
-  # 简单的代码质量检查设置
   code-quality:
-    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-ci.yml@main
-    with:
-      rust-toolchain: stable
-      enable-coverage: false
+    uses: loonghao/rust-actions-toolkit/.github/workflows/core-ci.yml@v4.0.0

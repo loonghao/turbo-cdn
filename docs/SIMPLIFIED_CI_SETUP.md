@@ -2,7 +2,10 @@
 
 ## 🎯 设计理念
 
-我们简化了 CI 配置，使用 rust-actions-toolkit 的最新版本来自动处理所有复杂的构建和测试逻辑，包括 proc-macro 跨平台编译问题。
+我们简化了 CI 配置，使用 rust-actions-toolkit v4.0.0 的新架构来自动处理所有复杂的构建和测试逻辑。v4.0.0 采用了三层设计：
+- **Layer 1**: Core CI - 零配置，最大可靠性
+- **Layer 2**: Enhanced Release - 多平台原生构建
+- **Layer 3**: Advanced - 复杂需求（未来）
 
 ## 📋 新的 CI 配置
 
@@ -23,11 +26,9 @@ permissions:
   security-events: write
 
 jobs:
-  # 简单的 CI 设置
+  # 简单的 CI 设置 - 使用 v4.0.0 的 core-ci
   ci:
-    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-ci.yml@main
-    with:
-      rust-toolchain: stable
+    uses: loonghao/rust-actions-toolkit/.github/workflows/core-ci.yml@v4.0.0
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 ```
@@ -46,11 +47,9 @@ permissions:
   contents: write
 
 jobs:
-  # 简单的发布设置
+  # 简单的发布设置 - 使用 v4.0.0 的 enhanced-release
   release:
-    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-release.yml@main
-    with:
-      rust-toolchain: stable
+    uses: loonghao/rust-actions-toolkit/.github/workflows/enhanced-release.yml@v4.0.0
 ```
 
 ### 代码质量工作流 (`.github/workflows/code-quality.yml`)
@@ -70,20 +69,18 @@ permissions:
   security-events: write
 
 jobs:
-  # 简单的代码质量检查设置
+  # 简单的代码质量检查设置 - 使用 v4.0.0 的 core-ci
   code-quality:
-    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-ci.yml@main
-    with:
-      rust-toolchain: stable
-      enable-coverage: false
+    uses: loonghao/rust-actions-toolkit/.github/workflows/core-ci.yml@v4.0.0
 ```
 
-## ✅ 简化的优势
+## ✅ v4.0.0 的优势
 
-1. **自动处理复杂性**：rust-actions-toolkit 自动处理 proc-macro 跨平台编译问题
-2. **减少维护负担**：不需要手动管理环境变量和修复脚本
-3. **统一的配置**：所有项目使用相同的 CI 模式
-4. **自动更新**：使用 `@main` 分支自动获取最新的修复和改进
+1. **零配置可靠性**：core-ci 提供零配置的最大可靠性
+2. **原生构建**：enhanced-release 使用原生构建，避免所有 proc-macro 问题
+3. **性能优化**：原生编译比跨平台编译更快
+4. **简化架构**：清晰的三层设计，渐进式复杂性
+5. **修复关键问题**：解决了 CARGO_BUILD_TARGET 环境变量导致的 proc-macro 问题
 
 ## 🔄 迁移说明
 
