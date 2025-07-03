@@ -332,7 +332,7 @@ impl SmartDownloader {
             .header("Range", range_header)
             .send()
             .await
-            .map_err(|e| TurboCdnError::network(format!("Request failed: {}", e)))?;
+            .map_err(|e| TurboCdnError::network(format!("Request failed: {e}")))?;
 
         if !response.status().is_success() && response.status() != 206 {
             return Err(TurboCdnError::network(format!(
