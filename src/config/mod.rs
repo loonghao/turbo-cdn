@@ -277,7 +277,7 @@ impl std::fmt::Display for Region {
             Region::AsiaPacific => write!(f, "AsiaPacific"),
             Region::Europe => write!(f, "Europe"),
             Region::NorthAmerica => write!(f, "NorthAmerica"),
-            Region::Custom(name) => write!(f, "{}", name),
+            Region::Custom(name) => write!(f, "{name}"),
         }
     }
 }

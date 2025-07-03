@@ -46,12 +46,12 @@ impl MmapWriter {
             .truncate(true)
             .open(&path)
             .map_err(|e| {
-                TurboCdnError::io(format!("Failed to create file {}: {}", path.display(), e))
+                TurboCdnError::io(format!("Failed to create file {}: {e}", path.display()))
             })?;
 
         // Pre-allocate file space
         file.set_len(file_size)
-            .map_err(|e| TurboCdnError::io(format!("Failed to set file size: {}", e)))?;
+            .map_err(|e| TurboCdnError::io(format!("Failed to set file size: {e}")))?;
 
         let file = Arc::new(Mutex::new(file));
         let mmap = Arc::new(Mutex::new(None));
@@ -92,7 +92,7 @@ impl MmapWriter {
             MmapOptions::new()
                 .len(self.file_size as usize)
                 .map_mut(&*file)
-                .map_err(|e| TurboCdnError::io(format!("Failed to create memory map: {}", e)))?
+                .map_err(|e| TurboCdnError::io(format!("Failed to create memory map: {e}")))?
         };
 
         *self.mmap.lock().await = Some(mmap);
@@ -144,13 +144,12 @@ impl MmapWriter {
     async fn write_file(&self, offset: u64, data: &[u8]) -> Result<usize> {
         let mut file = self.file.lock().await;
 
-        file.seek(SeekFrom::Start(offset)).map_err(|e| {
-            TurboCdnError::io(format!("Failed to seek to offset {}: {}", offset, e))
-        })?;
+        file.seek(SeekFrom::Start(offset))
+            .map_err(|e| TurboCdnError::io(format!("Failed to seek to offset {offset}: {e}")))?;
 
         let bytes_written = file
             .write(data)
-            .map_err(|e| TurboCdnError::io(format!("Failed to write data: {}", e)))?;
+            .map_err(|e| TurboCdnError::io(format!("Failed to write data: {e}")))?;
 
         debug!("File write: {} bytes at offset {}", bytes_written, offset);
         Ok(bytes_written)
@@ -171,7 +170,7 @@ impl MmapWriter {
 
         if let Some(mmap) = mmap_guard.as_ref() {
             mmap.flush()
-                .map_err(|e| TurboCdnError::io(format!("Failed to flush memory map: {}", e)))?;
+                .map_err(|e| TurboCdnError::io(format!("Failed to flush memory map: {e}")))?;
             debug!("Memory map flushed");
         }
 
@@ -182,7 +181,7 @@ impl MmapWriter {
     async fn flush_file(&self) -> Result<()> {
         let mut file = self.file.lock().await;
         file.flush()
-            .map_err(|e| TurboCdnError::io(format!("Failed to flush file: {}", e)))?;
+            .map_err(|e| TurboCdnError::io(format!("Failed to flush file: {e}")))?;
         debug!("File flushed");
         Ok(())
     }
@@ -195,7 +194,7 @@ impl MmapWriter {
         // Then sync to disk
         let file = self.file.lock().await;
         file.sync_all()
-            .map_err(|e| TurboCdnError::io(format!("Failed to sync file: {}", e)))?;
+            .map_err(|e| TurboCdnError::io(format!("Failed to sync file: {e}")))?;
 
         debug!("File synced to disk");
         Ok(())
@@ -221,7 +220,7 @@ impl MmapWriter {
         let file = self.file.lock().await;
         let metadata = file
             .metadata()
-            .map_err(|e| TurboCdnError::io(format!("Failed to get file metadata: {}", e)))?;
+            .map_err(|e| TurboCdnError::io(format!("Failed to get file metadata: {e}")))?;
 
         let actual_size = metadata.len();
         let expected_size = self.file_size;
