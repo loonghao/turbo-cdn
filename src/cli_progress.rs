@@ -58,13 +58,13 @@ pub async fn show_quick_spinner(message: &str) {
 
 /// Display a clean status message
 pub fn status_message(icon: &str, message: &str) {
-    println!("{} {}", icon, message);
+    println!("{icon} {message}");
 }
 
 /// Display an info message (only in verbose mode)
 pub fn info_message(message: &str, verbose: bool) {
     if verbose {
-        println!("ℹ️  {}", message);
+        println!("ℹ️  {message}");
     }
 }
 
@@ -98,8 +98,7 @@ pub fn display_download_result(
     verbose: bool,
 ) {
     success_message(&format!(
-        "Downloaded {:.1} MB in {:.1}s ({:.1} MB/s)",
-        size_mb, duration_secs, speed_mbps
+        "Downloaded {size_mb:.1} MB in {duration_secs:.1}s ({speed_mbps:.1} MB/s)"
     ));
 
     if verbose {
@@ -136,7 +135,7 @@ pub fn display_speed_test_results(
             if *speed > 0.0 {
                 status_message("⚡", &format!("Using {selected_method} ({speed:.1} MB/s)"));
             } else {
-                status_message("⚡", &format!("Using {}", selected_method));
+                status_message("⚡", &format!("Using {selected_method}"));
             }
         }
     }
@@ -149,12 +148,12 @@ pub fn create_multi_progress() -> indicatif::MultiProgress {
 
 /// Finish a progress bar with success message
 pub fn finish_progress_with_message(pb: &ProgressBar, message: &str) {
-    pb.finish_with_message(format!("✅ {}", message));
+    pb.finish_with_message(format!("✅ {message}"));
 }
 
 /// Finish a progress bar with error message
 pub fn finish_progress_with_error(pb: &ProgressBar, message: &str) {
-    pb.finish_with_message(format!("❌ {}", message));
+    pb.finish_with_message(format!("❌ {message}"));
 }
 
 #[cfg(test)]
