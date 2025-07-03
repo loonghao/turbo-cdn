@@ -55,6 +55,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - improve code quality and remove code smells
 ## [Unreleased]
 
+## [0.4.2](https://github.com/loonghao/turbo-cdn/compare/v0.4.1...v0.4.2) - 2025-07-03
+
+### Fixed
+
+- disable uninlined_format_args clippy warning
+- resolve all remaining uninlined format args warnings
+- resolve uninlined format args clippy warnings
+- resolve clippy warnings and modernize string formatting
+- resolve remaining clippy format string warnings in cli_progress.rs
+- resolve final clippy format string warnings and add automation scripts
+- resolve all clippy format string warnings
+- resolve clippy warnings for format string optimization
+
 ## [0.4.1](https://github.com/loonghao/turbo-cdn/compare/v0.4.0...v0.4.1) - 2025-06-25
 
 ### Added
