@@ -119,17 +119,28 @@ high-performance = []
 
 [profile.release]
 opt-level = 3
-lto = true
+lto = "fat"
 codegen-units = 1
 panic = "abort"
+strip = true
+overflow-checks = false
 
 [profile.dev]
 opt-level = 0
 debug = true
+overflow-checks = true
 
 [profile.test]
 opt-level = 1
 debug = true
+overflow-checks = true
+
+# Optimized profile for distribution
+[profile.dist]
+inherits = "release"
+lto = "fat"
+codegen-units = 1
+strip = true
 
 # Examples
 [[example]]
@@ -156,8 +167,51 @@ path = "examples/performance/benchmarks.rs"
 name = "monitoring"
 path = "examples/performance/monitoring.rs"
 
-# Clippy configuration
+# Linting configuration
+[lints.rust]
+# unsafe_code = "forbid"  # Disabled due to necessary unsafe usage in mmap_writer
+# missing_docs = "warn"  # Disabled due to extensive internal APIs
+
 [lints.clippy]
 # Disable uninlined format args warning
 # This warning can be overly strict and may cause CI/local version conflicts
 uninlined_format_args = "allow"
+
+# Security and performance lints (selective)
+# all = "warn"  # Too many warnings for current codebase
+# pedantic = "warn"  # Too strict for current development
+# nursery = "warn"  # Experimental lints
+# cargo = "warn"  # Cargo-specific lints
+
+# Allow some pedantic lints that can be overly strict
+module_name_repetitions = "allow"
+similar_names = "allow"
+too_many_lines = "allow"
+cast_precision_loss = "allow"
+cast_possible_truncation = "allow"
+cast_possible_wrap = "allow"
+float_cmp = "allow"
+if_not_else = "allow"
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+doc_markdown = "allow"
+must_use_candidate = "allow"
+unused_self = "allow"
+wildcard_imports = "allow"
+unused_async = "allow"
+missing_fields_in_debug = "allow"
+significant_drop_tightening = "allow"
+match_same_arms = "allow"
+suboptimal_flops = "allow"
+cast_lossless = "allow"
+redundant_closure_for_method_calls = "allow"
+missing_const_for_fn = "allow"
+derive_partial_eq_without_eq = "allow"
+use_self = "allow"
+branches_sharing_code = "allow"
+unnecessary_wraps = "allow"
+map_unwrap_or = "allow"
+return_self_not_must_use = "allow"
+unchecked_duration_subtraction = "allow"
+option_if_let_else = "allow"
+cast_sign_loss = "allow"
