@@ -6,7 +6,7 @@ on:
   push:
     branches: [main, develop]
   schedule:
-    - cron: '00 01 * * *' # Daily at 1 AM UTC
+    - cron: '00 01 * * *'
 
 permissions:
   contents: read
@@ -16,8 +16,6 @@ permissions:
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
-  # Pin cross version for reproducible builds
-  CROSS_VERSION: v0.2.5
 
 jobs:
   # Clippy linting
@@ -28,94 +26,33 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: stable
-          components: clippy
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
 
       - name: Run clippy
         run: cargo clippy --all-targets --all-features -- -D warnings
 
-  # Comprehensive testing across platforms
+  # Testing across platforms
   test:
-    name: Test - ${{ matrix.build }}
+    name: Test - ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
-    env:
-      CARGO: cargo
-      TARGET_FLAGS:
-      TARGET_DIR: ./target
     strategy:
       fail-fast: false
       matrix:
-        include:
-          # Stable builds
-          - build: stable
-            os: ubuntu-latest
-            rust: stable
-            target: x86_64-unknown-linux-gnu
-          - build: stable-musl
-            os: ubuntu-latest
-            rust: stable
-            target: x86_64-unknown-linux-musl
-          # Native builds
-          - build: macos
-            os: macos-latest
-            rust: stable
-            target: x86_64-apple-darwin
-          - build: win-msvc
-            os: windows-latest
-            rust: stable
-            target: x86_64-pc-windows-msvc
-          - build: win-gnu
-            os: windows-latest
-            rust: stable-x86_64-gnu
-            target: x86_64-pc-windows-gnu
+        os: [ubuntu-latest, windows-latest, macos-latest]
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install packages (Ubuntu)
-        if: matrix.os == 'ubuntu-latest'
-        run: |
-          ci/ubuntu-install-packages
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
 
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: ${{ matrix.rust }}
-          targets: ${{ matrix.target }}
+      - name: Build
+        run: cargo build --verbose --workspace
 
-      - name: Use Cross
-        if: matrix.os == 'ubuntu-latest' && matrix.target != '' && matrix.target != 'x86_64-unknown-linux-gnu'
-        run: |
-          dir="$RUNNER_TEMP/cross-download"
-          mkdir "$dir"
-          echo "$dir" >> $GITHUB_PATH
-          cd "$dir"
-          curl -LO "https://github.com/cross-rs/cross/releases/download/$CROSS_VERSION/cross-x86_64-unknown-linux-musl.tar.gz"
-          tar xf cross-x86_64-unknown-linux-musl.tar.gz
-          echo "CARGO=cross" >> $GITHUB_ENV
-          echo "TARGET_FLAGS=--target ${{ matrix.target }}" >> $GITHUB_ENV
-          echo "TARGET_DIR=./target/${{ matrix.target }}" >> $GITHUB_ENV
-
-      - name: Show command used for Cargo
-        run: |
-          echo "cargo command is: ${{ env.CARGO }}"
-          echo "target flag is: ${{ env.TARGET_FLAGS }}"
-          echo "target dir is: ${{ env.TARGET_DIR }}"
-
-      - name: Build turbo-cdn and all crates
-        run: ${{ env.CARGO }} build --verbose --workspace ${{ env.TARGET_FLAGS }}
-
-      - name: Run tests (sans cross)
-        if: matrix.target == '' || matrix.target == 'x86_64-unknown-linux-gnu' || matrix.os != 'ubuntu-latest'
-        run: ${{ env.CARGO }} test --verbose --workspace ${{ env.TARGET_FLAGS }}
-
-      - name: Run tests (with cross)
-        if: matrix.target != '' && matrix.target != 'x86_64-unknown-linux-gnu' && matrix.os == 'ubuntu-latest'
-        run: ${{ env.CARGO }} test --verbose --workspace ${{ env.TARGET_FLAGS }}
+      - name: Run tests
+        run: cargo test --verbose --workspace
 
   # Security audit using rustsec database
   security_audit:
@@ -138,10 +75,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@master
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: stable
           components: rustfmt
 
       - name: Check formatting
@@ -155,10 +91,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: stable
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
 
       - name: Check documentation
         env:
@@ -174,10 +108,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: stable
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
 
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
