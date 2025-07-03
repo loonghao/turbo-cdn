@@ -260,20 +260,18 @@ impl ErrorContext {
 
 impl fmt::Display for ErrorContext {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Operation: {}", self.operation)?;
+        let operation = &self.operation;
+        write!(f, "Operation: {operation}")?;
         if let Some(source) = &self.source {
-            write!(f, ", Source: {}", source)?;
+            write!(f, ", Source: {source}")?;
         }
         if let Some(path) = &self.file_path {
-            write!(f, ", File: {}", path)?;
+            write!(f, ", File: {path}")?;
         }
         if let Some(url) = &self.url {
-            write!(f, ", URL: {}", url)?;
+            write!(f, ", URL: {url}")?;
         }
-        write!(
-            f,
-            ", Time: {}",
-            self.timestamp.format("%Y-%m-%d %H:%M:%S UTC")
-        )
+        let timestamp = self.timestamp.format("%Y-%m-%d %H:%M:%S UTC");
+        write!(f, ", Time: {timestamp}")
     }
 }
