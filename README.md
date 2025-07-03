@@ -37,10 +37,10 @@
 
 ### ⚡ High-Performance Architecture
 - **mimalloc**: High-performance memory allocator
-- **isahc**: libcurl-based HTTP client for optimal performance
+- **reqwest + rustls**: High-performance HTTP client with TLS for cross-platform compatibility
 - **Adaptive Concurrency**: Network condition-based concurrency control with congestion detection
 - **Smart Chunking**: IDM-style adaptive chunk size with performance-based optimization
-- **DNS Caching**: High-performance DNS resolution caching with TTL management
+- **DNS Caching**: High-performance DNS resolution caching with hickory-dns
 - **Load Balancing**: Intelligent server selection with health scoring and multiple strategies
 - **Resume Support**: Robust resume capability for interrupted downloads
 
