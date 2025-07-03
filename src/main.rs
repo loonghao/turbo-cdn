@@ -162,9 +162,10 @@ async fn handle_download_command(
             println!("⬇️  Legacy Download Mode");
             println!("=======================");
         }
-        println!("Source URL: {}", url);
+        println!("Source URL: {url}");
         if let Some(ref path) = output_path {
-            println!("Output Path: {}", path.display());
+            let path_display = path.display();
+            println!("Output Path: {path_display}");
         }
         if smart {
             println!("Mode: Smart mode (testing and selecting fastest method)");
@@ -240,7 +241,8 @@ async fn handle_download_command(
             }
 
             println!("🎉 Download completed successfully!");
-            println!("   📁 {}", result.path.display());
+            let path_display = result.path.display();
+            println!("   📁 {path_display}");
             println!(
                 "   📊 {:.2} MB ({:.2} MB/s)",
                 result.size as f64 / 1024.0 / 1024.0,
@@ -248,7 +250,8 @@ async fn handle_download_command(
             );
 
             if verbose {
-                println!("   📊 Size: {} bytes", result.size);
+                let size = result.size;
+                println!("   📊 Size: {size} bytes");
                 println!("   ⏱️  Duration: {:.2}s", result.duration.as_secs_f64());
                 if result.resumed {
                     println!("   🔄 Download was resumed from previous attempt");

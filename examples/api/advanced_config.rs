@@ -50,7 +50,8 @@ async fn main() -> Result<()> {
         "  📦 Chunk size: {} MB",
         download_options.chunk_size.unwrap_or(1024 * 1024) / (1024 * 1024)
     );
-    println!("  🔄 Resume enabled: {}", download_options.enable_resume);
+    let resume_enabled = download_options.enable_resume;
+    println!("  🔄 Resume enabled: {resume_enabled}");
     println!(
         "  ⏱️  Timeout: {}s",
         download_options.timeout_override.unwrap().as_secs()
@@ -64,14 +65,15 @@ async fn main() -> Result<()> {
     let turbo_cdn = TurboCdn::new().await?;
     let url = "https://github.com/sharkdp/hyperfine/releases/download/v1.18.0/hyperfine-v1.18.0-x86_64-pc-windows-msvc.zip";
 
-    println!("\n📥 Downloading with custom options: {}", url);
+    println!("\n📥 Downloading with custom options: {url}");
     match turbo_cdn
         .download_with_options(url, std::env::temp_dir().join("download"), download_options)
         .await
     {
         Ok(result) => {
             println!("✅ Download completed with custom options!");
-            println!("   📁 Path: {}", result.path.display());
+            let path_display = result.path.display();
+            println!("   📁 Path: {path_display}");
             println!("   📊 Size: {} bytes", result.size);
             println!("   ⚡ Speed: {:.2} MB/s", result.speed / 1_000_000.0);
         }
