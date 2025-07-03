@@ -34,7 +34,7 @@ impl HttpClient {
             .pool_max_idle_per_host(20)
             .http2_prior_knowledge()
             .build()
-            .map_err(|e| TurboCdnError::network(format!("Failed to create HTTP client: {}", e)))?;
+            .map_err(|e| TurboCdnError::network(format!("Failed to create HTTP client: {e}")))?;
 
         Ok(Self { client })
     }
@@ -46,7 +46,7 @@ impl HttpClient {
             .get(url)
             .send()
             .await
-            .map_err(|e| TurboCdnError::network(format!("GET request failed: {}", e)))?;
+            .map_err(|e| TurboCdnError::network(format!("GET request failed: {e}")))?;
 
         let status = response.status().as_u16();
         let headers = response
@@ -58,7 +58,7 @@ impl HttpClient {
         let body = response
             .bytes()
             .await
-            .map_err(|e| TurboCdnError::network(format!("Failed to read response body: {}", e)))?
+            .map_err(|e| TurboCdnError::network(format!("Failed to read response body: {e}")))?
             .to_vec();
 
         Ok(HttpResponse {
@@ -80,9 +80,10 @@ impl HttpClient {
             request = request.header(key, value);
         }
 
-        let response = request.send().await.map_err(|e| {
-            TurboCdnError::network(format!("GET request with headers failed: {}", e))
-        })?;
+        let response = request
+            .send()
+            .await
+            .map_err(|e| TurboCdnError::network(format!("GET request with headers failed: {e}")))?;
 
         let status = response.status().as_u16();
         let headers = response
@@ -94,7 +95,7 @@ impl HttpClient {
         let body = response
             .bytes()
             .await
-            .map_err(|e| TurboCdnError::network(format!("Failed to read response body: {}", e)))?
+            .map_err(|e| TurboCdnError::network(format!("Failed to read response body: {e}")))?
             .to_vec();
 
         Ok(HttpResponse {
@@ -111,7 +112,7 @@ impl HttpClient {
             .head(url)
             .send()
             .await
-            .map_err(|e| TurboCdnError::network(format!("HEAD request failed: {}", e)))?;
+            .map_err(|e| TurboCdnError::network(format!("HEAD request failed: {e}")))?;
 
         let status = response.status().as_u16();
         let headers = response

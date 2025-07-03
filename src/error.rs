@@ -169,15 +169,17 @@ impl TurboCdnError {
 
     /// Create a new network error
     pub fn network<S: Into<String>>(message: S) -> Self {
+        let msg = message.into();
         Self::Internal {
-            message: format!("Network error: {}", message.into()),
+            message: format!("Network error: {msg}"),
         }
     }
 
     /// Create a new IO error
     pub fn io<S: Into<String>>(message: S) -> Self {
+        let msg = message.into();
         Self::Internal {
-            message: format!("IO error: {}", message.into()),
+            message: format!("IO error: {msg}"),
         }
     }
 

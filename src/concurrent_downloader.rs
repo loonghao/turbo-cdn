@@ -97,7 +97,7 @@ impl ConcurrentDownloader {
 
         let client = client_builder
             .build()
-            .map_err(|e| TurboCdnError::network(format!("Failed to create HTTP client: {}", e)))?;
+            .map_err(|e| TurboCdnError::network(format!("Failed to create HTTP client: {e}")))?;
 
         Ok(Self {
             http_client: client,
@@ -276,7 +276,7 @@ impl ConcurrentDownloader {
             .head(url)
             .send()
             .await
-            .map_err(|e| TurboCdnError::network(format!("Failed to get file info: {}", e)))?;
+            .map_err(|e| TurboCdnError::network(format!("Failed to get file info: {e}")))?;
 
         if !response.status().is_success() {
             return Err(TurboCdnError::network(format!(
@@ -336,11 +336,11 @@ impl ConcurrentDownloader {
                 .write(true)
                 .open(output_path)
                 .await
-                .map_err(|e| TurboCdnError::io(format!("Failed to open file: {}", e)))?
+                .map_err(|e| TurboCdnError::io(format!("Failed to open file: {e}")))?
         } else {
             File::create(output_path)
                 .await
-                .map_err(|e| TurboCdnError::io(format!("Failed to create file: {}", e)))?
+                .map_err(|e| TurboCdnError::io(format!("Failed to create file: {e}")))?
         };
 
         let file = Arc::new(tokio::sync::Mutex::new(file));
@@ -368,7 +368,8 @@ impl ConcurrentDownloader {
         // Wait for all chunks to complete
         for task in tasks {
             task.await
-                .map_err(|e| TurboCdnError::network(format!("Chunk download failed: {}", e)))??;
+                .map_err(|e| TurboCdnError::network(format!("Chunk download failed: {e}")))?
+                .map_err(|e| TurboCdnError::network(format!("Chunk processing failed: {e}")))?;
         }
 
         Ok(DownloadResult {
@@ -504,7 +505,7 @@ impl ConcurrentDownloader {
             .header("Range", range_header)
             .send()
             .await
-            .map_err(|e| TurboCdnError::network(format!("Failed to download chunk: {}", e)))?;
+            .map_err(|e| TurboCdnError::network(format!("Failed to download chunk: {e}")))?;
 
         if !response.status().is_success() {
             return Err(TurboCdnError::network(format!(
@@ -516,19 +517,19 @@ impl ConcurrentDownloader {
         let bytes = response
             .bytes()
             .await
-            .map_err(|e| TurboCdnError::network(format!("Failed to read chunk data: {}", e)))?;
+            .map_err(|e| TurboCdnError::network(format!("Failed to read chunk data: {e}")))?;
 
         // Write chunk to file
         let mut file_guard = file.lock().await;
         file_guard
             .seek(SeekFrom::Start(chunk.start))
             .await
-            .map_err(|e| TurboCdnError::io(format!("Failed to seek in file: {}", e)))?;
+            .map_err(|e| TurboCdnError::io(format!("Failed to seek in file: {e}")))?;
 
         file_guard
             .write_all(&bytes)
             .await
-            .map_err(|e| TurboCdnError::io(format!("Failed to write chunk: {}", e)))?;
+            .map_err(|e| TurboCdnError::io(format!("Failed to write chunk: {e}")))?;
 
         debug!("Completed chunk {}: {} bytes", chunk.index, bytes.len());
         Ok(())
@@ -548,13 +549,13 @@ impl ConcurrentDownloader {
 
         // Add range header for resume if file exists
         if existing_size > 0 {
-            request = request.header("Range", format!("bytes={}-", existing_size));
+            request = request.header("Range", format!("bytes={existing_size}-"));
         }
 
         let response = request
             .send()
             .await
-            .map_err(|e| TurboCdnError::network(format!("Failed to start download: {}", e)))?;
+            .map_err(|e| TurboCdnError::network(format!("Failed to start download: {e}")))?;
 
         if !response.status().is_success() {
             return Err(TurboCdnError::network(format!(
@@ -569,11 +570,11 @@ impl ConcurrentDownloader {
                 .append(true)
                 .open(output_path.as_ref())
                 .await
-                .map_err(|e| TurboCdnError::io(format!("Failed to open file: {}", e)))?
+                .map_err(|e| TurboCdnError::io(format!("Failed to open file: {e}")))?
         } else {
             File::create(output_path.as_ref())
                 .await
-                .map_err(|e| TurboCdnError::io(format!("Failed to create file: {}", e)))?
+                .map_err(|e| TurboCdnError::io(format!("Failed to create file: {e}")))?
         };
 
         // Stream download
@@ -582,19 +583,19 @@ impl ConcurrentDownloader {
 
         use futures_util::StreamExt;
         while let Some(chunk) = stream.next().await {
-            let chunk = chunk
-                .map_err(|e| TurboCdnError::network(format!("Failed to read chunk: {}", e)))?;
+            let chunk =
+                chunk.map_err(|e| TurboCdnError::network(format!("Failed to read chunk: {e}")))?;
 
             file.write_all(&chunk)
                 .await
-                .map_err(|e| TurboCdnError::io(format!("Failed to write chunk: {}", e)))?;
+                .map_err(|e| TurboCdnError::io(format!("Failed to write chunk: {e}")))?;
 
             downloaded_bytes += chunk.len() as u64;
         }
 
         file.flush()
             .await
-            .map_err(|e| TurboCdnError::io(format!("Failed to flush file: {}", e)))?;
+            .map_err(|e| TurboCdnError::io(format!("Failed to flush file: {e}")))?;
 
         Ok(DownloadResult {
             path: output_path.as_ref().to_path_buf(),
