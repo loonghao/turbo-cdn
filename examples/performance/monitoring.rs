@@ -471,7 +471,7 @@ async fn main() -> Result<()> {
     ];
 
     for (config_name, options) in configs {
-        println!("\n⚙️  Testing {} configuration:", config_name);
+        println!("\n⚙️  Testing {config_name} configuration:");
         let test_url =
             "https://github.com/cli/cli/releases/download/v2.40.1/gh_2.40.1_windows_amd64.zip";
 
@@ -487,7 +487,7 @@ async fn main() -> Result<()> {
                 );
             }
             Err(e) => {
-                println!("   ❌ {}: {}", config_name, e);
+                println!("   ❌ {config_name}: {e}");
             }
         }
     }
@@ -504,7 +504,7 @@ async fn main() -> Result<()> {
             println!("   ✅ Metrics exported to performance_metrics.json");
         }
         Err(e) => {
-            println!("   ❌ Failed to export metrics: {}", e);
+            println!("   ❌ Failed to export metrics: {e}");
         }
     }
 

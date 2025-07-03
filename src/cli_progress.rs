@@ -104,7 +104,8 @@ pub fn display_download_result(
     if verbose {
         info_message(&format!("Saved to: {}", path.display()), true);
     } else {
-        println!("📁 {}", path.display());
+        let path_display = path.display();
+        println!("📁 {path_display}");
     }
 }
 
