@@ -55,6 +55,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - improve code quality and remove code smells
 ## [Unreleased]
 
+## [0.4.3](https://github.com/loonghao/turbo-cdn/compare/v0.4.2...v0.4.3) - 2025-07-03
+
+### Added
+
+- optimize build profiles and clippy configuration
+
+### Other
+
+- update README to reflect current architecture
+
 ## [0.4.2](https://github.com/loonghao/turbo-cdn/compare/v0.4.1...v0.4.2) - 2025-07-03
 
 ### Fixed
