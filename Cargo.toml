@@ -51,7 +51,7 @@ futures-util = "0.3"
 async-trait = "0.1"
 
 # Progress tracking
-indicatif = "0.17"
+indicatif = "0.18"
 
 # Logging and tracing
 tracing = "0.1"
