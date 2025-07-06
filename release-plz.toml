@@ -1,4 +1,4 @@
-# Release-plz configuration for turbo-cdn
+# Release-plz configuration for turbo-cdn (single package project)
 #
 # Strategy: release-plz handles crates.io publishing and creates GitHub releases,
 # while .github/workflows/release.yml builds cross-platform binaries using upload-rust-binary-action.
@@ -12,15 +12,23 @@
 # This approach leverages release-plz's strengths (version management, changelog, crates.io)
 # while using the specialized upload-rust-binary-action for cross-platform builds.
 
-[workspace]
+# Single package configuration (no workspace needed)
 # Enable automatic changelog generation
 changelog_update = true
-# Disable GitHub releases at workspace level (handled by package level)
-git_release_enable = false
+# Enable GitHub releases for binary distribution
+git_release_enable = true
 # Enable automatic tag creation (triggers release.yml)
 git_tag_enable = true
+# Standard tag format (triggers release workflows) - with 'v' prefix to trigger release.yml
+git_tag_name = "v{{version}}"
 # Enable processing for releases
 release = true
+# Allow major version bumps for breaking changes
+allow_dirty = false
+# Ensure proper semantic versioning
+semver_check = true
+# Create published releases (upload-rust-binary-action will add binaries)
+git_release_draft = false
 
 # Changelog configuration
 [changelog]
@@ -34,23 +42,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 """
 
-# Package-specific configuration for turbo-cdn
-[[package]]
-name = "turbo-cdn"
-# Enable changelog updates
-changelog_update = true
-# Enable GitHub releases (release-plz creates draft, release.yml adds binaries and publishes)
-git_release_enable = true
-# Enable processing for releases
-release = true
-# Standard tag format (triggers release workflows) - with 'v' prefix to trigger release.yml
-git_tag_name = "v{{version}}"
-# Allow major version bumps for breaking changes
-allow_dirty = false
-# Ensure proper semantic versioning
-semver_check = true
-# Create published releases (upload-rust-binary-action will add binaries)
-git_release_draft = false
 # Custom release body template
 git_release_body = """
 ## 🚀 What's Changed
