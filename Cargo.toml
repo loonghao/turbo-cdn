@@ -102,7 +102,7 @@ ping = "0.5"
 tokio-test = "0.4"
 tempfile = "3.0"
 wiremock = "0.6"
-criterion = { version = "0.6", features = ["html_reports"] }
+criterion = { version = "0.7", features = ["html_reports"] }
 proptest = "1.0"
 
 # Test utilities
