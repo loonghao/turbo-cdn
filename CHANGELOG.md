@@ -55,6 +55,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - improve code quality and remove code smells
 ## [Unreleased]
 
+## [0.5.0](https://github.com/loonghao/turbo-cdn/compare/v0.4.3...v0.5.0) - 2025-12-14
+
+### Fixed
+
+- correct release-plz config and add adaptive concurrency tests
+- update dependencies and add more test coverage
+- *(deps)* update rust crate tokio-util to v0.7.16
+- *(deps)* update rust crate indicatif to 0.18
+
+### Other
+
+- add comprehensive unit tests for dns_cache, load_balancer, smart_chunking, http_client_manager modules
+- add E2E tests and performance benchmarks
+- update dependencies via cargo update
+- improve API ergonomics and add comprehensive tests
+- *(deps)* update rust crate criterion to 0.7
+
 ## [0.4.3](https://github.com/loonghao/turbo-cdn/compare/v0.4.2...v0.4.3) - 2025-07-03
 
 ### Added
