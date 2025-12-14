@@ -40,6 +40,7 @@ pub mod cdn_quality;
 pub mod cli_progress;
 pub mod concurrent_downloader;
 pub mod config;
+pub mod constants;
 pub mod dns_cache;
 pub mod error;
 pub mod geo_detection;
@@ -60,12 +61,16 @@ pub mod url_mapper;
 // Re-export commonly used types
 pub use concurrent_downloader::{ConcurrentDownloader, DownloadResult};
 pub use config::{Region, TurboCdnConfig};
+pub use constants::*;
 pub use error::{Result, TurboCdnError};
 pub use progress::{ConsoleProgressReporter, ProgressCallback, ProgressInfo, ProgressTracker};
+pub use server_tracker::{PerformanceSummary, ServerStats};
 pub use url_mapper::UrlMapper;
 
 // Internal imports
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use std::time::Instant;
+use tokio::sync::RwLock;
 use tracing::{info, warn};
 
 /// Download options for customizing download behavior
@@ -180,15 +185,41 @@ impl Clone for DownloadOptions {
 }
 
 /// Main TurboCdn client - simplified download accelerator
+///
+/// # Example
+/// ```rust,no_run
+/// use turbo_cdn::*;
+///
+/// #[tokio::main]
+/// async fn main() -> turbo_cdn::Result<()> {
+///     // Using builder pattern
+///     let downloader = TurboCdn::builder()
+///         .with_region(Region::China)
+///         .with_max_concurrent_downloads(16)
+///         .build()
+///         .await?;
+///     
+///     let result = downloader.download_from_url("https://example.com/file.zip").await?;
+///     println!("Downloaded: {}", result.path.display());
+///     Ok(())
+/// }
+/// ```
 #[derive(Debug)]
 pub struct TurboCdn {
-    url_mapper: Arc<Mutex<UrlMapper>>,
+    url_mapper: Arc<RwLock<UrlMapper>>,
     downloader: ConcurrentDownloader,
     #[allow(dead_code)]
-    progress_tracker: Option<std::sync::Arc<ProgressTracker>>,
+    progress_tracker: Option<Arc<ProgressTracker>>,
+    stats: Arc<RwLock<TurboCdnStats>>,
+    created_at: Instant,
 }
 
 impl TurboCdn {
+    /// Create a new builder for TurboCdn
+    pub fn builder() -> TurboCdnBuilder {
+        TurboCdnBuilder::new()
+    }
+
     /// Create a TurboCdn client with default configuration
     pub async fn new() -> Result<Self> {
         let config = TurboCdnConfig::load().unwrap_or_default();
@@ -218,9 +249,11 @@ impl TurboCdn {
         let downloader = ConcurrentDownloader::with_config(&config)?;
 
         Ok(Self {
-            url_mapper: Arc::new(Mutex::new(url_mapper)),
+            url_mapper: Arc::new(RwLock::new(url_mapper)),
             downloader,
-            progress_tracker: None, // Will be created per download
+            progress_tracker: None,
+            stats: Arc::new(RwLock::new(TurboCdnStats::default())),
+            created_at: Instant::now(),
         })
     }
 
@@ -253,14 +286,19 @@ impl TurboCdn {
     /// ```
     pub async fn download_from_url(&self, url: &str) -> Result<DownloadResult> {
         // Map URL to optimal CDN alternatives
-        let urls = self.url_mapper.lock().unwrap().map_url(url)?;
+        let urls = self.url_mapper.read().await.map_url(url)?;
 
         // Generate output filename from URL
         let filename = self.extract_filename_from_url(url)?;
         let output_path = std::env::temp_dir().join(&filename);
 
         // Download with concurrent downloader
-        self.downloader.download(&urls, &output_path, None).await
+        let result = self.downloader.download(&urls, &output_path, None).await?;
+
+        // Update stats
+        self.update_stats(&result).await;
+
+        Ok(result)
     }
 
     /// Download from URL to specific path
@@ -269,8 +307,10 @@ impl TurboCdn {
         url: &str,
         output_path: P,
     ) -> Result<DownloadResult> {
-        let urls = self.url_mapper.lock().unwrap().map_url(url)?;
-        self.downloader.download(&urls, output_path, None).await
+        let urls = self.url_mapper.read().await.map_url(url)?;
+        let result = self.downloader.download(&urls, output_path, None).await?;
+        self.update_stats(&result).await;
+        Ok(result)
     }
 
     /// Download directly from original URL without CDN optimization
@@ -283,7 +323,9 @@ impl TurboCdn {
         let output_path = std::env::temp_dir().join(&filename);
 
         // Download with concurrent downloader
-        self.downloader.download(&urls, &output_path, None).await
+        let result = self.downloader.download(&urls, &output_path, None).await?;
+        self.update_stats(&result).await;
+        Ok(result)
     }
 
     /// Download directly from URL to specific path without CDN optimization
@@ -294,7 +336,9 @@ impl TurboCdn {
     ) -> Result<DownloadResult> {
         // Use only the original URL, no CDN mapping
         let urls = vec![url.to_string()];
-        self.downloader.download(&urls, output_path, None).await
+        let result = self.downloader.download(&urls, output_path, None).await?;
+        self.update_stats(&result).await;
+        Ok(result)
     }
 
     /// Smart download that automatically selects the fastest method
@@ -346,40 +390,81 @@ impl TurboCdn {
         output_path: P,
         options: DownloadOptions,
     ) -> Result<DownloadResult> {
-        let urls = self.url_mapper.lock().unwrap().map_url(url)?;
+        let urls = self.url_mapper.read().await.map_url(url)?;
 
         // Create progress tracker if callback is provided
         let progress_tracker = if options.progress_callback.is_some() {
             let expected_size = options.expected_size.unwrap_or(0);
-            Some(std::sync::Arc::new(ProgressTracker::new(expected_size)))
+            Some(Arc::new(ProgressTracker::new(expected_size)))
         } else {
             None
         };
 
-        self.downloader
+        let result = self
+            .downloader
             .download(&urls, output_path, progress_tracker)
-            .await
+            .await?;
+        self.update_stats(&result).await;
+        Ok(result)
     }
 
     /// Get optimal CDN URL without downloading
     pub async fn get_optimal_url(&self, url: &str) -> Result<String> {
-        let urls = self.url_mapper.lock().unwrap().map_url(url)?;
+        let urls = self.url_mapper.read().await.map_url(url)?;
         Ok(urls.into_iter().next().unwrap_or_else(|| url.to_string()))
     }
 
     /// Get all available CDN URLs for a given URL
     pub async fn get_all_cdn_urls(&self, url: &str) -> Result<Vec<String>> {
-        self.url_mapper.lock().unwrap().map_url(url)
+        self.url_mapper.read().await.map_url(url)
     }
 
     /// Check if a URL can be optimized
-    pub fn can_optimize_url(&self, url: &str) -> bool {
+    pub async fn can_optimize_url(&self, url: &str) -> bool {
         self.url_mapper
-            .lock()
-            .unwrap()
+            .read()
+            .await
             .map_url(url)
             .map(|urls| urls.len() > 1)
             .unwrap_or(false)
+    }
+
+    /// Get download statistics
+    pub async fn get_stats(&self) -> TurboCdnStats {
+        let mut stats = self.stats.read().await.clone();
+        stats.uptime = self.created_at.elapsed();
+        stats
+    }
+
+    /// Get server performance summary
+    pub fn get_performance_summary(&self) -> PerformanceSummary {
+        self.downloader.get_server_stats()
+    }
+
+    /// Get detailed server statistics for a specific URL
+    pub fn get_server_stats(&self, url: &str) -> Option<ServerStats> {
+        self.downloader.get_server_detail(url)
+    }
+
+    /// Reset statistics
+    pub async fn reset_stats(&self) {
+        let mut stats = self.stats.write().await;
+        *stats = TurboCdnStats::default();
+    }
+
+    /// Update internal statistics after a download
+    async fn update_stats(&self, result: &DownloadResult) {
+        let mut stats = self.stats.write().await;
+        stats.total_downloads += 1;
+        if result.size > 0 {
+            stats.successful_downloads += 1;
+            stats.total_bytes += result.size;
+            // Update moving average speed
+            let alpha = 0.3; // Smoothing factor
+            stats.average_speed = alpha * result.speed + (1.0 - alpha) * stats.average_speed;
+        } else {
+            stats.failed_downloads += 1;
+        }
     }
 
     /// Extract filename from URL
@@ -418,6 +503,128 @@ pub struct TurboCdnStats {
 
     /// Average download speed in bytes per second
     pub average_speed: f64,
+
+    /// Uptime since creation
+    pub uptime: std::time::Duration,
+}
+
+impl TurboCdnStats {
+    /// Get success rate as a percentage
+    pub fn success_rate(&self) -> f64 {
+        if self.total_downloads == 0 {
+            0.0
+        } else {
+            (self.successful_downloads as f64 / self.total_downloads as f64) * 100.0
+        }
+    }
+
+    /// Get average speed in MB/s
+    pub fn average_speed_mbps(&self) -> f64 {
+        self.average_speed / 1024.0 / 1024.0
+    }
+
+    /// Get total bytes in human-readable format
+    pub fn total_bytes_human(&self) -> String {
+        if self.total_bytes >= 1024 * 1024 * 1024 {
+            format!(
+                "{:.2} GB",
+                self.total_bytes as f64 / 1024.0 / 1024.0 / 1024.0
+            )
+        } else if self.total_bytes >= 1024 * 1024 {
+            format!("{:.2} MB", self.total_bytes as f64 / 1024.0 / 1024.0)
+        } else if self.total_bytes >= 1024 {
+            format!("{:.2} KB", self.total_bytes as f64 / 1024.0)
+        } else {
+            format!("{} B", self.total_bytes)
+        }
+    }
+}
+
+/// Builder for TurboCdn with fluent API
+#[derive(Debug, Clone)]
+pub struct TurboCdnBuilder {
+    config: TurboCdnConfig,
+}
+
+impl TurboCdnBuilder {
+    /// Create a new builder with default configuration
+    pub fn new() -> Self {
+        Self {
+            config: TurboCdnConfig::load().unwrap_or_default(),
+        }
+    }
+
+    /// Set the region for CDN optimization
+    pub fn with_region(mut self, region: Region) -> Self {
+        self.config.general.default_region = region;
+        self.config.geo_detection.auto_detect_region = false;
+        self
+    }
+
+    /// Enable or disable auto region detection
+    pub fn with_auto_detect_region(mut self, enable: bool) -> Self {
+        self.config.geo_detection.auto_detect_region = enable;
+        self
+    }
+
+    /// Set maximum concurrent downloads
+    pub fn with_max_concurrent_downloads(mut self, count: usize) -> Self {
+        self.config.performance.max_concurrent_downloads = count;
+        self
+    }
+
+    /// Set chunk size for downloads
+    pub fn with_chunk_size(mut self, size: u64) -> Self {
+        self.config.performance.chunk_size = size;
+        self
+    }
+
+    /// Set connection timeout
+    pub fn with_timeout(mut self, timeout_secs: u64) -> Self {
+        self.config.performance.timeout = timeout_secs;
+        self
+    }
+
+    /// Enable or disable adaptive chunking
+    pub fn with_adaptive_chunking(mut self, enable: bool) -> Self {
+        self.config.performance.adaptive_chunking = enable;
+        self
+    }
+
+    /// Set retry attempts
+    pub fn with_retry_attempts(mut self, attempts: usize) -> Self {
+        self.config.performance.retry_attempts = attempts;
+        self
+    }
+
+    /// Enable debug mode
+    pub fn with_debug(mut self, enable: bool) -> Self {
+        self.config.general.debug = enable;
+        self
+    }
+
+    /// Set custom user agent
+    pub fn with_user_agent<S: Into<String>>(mut self, user_agent: S) -> Self {
+        self.config.general.user_agent = user_agent.into();
+        self
+    }
+
+    /// Use a custom configuration
+    pub fn with_config(mut self, config: TurboCdnConfig) -> Self {
+        self.config = config;
+        self
+    }
+
+    /// Build the TurboCdn client
+    pub async fn build(self) -> Result<TurboCdn> {
+        TurboCdn::with_config(self.config).await
+    }
+}
+
+impl Default for TurboCdnBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 /// Synchronous API for blocking operations
@@ -618,6 +825,7 @@ mod tests {
             total_bytes: 1024 * 1024,
             cache_hit_rate: 0.8,
             average_speed: 1000.0,
+            uptime: std::time::Duration::from_secs(3600),
         };
 
         assert_eq!(stats.total_downloads, 100);
