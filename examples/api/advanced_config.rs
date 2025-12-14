@@ -95,7 +95,7 @@ async fn main() -> Result<()> {
         verify_integrity: false,                          // Skip verification for speed
         expected_size: None,
         progress_callback: Some(Box::new(|progress| {
-            if progress.percentage as u32 % 10 == 0 {
+            if (progress.percentage as u32).is_multiple_of(10) {
                 println!(
                     "🚀 High-speed download: {:.0}% complete",
                     progress.percentage

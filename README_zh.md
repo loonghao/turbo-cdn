@@ -52,7 +52,7 @@
 
 ```toml
 [dependencies]
-turbo-cdn = "0.1.0"
+turbo-cdn = "0.4.3"
 ```
 
 ### 基本用法
@@ -61,35 +61,60 @@ turbo-cdn = "0.1.0"
 use turbo_cdn::*;
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // 初始化 TurboCdn
+async fn main() -> turbo_cdn::Result<()> {
+    // 创建 TurboCdn 客户端
+    let downloader = TurboCdn::new().await?;
+
+    // 自动CDN优化下载
+    let result = downloader.download_from_url(
+        "https://github.com/BurntSushi/ripgrep/releases/download/14.1.1/ripgrep-14.1.1-x86_64-pc-windows-msvc.zip"
+    ).await?;
+
+    println!("✅ 下载完成: {} 字节", result.size);
+    println!("📊 速度: {:.2} MB/s", result.speed / 1024.0 / 1024.0);
+    println!("📁 保存到: {}", result.path.display());
+
+    // 获取优化后的 CDN URL
+    let optimal_url = downloader.get_optimal_url(
+        "https://github.com/user/repo/releases/download/v1.0/file.zip"
+    ).await?;
+    println!("🌐 最优 URL: {}", optimal_url);
+
+    // 获取性能统计
+    let stats = downloader.get_stats().await;
+    println!("📈 总下载次数: {}", stats.total_downloads);
+    println!("⚡ 平均速度: {:.2} MB/s", stats.average_speed_mbps());
+
+    Ok(())
+}
+```
+
+### Builder 模式 (推荐)
+
+```rust
+use turbo_cdn::*;
+
+#[tokio::main]
+async fn main() -> turbo_cdn::Result<()> {
+    // 使用 Builder 模式完全控制配置
     let downloader = TurboCdn::builder()
-        .with_sources(&[
-            Source::github(),
-            Source::jsdelivr(),
-            Source::fastly(),
-        ])
-        .with_region(Region::Global)
+        .with_region(Region::China)                    // 设置区域
+        .with_max_concurrent_downloads(16)             // 配置并发数
+        .with_chunk_size(2 * 1024 * 1024)              // 2MB 分块
+        .with_timeout(60)                              // 60秒超时
+        .with_adaptive_chunking(true)                  // 启用自适应分块
+        .with_retry_attempts(5)                        // 最多重试5次
+        .with_user_agent("my-app/1.0")                 // 自定义 User-Agent
         .build()
         .await?;
 
-    // 带进度跟踪的下载
-    let result = downloader
-        .download("oven-sh/bun", "v1.0.0", "bun-linux-x64.zip")
-        .with_progress(|progress| {
-            println!("已下载: {:.1}% ({}) - {} - 预计剩余: {}",
-                progress.percentage(),
-                progress.size_human(),
-                progress.speed_human(),
-                progress.eta_human()
-            );
-        })
-        .execute()
-        .await?;
+    // 下载到指定路径
+    let result = downloader.download_to_path(
+        "https://github.com/user/repo/releases/download/v1.0.0/file.zip",
+        "./downloads/file.zip"
+    ).await?;
 
-    println!("✅ 下载到: {}", result.path.display());
-    println!("📊 速度: {:.2} MB/s", result.speed / 1_000_000.0);
-    
+    println!("下载完成: {}", result.path.display());
     Ok(())
 }
 ```
@@ -101,49 +126,36 @@ use turbo_cdn::*;
 use std::time::Duration;
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // 自定义配置
-    let config = TurboCdnConfig {
-        general: GeneralConfig {
-            max_concurrent_downloads: 8,
-            default_region: Region::China,
-            ..Default::default()
-        },
-        network: NetworkConfig {
-            max_concurrent_chunks: 16,
-            chunk_size: 2 * 1024 * 1024, // 2MB 分块
-            max_retries: 5,
-            ..Default::default()
-        },
-        cache: CacheConfig {
-            enabled: true,
-            max_size: 5 * 1024 * 1024 * 1024, // 5GB 缓存
-            compression: true,
-            ..Default::default()
-        },
-        ..Default::default()
-    };
-
-    let downloader = TurboCdn::builder()
-        .with_config(config)
-        .with_sources(&[Source::github(), Source::jsdelivr()])
-        .build()
-        .await?;
+async fn main() -> turbo_cdn::Result<()> {
+    let downloader = TurboCdn::new().await?;
 
     // 高级下载选项
-    let options = DownloadOptions::builder()
-        .max_concurrent_chunks(8)
-        .chunk_size(1024 * 1024)
-        .timeout(Duration::from_secs(60))
-        .use_cache(true)
-        .verify_checksum(true)
-        .build();
+    let options = DownloadOptions::new()
+        .with_max_concurrent_chunks(16)
+        .with_chunk_size(2 * 1024 * 1024)  // 2MB 分块
+        .with_resume(true)                  // 启用断点续传
+        .with_timeout(Duration::from_secs(120))
+        .with_integrity_verification(true)
+        .with_header("Accept", "application/octet-stream");
 
-    let result = downloader
-        .download("microsoft/vscode", "1.85.0", "VSCode-linux-x64.tar.gz")
-        .with_options(options)
-        .execute()
-        .await?;
+    let result = downloader.download_with_options(
+        "https://github.com/BurntSushi/ripgrep/releases/download/14.1.1/ripgrep-14.1.1-x86_64-pc-windows-msvc.zip",
+        "./downloads/ripgrep.zip",
+        options
+    ).await?;
+
+    println!("✅ 下载完成: {}", result.path.display());
+    println!("📊 速度: {:.2} MB/s", result.speed / 1024.0 / 1024.0);
+    println!("⏱️  耗时: {:.2}s", result.duration.as_secs_f64());
+
+    if result.resumed {
+        println!("🔄 从断点续传");
+    }
+
+    // 获取服务器性能摘要
+    let summary = downloader.get_performance_summary();
+    println!("📈 跟踪的服务器数: {}", summary.total_servers);
+    println!("✅ 总体成功率: {:.1}%", summary.overall_success_rate * 100.0);
 
     Ok(())
 }

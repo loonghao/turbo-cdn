@@ -139,7 +139,9 @@ impl UrlMapper {
     }
 
     /// Map a URL to the best CDN alternative with performance-based ordering
-    pub fn map_url(&mut self, original_url: &str) -> Result<Vec<String>> {
+    ///
+    /// This is a non-mutable version that works with RwLock read guards.
+    pub fn map_url(&self, original_url: &str) -> Result<Vec<String>> {
         debug!("Mapping URL: {}", original_url);
 
         // Check cache first
@@ -202,6 +204,12 @@ impl UrlMapper {
 
         debug!("Mapped to {} URLs: {:?}", mapped_urls.len(), mapped_urls);
         Ok(mapped_urls)
+    }
+
+    /// Map a URL (mutable version for backward compatibility)
+    #[deprecated(note = "Use map_url instead, which doesn't require mutable access")]
+    pub fn map_url_mut(&mut self, original_url: &str) -> Result<Vec<String>> {
+        self.map_url(original_url)
     }
 
     /// Create built-in rules as fallback when no config rules are available
@@ -353,7 +361,7 @@ mod tests {
     #[test]
     fn test_github_url_mapping() {
         let config = TurboCdnConfig::default();
-        let mut mapper = UrlMapper::new(&config, Region::China).unwrap();
+        let mapper = UrlMapper::new(&config, Region::China).unwrap();
 
         let original_url = "https://github.com/BurntSushi/ripgrep/releases/download/14.1.1/ripgrep-14.1.1-x86_64-pc-windows-msvc.zip";
         let mapped_urls = mapper.map_url(original_url).unwrap();
@@ -365,7 +373,7 @@ mod tests {
     #[test]
     fn test_jsdelivr_url_mapping() {
         let config = TurboCdnConfig::default();
-        let mut mapper = UrlMapper::new(&config, Region::Global).unwrap();
+        let mapper = UrlMapper::new(&config, Region::Global).unwrap();
 
         let original_url = "https://cdn.jsdelivr.net/npm/package@1.0.0/dist/package.min.js";
         let mapped_urls = mapper.map_url(original_url).unwrap();
@@ -377,7 +385,7 @@ mod tests {
     #[test]
     fn test_unknown_url_passthrough() {
         let config = TurboCdnConfig::default();
-        let mut mapper = UrlMapper::new(&config, Region::Global).unwrap();
+        let mapper = UrlMapper::new(&config, Region::Global).unwrap();
 
         let original_url = "https://example.com/file.zip";
         let mapped_urls = mapper.map_url(original_url).unwrap();

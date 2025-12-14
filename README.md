@@ -90,39 +90,69 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-turbo-cdn = "0.2.1"
+turbo-cdn = "0.4.3"
 ```
+
+#### Basic Usage
 
 ```rust
 use turbo_cdn::*;
 
 #[tokio::main]
 async fn main() -> turbo_cdn::Result<()> {
-    // Create a TurboCdn client with intelligent optimizations
+    // Create a TurboCdn client with default settings
     let downloader = TurboCdn::new().await?;
 
-    // Download with automatic CDN optimization, adaptive concurrency, and smart chunking
+    // Download with automatic CDN optimization
     let result = downloader.download_from_url(
         "https://github.com/BurntSushi/ripgrep/releases/download/14.1.1/ripgrep-14.1.1-x86_64-pc-windows-msvc.zip"
     ).await?;
 
     println!("✅ Downloaded {} bytes to: {}", result.size, result.path.display());
     println!("🚀 Speed: {:.2} MB/s", result.speed / 1024.0 / 1024.0);
-    println!("📊 Chunks used: {}", result.chunks_used.unwrap_or(1));
-    println!("🌐 CDN used: {}", result.final_url.unwrap_or_else(|| "Original".to_string()));
 
-    // Get optimal CDN URL with real-time quality assessment
+    // Get optimal CDN URL without downloading
     let optimal_url = downloader.get_optimal_url(
         "https://github.com/user/repo/releases/download/v1.0/file.zip"
     ).await?;
-
     println!("🌐 Optimal URL: {}", optimal_url);
 
     // Get performance statistics
-    let stats = downloader.get_stats().await?;
+    let stats = downloader.get_stats().await;
     println!("📈 Total downloads: {}", stats.total_downloads);
-    println!("⚡ Average speed: {:.2} MB/s", stats.average_speed / 1024.0 / 1024.0);
+    println!("⚡ Average speed: {:.2} MB/s", stats.average_speed_mbps());
+    println!("✅ Success rate: {:.1}%", stats.success_rate());
 
+    Ok(())
+}
+```
+
+#### Builder Pattern (Recommended)
+
+```rust
+use turbo_cdn::*;
+
+#[tokio::main]
+async fn main() -> turbo_cdn::Result<()> {
+    // Create client with builder pattern for full control
+    let downloader = TurboCdn::builder()
+        .with_region(Region::China)                    // Set region explicitly
+        .with_max_concurrent_downloads(16)             // Configure concurrency
+        .with_chunk_size(2 * 1024 * 1024)              // 2MB chunks
+        .with_timeout(60)                              // 60 second timeout
+        .with_adaptive_chunking(true)                  // Enable adaptive chunking
+        .with_retry_attempts(5)                        // Retry up to 5 times
+        .with_user_agent("my-app/1.0")                 // Custom user agent
+        .build()
+        .await?;
+
+    // Download to specific path
+    let result = downloader.download_to_path(
+        "https://github.com/user/repo/releases/download/v1.0.0/file.zip",
+        "./downloads/file.zip"
+    ).await?;
+
+    println!("Downloaded to: {}", result.path.display());
     Ok(())
 }
 ```
@@ -144,24 +174,26 @@ Turbo CDN now supports 16+ optimization rules across 6+ package managers:
 
 **Real-time Quality Assessment**: All mirrors are continuously monitored for latency, bandwidth, and availability with dynamic ranking.
 
-### Advanced Usage with Performance Optimizations
+### Advanced Usage with Download Options
 
 ```rust
 use turbo_cdn::*;
+use std::time::Duration;
 
 #[tokio::main]
 async fn main() -> turbo_cdn::Result<()> {
-    // Create downloader with intelligent optimizations enabled
     let downloader = TurboCdn::new().await?;
 
     // Download with advanced options
     let options = DownloadOptions::new()
-        .with_max_concurrent_chunks(16)  // Adaptive concurrency will optimize this
-        .with_chunk_size(2 * 1024 * 1024)  // Smart chunking will adjust dynamically
-        .with_resume(true)
-        .with_integrity_verification(true);
+        .with_max_concurrent_chunks(16)
+        .with_chunk_size(2 * 1024 * 1024)  // 2MB chunks
+        .with_resume(true)                  // Enable resume support
+        .with_timeout(Duration::from_secs(120))
+        .with_integrity_verification(true)
+        .with_header("Accept", "application/octet-stream");
 
-    let result = downloader.download_to_path_with_options(
+    let result = downloader.download_with_options(
         "https://github.com/BurntSushi/ripgrep/releases/download/14.1.1/ripgrep-14.1.1-x86_64-pc-windows-msvc.zip",
         "./downloads/ripgrep.zip",
         options
@@ -170,18 +202,19 @@ async fn main() -> turbo_cdn::Result<()> {
     println!("✅ Downloaded to: {}", result.path.display());
     println!("📊 Speed: {:.2} MB/s", result.speed / 1024.0 / 1024.0);
     println!("⏱️  Duration: {:.2}s", result.duration.as_secs_f64());
-    println!("🧩 Chunks: {} (adaptive)", result.chunks_used.unwrap_or(1));
-    println!("🌐 CDN: {}", result.final_url.unwrap_or_else(|| "Original".to_string()));
 
     if result.resumed {
-        println!("🔄 Download was resumed");
+        println!("🔄 Download was resumed from previous state");
     }
 
-    // Get detailed performance metrics
-    let performance = downloader.get_performance_metrics().await?;
-    println!("📈 DNS Cache hits: {}", performance.dns_cache_hits);
-    println!("⚡ Avg concurrency: {:.1}", performance.avg_concurrency);
-    println!("🎯 CDN success rate: {:.1}%", performance.cdn_success_rate * 100.0);
+    // Get server performance summary
+    let summary = downloader.get_performance_summary();
+    println!("📈 Total servers tracked: {}", summary.total_servers);
+    println!("✅ Overall success rate: {:.1}%", summary.overall_success_rate * 100.0);
+    
+    if let Some((url, score)) = summary.best_server {
+        println!("🏆 Best server: {} (score: {:.2})", url, score);
+    }
 
     Ok(())
 }
@@ -216,7 +249,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ## 📊 Performance Improvements
 
-Turbo CDN v0.2.1 delivers unprecedented performance through comprehensive optimizations:
+Turbo CDN v0.4.3 delivers unprecedented performance through comprehensive optimizations:
 
 ### 📈 Quantified Improvements
 
@@ -227,7 +260,7 @@ Turbo CDN v0.2.1 delivers unprecedented performance through comprehensive optimi
 | **Package Managers** | GitHub only | 6+ managers | **6x expansion** |
 | **Region Detection** | Manual | Automatic | **Full automation** |
 | **Quality Assessment** | None | Real-time | **New feature** |
-| **Intelligent Features** | Basic | 4 AI modules | **Smart optimization** |
+| **API Design** | Basic | Builder pattern | **Fluent API** |
 
 ### 🚀 Real-World Performance
 
@@ -239,7 +272,7 @@ Turbo CDN v0.2.1 delivers unprecedented performance through comprehensive optimi
 | **Load Balancing** | Intelligent server selection | Health scoring + multiple strategies |
 | **Geographic Detection** | Auto-optimal region | IP geolocation + network testing |
 | **CDN Quality Assessment** | Real-time performance ranking | Latency/bandwidth/availability scoring |
-| **High-Performance Stack** | Memory & HTTP optimization | mimalloc + isahc + dashmap |
+| **High-Performance Stack** | Memory & HTTP optimization | mimalloc + reqwest + dashmap |
 
 ### 🧠 Intelligent Optimization Modules
 
@@ -306,7 +339,7 @@ Turbo CDN v0.2.1 delivers unprecedented performance through comprehensive optimi
 
 ## 🏗️ Next-Generation Architecture
 
-Turbo CDN v0.2.1 features an intelligent, high-performance architecture with 4 AI optimization modules:
+Turbo CDN v0.4.3 features an intelligent, high-performance architecture:
 
 ```
 ┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
@@ -335,7 +368,7 @@ Turbo CDN v0.2.1 features an intelligent, high-performance architecture with 4 A
 
 ### 🔧 Advanced Components
 
-#### 🧠 AI Optimization Modules
+#### 🧠 Optimization Modules
 - **Adaptive Concurrency Controller**: Network congestion detection with dynamic adjustment
 - **Smart Chunking Algorithm**: File-size aware chunking with performance history learning
 - **DNS Cache System**: High-performance caching with TTL management and cleanup
@@ -345,7 +378,7 @@ Turbo CDN v0.2.1 features an intelligent, high-performance architecture with 4 A
 - **Geographic Detection**: Multi-API IP geolocation with network performance fallback
 - **CDN Quality Assessment**: Real-time latency/bandwidth/availability monitoring
 - **URL Mapper**: 16+ regex rules covering 6+ package managers
-- **High-Performance Stack**: mimalloc + isahc + dashmap for optimal performance
+- **High-Performance Stack**: mimalloc + reqwest + dashmap for optimal performance
 
 #### 📊 Performance Monitoring
 - **Real-time Metrics**: Comprehensive performance tracking and statistics
@@ -392,7 +425,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 🙏 Acknowledgments
 
 ### High-Performance Stack
-- [isahc](https://github.com/sagebind/isahc) - libcurl-based HTTP client for optimal performance
+- [reqwest](https://github.com/seanmonstar/reqwest) - High-performance HTTP client with async support
 - [mimalloc](https://github.com/microsoft/mimalloc) - High-performance memory allocator
 - [dashmap](https://github.com/xacrimon/dashmap) - Concurrent hash maps
 - [tokio](https://github.com/tokio-rs/tokio) - Async runtime

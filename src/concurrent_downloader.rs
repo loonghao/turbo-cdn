@@ -9,6 +9,10 @@
 //! - Resume capability
 //! - Progress tracking
 
+use crate::constants::{
+    DEFAULT_RETRY_ATTEMPTS, DEFAULT_RETRY_DELAY_BASE, HTTP2_FRAME_SIZE, MAX_REDIRECTS,
+    MAX_URLS_TO_TRY,
+};
 use crate::error::{Result, TurboCdnError};
 use crate::progress::ProgressTracker;
 use crate::server_tracker::ServerTracker;
@@ -84,7 +88,7 @@ impl ConcurrentDownloader {
             .tcp_keepalive(Duration::from_secs(config.performance.tcp_keepalive))
             .tcp_nodelay(true) // Disable Nagle's algorithm for lower latency
             .connection_verbose(config.general.debug) // Enable connection debugging if debug mode
-            .redirect(reqwest::redirect::Policy::limited(10)); // Allow up to 10 redirects
+            .redirect(reqwest::redirect::Policy::limited(MAX_REDIRECTS));
 
         if config.performance.http2_prior_knowledge {
             client_builder = client_builder.http2_prior_knowledge();
@@ -93,7 +97,7 @@ impl ConcurrentDownloader {
         // Configure TLS settings for better performance
         client_builder = client_builder
             .http2_adaptive_window(true)
-            .http2_max_frame_size(Some(16384)); // 16KB frame size for better throughput
+            .http2_max_frame_size(Some(HTTP2_FRAME_SIZE));
 
         let client = client_builder
             .build()
@@ -125,7 +129,7 @@ impl ConcurrentDownloader {
         let start_time = Instant::now();
 
         // Use intelligent server selection - select more URLs for better redundancy
-        let max_urls_to_try = (urls.len()).min(8); // Try up to 8 different URLs
+        let max_urls_to_try = (urls.len()).min(MAX_URLS_TO_TRY);
         let selected_urls = {
             let tracker = self.server_performance_tracker.lock().unwrap();
             tracker.select_best_servers(urls, max_urls_to_try)
@@ -138,19 +142,22 @@ impl ConcurrentDownloader {
             self.max_concurrent_chunks
         );
 
+        // Get retry attempts from config or use default
+        let retry_attempts = DEFAULT_RETRY_ATTEMPTS;
+
         // Try each URL with retry logic
         for (index, url) in selected_urls.iter().enumerate() {
             debug!("Trying URL {}/{}: {}", index + 1, selected_urls.len(), url);
 
             // Retry logic for each URL
-            for retry_attempt in 0..=3 {
-                // Max 3 retries per URL
+            for retry_attempt in 0..=retry_attempts {
                 let url_start_time = Instant::now();
 
                 if retry_attempt > 0 {
                     debug!("Retry attempt {} for URL: {}", retry_attempt, url);
-                    // Exponential backoff: 1s, 2s, 4s
-                    let delay = Duration::from_secs(2_u64.pow(retry_attempt as u32 - 1));
+                    // Exponential backoff
+                    let delay =
+                        Duration::from_secs(DEFAULT_RETRY_DELAY_BASE.pow(retry_attempt as u32 - 1));
                     tokio::time::sleep(delay).await;
                 }
 
@@ -191,7 +198,7 @@ impl ConcurrentDownloader {
                         warn!("Attempt {} failed for {}: {}", retry_attempt + 1, url, e);
 
                         // If this was the last retry for this URL, try next URL
-                        if retry_attempt == 3 {
+                        if retry_attempt == retry_attempts {
                             break;
                         }
                     }

@@ -38,7 +38,7 @@ fn test_config_loading() {
 fn test_url_mapping() {
     let config =
         config::TurboCdnConfig::load().unwrap_or_else(|_| config::TurboCdnConfig::default());
-    let mut mapper = url_mapper::UrlMapper::new(&config, config::Region::China).unwrap();
+    let mapper = url_mapper::UrlMapper::new(&config, config::Region::China).unwrap();
 
     // Test GitHub URL mapping
     let github_url = "https://github.com/user/repo/releases/download/v1.0.0/file.zip";
@@ -72,7 +72,7 @@ fn test_jsdelivr_mapping() {
         "Loaded {} URL mapping rules for jsDelivr test",
         config.url_mapping_rules.len()
     );
-    let mut mapper = url_mapper::UrlMapper::new(&config, config::Region::Global).unwrap();
+    let mapper = url_mapper::UrlMapper::new(&config, config::Region::Global).unwrap();
     println!(
         "URL mapper created with {} rules for jsDelivr test",
         mapper.rule_count()
@@ -109,7 +109,7 @@ fn test_jsdelivr_mapping() {
 #[test]
 fn test_unknown_url_passthrough() {
     let config = config::TurboCdnConfig::default();
-    let mut mapper = url_mapper::UrlMapper::new(&config, config::Region::Global).unwrap();
+    let mapper = url_mapper::UrlMapper::new(&config, config::Region::Global).unwrap();
 
     let unknown_url = "https://example.com/unknown/file.zip";
     let mapped_urls = mapper.map_url(unknown_url).unwrap();

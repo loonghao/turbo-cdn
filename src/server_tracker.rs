@@ -7,6 +7,11 @@
 //! URI selector, allowing the downloader to learn from historical performance
 //! and select the fastest servers automatically.
 
+use crate::constants::{
+    DEFAULT_RESPONSE_TIME, DEFAULT_SERVER_SCORE, EXCELLENT_SPEED_BYTES_PER_SEC,
+    MAX_SERVERS_TO_TRACK, POOR_LATENCY_MS, RECENT_SAMPLES_SIZE, SERVER_CLEANUP_BUFFER,
+    WEIGHT_LATENCY, WEIGHT_SPEED, WEIGHT_SUCCESS,
+};
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 use tracing::{debug, info, warn};
@@ -39,7 +44,7 @@ impl Default for ServerStats {
         Self {
             average_speed: 0.0,
             success_rate: 1.0, // Start optimistic
-            average_response_time: Duration::from_millis(100),
+            average_response_time: DEFAULT_RESPONSE_TIME,
             total_attempts: 0,
             successful_downloads: 0,
             failed_downloads: 0,
@@ -54,25 +59,20 @@ impl ServerStats {
     /// Calculate performance score (0.0 to 1.0, higher is better)
     pub fn performance_score(&self) -> f64 {
         if self.total_attempts == 0 {
-            return 0.5; // Neutral score for untested servers
+            return DEFAULT_SERVER_SCORE;
         }
 
-        // Weight factors
-        let speed_weight = 0.4;
-        let success_weight = 0.4;
-        let latency_weight = 0.2;
-
         // Normalize speed (assume 10MB/s is excellent)
-        let speed_score = (self.average_speed / (10.0 * 1024.0 * 1024.0)).min(1.0);
+        let speed_score = (self.average_speed / EXCELLENT_SPEED_BYTES_PER_SEC).min(1.0);
 
         // Success rate is already normalized
         let success_score = self.success_rate;
 
         // Normalize latency (assume 50ms is excellent, 1000ms is poor)
         let latency_ms = self.average_response_time.as_millis() as f64;
-        let latency_score = (1000.0 - latency_ms.min(1000.0)) / 1000.0;
+        let latency_score = (POOR_LATENCY_MS - latency_ms.min(POOR_LATENCY_MS)) / POOR_LATENCY_MS;
 
-        speed_weight * speed_score + success_weight * success_score + latency_weight * latency_score
+        WEIGHT_SPEED * speed_score + WEIGHT_SUCCESS * success_score + WEIGHT_LATENCY * latency_score
     }
 
     /// Update statistics with new download result
@@ -85,7 +85,7 @@ impl ServerStats {
 
             // Update speed statistics
             self.recent_speeds.push(speed);
-            if self.recent_speeds.len() > 10 {
+            if self.recent_speeds.len() > RECENT_SAMPLES_SIZE {
                 self.recent_speeds.remove(0);
             }
             self.average_speed =
@@ -96,7 +96,7 @@ impl ServerStats {
 
         // Update response time statistics
         self.recent_response_times.push(response_time);
-        if self.recent_response_times.len() > 10 {
+        if self.recent_response_times.len() > RECENT_SAMPLES_SIZE {
             self.recent_response_times.remove(0);
         }
         self.average_response_time = Duration::from_millis(
@@ -133,7 +133,15 @@ impl ServerTracker {
     pub fn new() -> Self {
         Self {
             server_stats: HashMap::new(),
-            max_servers_to_track: 100, // Limit memory usage
+            max_servers_to_track: MAX_SERVERS_TO_TRACK,
+        }
+    }
+
+    /// Create a new server tracker with custom capacity
+    pub fn with_capacity(max_servers: usize) -> Self {
+        Self {
+            server_stats: HashMap::new(),
+            max_servers_to_track: max_servers,
         }
     }
 
@@ -208,7 +216,7 @@ impl ServerTracker {
                 .collect();
             entries.sort_by_key(|(_, last_updated)| *last_updated);
 
-            let to_remove = entries.len() - self.max_servers_to_track + 10; // Remove 10 extra
+            let to_remove = entries.len() - self.max_servers_to_track + SERVER_CLEANUP_BUFFER;
             let urls_to_remove: Vec<String> = entries
                 .into_iter()
                 .take(to_remove)
