@@ -95,7 +95,7 @@ flate2 = "1.0"
 brotli = "8.0"
 
 # Network performance monitoring
-ping = "0.5"
+ping = "0.7"
 
 [dev-dependencies]
 # Testing
