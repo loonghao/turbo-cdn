@@ -349,3 +349,192 @@ fn test_builder_default() {
     let builder = TurboCdnBuilder::default();
     assert!(std::mem::size_of_val(&builder) > 0);
 }
+
+/// Test DownloadOptions creation and builder methods
+#[test]
+fn test_download_options_creation() {
+    let options = DownloadOptions::new();
+    assert!(options.progress_callback.is_none());
+    assert!(options.max_concurrent_chunks.is_none());
+    assert!(options.chunk_size.is_none());
+    assert!(!options.enable_resume);
+    assert!(options.custom_headers.is_none());
+    assert!(options.timeout_override.is_none());
+    assert!(!options.verify_integrity);
+    assert!(options.expected_size.is_none());
+}
+
+/// Test DownloadOptions with_max_concurrent_chunks
+#[test]
+fn test_download_options_with_concurrent_chunks() {
+    let options = DownloadOptions::new().with_max_concurrent_chunks(8);
+    assert_eq!(options.max_concurrent_chunks, Some(8));
+}
+
+/// Test DownloadOptions with_chunk_size
+#[test]
+fn test_download_options_with_chunk_size() {
+    let options = DownloadOptions::new().with_chunk_size(1024 * 1024);
+    assert_eq!(options.chunk_size, Some(1024 * 1024));
+}
+
+/// Test DownloadOptions with_resume
+#[test]
+fn test_download_options_with_resume() {
+    let options = DownloadOptions::new().with_resume(true);
+    assert!(options.enable_resume);
+}
+
+/// Test DownloadOptions with_header
+#[test]
+fn test_download_options_with_header() {
+    let options = DownloadOptions::new()
+        .with_header("Authorization", "Bearer token123")
+        .with_header("X-Custom-Header", "value");
+
+    assert!(options.custom_headers.is_some());
+    let headers = options.custom_headers.unwrap();
+    assert_eq!(
+        headers.get("Authorization"),
+        Some(&"Bearer token123".to_string())
+    );
+    assert_eq!(headers.get("X-Custom-Header"), Some(&"value".to_string()));
+}
+
+/// Test DownloadOptions with_timeout
+#[test]
+fn test_download_options_with_timeout() {
+    use std::time::Duration;
+    let options = DownloadOptions::new().with_timeout(Duration::from_secs(120));
+    assert_eq!(options.timeout_override, Some(Duration::from_secs(120)));
+}
+
+/// Test DownloadOptions with_integrity_verification
+#[test]
+fn test_download_options_with_integrity() {
+    let options = DownloadOptions::new().with_integrity_verification(true);
+    assert!(options.verify_integrity);
+}
+
+/// Test DownloadOptions with_expected_size
+#[test]
+fn test_download_options_with_expected_size() {
+    let options = DownloadOptions::new().with_expected_size(1024 * 1024 * 100);
+    assert_eq!(options.expected_size, Some(1024 * 1024 * 100));
+}
+
+/// Test DownloadOptions with_progress_callback
+#[test]
+fn test_download_options_with_progress_callback() {
+    let options = DownloadOptions::new().with_progress_callback(Box::new(|_progress| {
+        // Callback logic
+    }));
+    assert!(options.progress_callback.is_some());
+}
+
+/// Test DownloadOptions Debug implementation
+#[test]
+fn test_download_options_debug() {
+    let options = DownloadOptions::new()
+        .with_max_concurrent_chunks(4)
+        .with_chunk_size(1024)
+        .with_resume(true);
+
+    let debug_str = format!("{:?}", options);
+    assert!(debug_str.contains("DownloadOptions"));
+    assert!(debug_str.contains("max_concurrent_chunks"));
+    assert!(debug_str.contains("chunk_size"));
+    assert!(debug_str.contains("enable_resume"));
+}
+
+/// Test DownloadOptions Clone implementation
+#[test]
+fn test_download_options_clone() {
+    let options = DownloadOptions::new()
+        .with_max_concurrent_chunks(8)
+        .with_chunk_size(2048)
+        .with_resume(true)
+        .with_header("X-Test", "value")
+        .with_timeout(std::time::Duration::from_secs(60))
+        .with_integrity_verification(true)
+        .with_expected_size(1000);
+
+    let cloned = options.clone();
+
+    // Cloned should have same values except progress_callback (which is None)
+    assert_eq!(cloned.max_concurrent_chunks, Some(8));
+    assert_eq!(cloned.chunk_size, Some(2048));
+    assert!(cloned.enable_resume);
+    assert!(cloned.custom_headers.is_some());
+    assert_eq!(
+        cloned.timeout_override,
+        Some(std::time::Duration::from_secs(60))
+    );
+    assert!(cloned.verify_integrity);
+    assert_eq!(cloned.expected_size, Some(1000));
+    assert!(cloned.progress_callback.is_none()); // Cannot clone function pointers
+}
+
+/// Test DownloadOptions chained builder pattern
+#[test]
+fn test_download_options_chained() {
+    let options = DownloadOptions::new()
+        .with_max_concurrent_chunks(16)
+        .with_chunk_size(4 * 1024 * 1024)
+        .with_resume(true)
+        .with_header("User-Agent", "TestAgent/1.0")
+        .with_timeout(std::time::Duration::from_secs(300))
+        .with_integrity_verification(true)
+        .with_expected_size(1024 * 1024 * 500);
+
+    assert_eq!(options.max_concurrent_chunks, Some(16));
+    assert_eq!(options.chunk_size, Some(4 * 1024 * 1024));
+    assert!(options.enable_resume);
+    assert!(options.custom_headers.is_some());
+    assert_eq!(
+        options.timeout_override,
+        Some(std::time::Duration::from_secs(300))
+    );
+    assert!(options.verify_integrity);
+    assert_eq!(options.expected_size, Some(1024 * 1024 * 500));
+}
+
+/// Test TurboCdnBuilder with_config
+#[test]
+fn test_builder_with_config() {
+    let config = TurboCdnConfig::default();
+    let builder = TurboCdn::builder().with_config(config);
+    assert!(std::mem::size_of_val(&builder) > 0);
+}
+
+/// Test TurboCdn extract_filename (via download methods)
+#[tokio::test]
+async fn test_extract_filename_from_url() {
+    let cdn = TurboCdn::builder()
+        .with_auto_detect_region(false)
+        .build()
+        .await
+        .unwrap();
+
+    // Test with various URL formats
+    let url1 = "https://example.com/path/to/file.zip";
+    let optimal = cdn.get_optimal_url(url1).await;
+    assert!(optimal.is_ok());
+
+    let url2 = "https://example.com/";
+    let optimal = cdn.get_optimal_url(url2).await;
+    assert!(optimal.is_ok());
+}
+
+/// Test TurboCdn get_server_stats returns None for unknown URL
+#[tokio::test]
+async fn test_get_server_stats_unknown() {
+    let cdn = TurboCdn::builder()
+        .with_auto_detect_region(false)
+        .build()
+        .await
+        .unwrap();
+
+    let stats = cdn.get_server_stats("https://unknown.example.com/file.zip");
+    assert!(stats.is_none());
+}
