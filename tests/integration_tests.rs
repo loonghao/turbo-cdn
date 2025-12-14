@@ -303,3 +303,208 @@ fn test_rule_count() {
     let count = mapper.rule_count();
     assert!(count > 0);
 }
+
+/// Test SyncTurboCdn with_config
+#[test]
+fn test_sync_api_with_config() {
+    use turbo_cdn::sync_api::SyncTurboCdn;
+
+    let config = TurboCdnConfig::default();
+    let cdn = SyncTurboCdn::with_config(config).expect("Failed to create SyncTurboCdn with config");
+
+    let url = "https://github.com/user/repo/releases/download/v1.0.0/file.zip";
+    let optimal = cdn.get_optimal_url(url).expect("Failed to get optimal URL");
+
+    assert!(!optimal.is_empty());
+}
+
+/// Test AsyncTurboCdn with_config
+#[tokio::test]
+async fn test_async_api_with_config() {
+    use turbo_cdn::async_api::AsyncTurboCdn;
+
+    let config = TurboCdnConfig::default();
+    let cdn = AsyncTurboCdn::with_config(config)
+        .await
+        .expect("Failed to create AsyncTurboCdn with config");
+
+    let url = "https://github.com/user/repo/releases/download/v1.0.0/file.zip";
+    let optimal = cdn
+        .get_optimal_url_async(url)
+        .await
+        .expect("Failed to get optimal URL");
+
+    assert!(!optimal.is_empty());
+}
+
+/// Test ServerStats update_with_result
+#[test]
+fn test_server_stats_update() {
+    use turbo_cdn::server_tracker::ServerStats;
+
+    let mut stats = ServerStats::default();
+
+    // Record successful download
+    stats.update_with_result(5.0 * 1024.0 * 1024.0, Duration::from_millis(100), true);
+    assert_eq!(stats.total_attempts, 1);
+    assert_eq!(stats.successful_downloads, 1);
+    assert_eq!(stats.failed_downloads, 0);
+    assert!(stats.average_speed > 0.0);
+
+    // Record failed download
+    stats.update_with_result(0.0, Duration::from_millis(500), false);
+    assert_eq!(stats.total_attempts, 2);
+    assert_eq!(stats.successful_downloads, 1);
+    assert_eq!(stats.failed_downloads, 1);
+    assert_eq!(stats.success_rate, 0.5);
+}
+
+/// Test ServerTracker with_capacity
+#[test]
+fn test_server_tracker_with_capacity() {
+    use turbo_cdn::server_tracker::ServerTracker;
+
+    let tracker = ServerTracker::with_capacity(50);
+    let summary = tracker.get_performance_summary();
+    assert_eq!(summary.total_servers, 0);
+}
+
+/// Test ServerTracker get_all_stats
+#[test]
+fn test_server_tracker_get_all_stats() {
+    use turbo_cdn::server_tracker::ServerTracker;
+
+    let mut tracker = ServerTracker::new();
+
+    tracker.record_success(
+        "http://server1.example.com",
+        1024.0 * 1024.0,
+        Duration::from_millis(50),
+    );
+    tracker.record_success(
+        "http://server2.example.com",
+        2048.0 * 1024.0,
+        Duration::from_millis(100),
+    );
+
+    let all_stats = tracker.get_all_stats();
+    assert_eq!(all_stats.len(), 2);
+    assert!(all_stats.contains_key("http://server1.example.com"));
+    assert!(all_stats.contains_key("http://server2.example.com"));
+}
+
+/// Test ServerTracker record_failure
+#[test]
+fn test_server_tracker_record_failure() {
+    use turbo_cdn::server_tracker::ServerTracker;
+
+    let mut tracker = ServerTracker::new();
+
+    tracker.record_failure("http://bad.example.com", Duration::from_millis(1000));
+
+    let stats = tracker.get_stats("http://bad.example.com");
+    assert!(stats.is_some());
+    let stats = stats.unwrap();
+    assert_eq!(stats.failed_downloads, 1);
+    assert_eq!(stats.successful_downloads, 0);
+}
+
+/// Test ServerTracker select_best_servers with empty list
+#[test]
+fn test_server_tracker_empty_selection() {
+    use turbo_cdn::server_tracker::ServerTracker;
+
+    let tracker = ServerTracker::new();
+    let urls: Vec<String> = vec![];
+    let selected = tracker.select_best_servers(&urls, 5);
+    assert!(selected.is_empty());
+}
+
+/// Test UrlMapper set_region and region
+#[test]
+fn test_url_mapper_region() {
+    let config = TurboCdnConfig::default();
+    let mut mapper = UrlMapper::new(&config, Region::Global).expect("Failed to create UrlMapper");
+
+    assert_eq!(mapper.region(), &Region::Global);
+
+    mapper.set_region(Region::China);
+    assert_eq!(mapper.region(), &Region::China);
+}
+
+/// Test UrlMapper get_server_tracker
+#[test]
+fn test_url_mapper_server_tracker() {
+    let config = TurboCdnConfig::default();
+    let mapper = UrlMapper::new(&config, Region::Global).expect("Failed to create UrlMapper");
+
+    let tracker = mapper.get_server_tracker();
+    let guard = tracker.lock().unwrap();
+    let summary = guard.get_performance_summary();
+    assert_eq!(summary.total_servers, 0);
+}
+
+/// Test UrlMapper get_quality_assessor (currently None)
+#[test]
+fn test_url_mapper_quality_assessor() {
+    let config = TurboCdnConfig::default();
+    let mapper = UrlMapper::new(&config, Region::Global).expect("Failed to create UrlMapper");
+
+    let assessor = mapper.get_quality_assessor();
+    assert!(assessor.is_none()); // Currently not implemented
+}
+
+/// Test ConcurrentDownloader new and default
+#[test]
+fn test_concurrent_downloader_creation() {
+    use turbo_cdn::concurrent_downloader::ConcurrentDownloader;
+
+    let downloader = ConcurrentDownloader::new();
+    assert!(downloader.is_ok());
+
+    let default_downloader = ConcurrentDownloader::default();
+    let summary = default_downloader.get_server_stats();
+    assert_eq!(summary.total_servers, 0);
+}
+
+/// Test ConcurrentDownloader with_config
+#[test]
+fn test_concurrent_downloader_with_config() {
+    use turbo_cdn::concurrent_downloader::ConcurrentDownloader;
+
+    let config = TurboCdnConfig::default();
+    let downloader = ConcurrentDownloader::with_config(&config);
+    assert!(downloader.is_ok());
+}
+
+/// Test ConcurrentDownloader get_server_detail
+#[test]
+fn test_concurrent_downloader_server_detail() {
+    use turbo_cdn::concurrent_downloader::ConcurrentDownloader;
+
+    let downloader = ConcurrentDownloader::new().unwrap();
+    let detail = downloader.get_server_detail("http://unknown.example.com");
+    assert!(detail.is_none());
+}
+
+/// Test PerformanceSummary default
+#[test]
+fn test_performance_summary_default() {
+    let summary = PerformanceSummary::default();
+    assert_eq!(summary.total_servers, 0);
+    assert_eq!(summary.total_attempts, 0);
+    assert_eq!(summary.total_successes, 0);
+    assert_eq!(summary.overall_success_rate, 0.0);
+    assert_eq!(summary.average_speed, 0.0);
+    assert!(summary.best_server.is_none());
+}
+
+/// Test deprecated init_tracing functions exist (compile-time check)
+#[test]
+#[allow(deprecated)]
+fn test_deprecated_tracing_functions_exist() {
+    // Just verify the functions exist and are callable
+    // We can't actually call them because tracing may already be initialized
+    let _fn1: fn() = turbo_cdn::init_tracing;
+    let _fn2: fn(&str) = turbo_cdn::init_tracing_with_level;
+}
