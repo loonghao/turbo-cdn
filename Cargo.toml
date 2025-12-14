@@ -15,7 +15,7 @@ categories = [
     "web-programming",
     "command-line-utilities",
 ]
-exclude = ["/.github/", "/tests/fixtures/", "/benches/", "*.md"]
+exclude = ["/.github/", "/tests/fixtures/", "*.md"]
 
 [dependencies]
 # Async runtime
@@ -102,7 +102,7 @@ ping = "0.5"
 tokio-test = "0.4"
 tempfile = "3.0"
 wiremock = "0.6"
-criterion = { version = "0.7", features = ["html_reports"] }
+criterion = { version = "0.5", features = ["html_reports", "async_tokio"] }
 proptest = "1.0"
 
 # Test utilities
@@ -166,6 +166,11 @@ path = "examples/performance/benchmarks.rs"
 [[example]]
 name = "monitoring"
 path = "examples/performance/monitoring.rs"
+
+# Benchmarks
+[[bench]]
+name = "download_benchmarks"
+harness = false
 
 # Linting configuration
 [lints.rust]
