@@ -1,6 +1,6 @@
 # Turbo CDN Default Configuration
 # This file contains the default settings for Turbo CDN
-# Last updated: 2025-01
+# Last updated: 2025-12
 
 [general]
 # Enable debug mode for verbose logging
@@ -11,7 +11,7 @@ debug = false
 default_region = "Global"
 
 # User agent string for HTTP requests
-user_agent = "turbo-cdn/0.2.1"
+user_agent = "turbo-cdn/0.5.0"
 
 # Enable URL mapping cache for faster repeated operations
 enable_url_cache = true
@@ -95,18 +95,24 @@ ip_detection_timeout = 5
 auto_detect_region = true
 
 [testing]
-# Test URLs for connectivity and speed testing
+# Test URLs for connectivity and speed testing (updated 2025-12)
 test_urls = [
-    # GitHub releases
+    # GitHub releases (latest stable versions)
     "https://github.com/BurntSushi/ripgrep/releases/download/14.1.1/ripgrep-14.1.1-x86_64-pc-windows-msvc.zip",
-    "https://github.com/sharkdp/fd/releases/download/v8.7.0/fd-v8.7.0-x86_64-pc-windows-msvc.zip",
+    "https://github.com/sharkdp/fd/releases/download/v10.2.0/fd-v10.2.0-x86_64-pc-windows-msvc.zip",
+    "https://github.com/sharkdp/bat/releases/download/v0.24.0/bat-v0.24.0-x86_64-pc-windows-msvc.zip",
 
-    # jsDelivr CDN
-    "https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js",
-    "https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css",
+    # loonghao projects (our own tools)
+    "https://github.com/loonghao/vx/releases/download/v0.2.3/vx-x86_64-pc-windows-msvc.zip",
+    "https://github.com/loonghao/py2pyd/releases/download/v0.2.3/py2pyd-v0.2.3-cp312-cp312-win_amd64.whl",
+
+    # jsDelivr CDN (latest versions)
+    "https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js",
+    "https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css",
+    "https://cdn.jsdelivr.net/npm/vue@3.5.13/dist/vue.global.prod.js",
 
     # Fastly CDN
-    "https://fastly.jsdelivr.net/npm/vue@3.3.4/dist/vue.global.js",
+    "https://fastly.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js",
 
     # Cloudflare CDN
     "https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.21/lodash.min.js"
@@ -128,20 +134,21 @@ speed_test_sizes = [
 
 # -----------------------------------------------------------------------------
 # GitHub Releases - Primary rule for all regions
-# Verified working mirrors as of 2025-01
+# Verified working mirrors as of 2025-12
+# Priority order based on availability testing
 # -----------------------------------------------------------------------------
 [[url_mapping_rules]]
 name = "GitHub Releases - Primary"
 pattern = "^https://github\\.com/([^/]+)/([^/]+)/releases/download/([^/]+)/(.+)$"
 replacements = [
-    # Verified working proxies (2025-01)
-    "https://gh.api.99988866.xyz/https://github.com/$1/$2/releases/download/$3/$4",
+    # Verified working proxies (2025-12) - ordered by reliability
     "https://gh-proxy.com/https://github.com/$1/$2/releases/download/$3/$4",
-    "https://ghproxy.cc/https://github.com/$1/$2/releases/download/$3/$4",
     "https://ghproxy.net/https://github.com/$1/$2/releases/download/$3/$4",
-    "https://mirror.ghproxy.com/https://github.com/$1/$2/releases/download/$3/$4",
     "https://ghfast.top/https://github.com/$1/$2/releases/download/$3/$4",
-    "https://github.moeyy.xyz/https://github.com/$1/$2/releases/download/$3/$4",
+    "https://ghproxy.homeboyc.cn/https://github.com/$1/$2/releases/download/$3/$4",
+    "https://gh.api.99988866.xyz/https://github.com/$1/$2/releases/download/$3/$4",
+    "https://ghproxy.cc/https://github.com/$1/$2/releases/download/$3/$4",
+    "https://mirror.ghproxy.com/https://github.com/$1/$2/releases/download/$3/$4",
     # Mirror sites
     "https://bgithub.xyz/$1/$2/releases/download/$3/$4",
     "https://kkgithub.com/$1/$2/releases/download/$3/$4",
@@ -154,14 +161,15 @@ enabled = true
 
 # -----------------------------------------------------------------------------
 # GitHub Raw Files
+# Verified working mirrors as of 2025-12
 # -----------------------------------------------------------------------------
 [[url_mapping_rules]]
 name = "GitHub Raw Files"
 pattern = "^https://raw\\.githubusercontent\\.com/([^/]+)/([^/]+)/([^/]+)/(.+)$"
 replacements = [
-    "https://gh.api.99988866.xyz/https://raw.githubusercontent.com/$1/$2/$3/$4",
+    "https://gh-proxy.com/https://raw.githubusercontent.com/$1/$2/$3/$4",
     "https://ghproxy.net/https://raw.githubusercontent.com/$1/$2/$3/$4",
-    "https://mirror.ghproxy.com/https://raw.githubusercontent.com/$1/$2/$3/$4",
+    "https://ghfast.top/https://raw.githubusercontent.com/$1/$2/$3/$4",
     "https://raw.gitmirror.com/$1/$2/$3/$4",
     "https://raw.githubusercontent.com/$1/$2/$3/$4"
 ]
@@ -171,14 +179,15 @@ enabled = true
 
 # -----------------------------------------------------------------------------
 # GitHub Archive (zip/tar.gz downloads)
+# Verified working mirrors as of 2025-12
 # -----------------------------------------------------------------------------
 [[url_mapping_rules]]
 name = "GitHub Archive"
 pattern = "^https://github\\.com/([^/]+)/([^/]+)/archive/(.+)$"
 replacements = [
-    "https://gh.api.99988866.xyz/https://github.com/$1/$2/archive/$3",
+    "https://gh-proxy.com/https://github.com/$1/$2/archive/$3",
     "https://ghproxy.net/https://github.com/$1/$2/archive/$3",
-    "https://mirror.ghproxy.com/https://github.com/$1/$2/archive/$3",
+    "https://ghfast.top/https://github.com/$1/$2/archive/$3",
     "https://github.com/$1/$2/archive/$3"
 ]
 regions = ["Global", "China", "Asia", "Europe", "NorthAmerica", "AsiaPacific"]
@@ -192,7 +201,7 @@ enabled = true
 name = "GitHub Blob"
 pattern = "^https://github\\.com/([^/]+)/([^/]+)/blob/([^/]+)/(.+)$"
 replacements = [
-    "https://gh.api.99988866.xyz/https://github.com/$1/$2/blob/$3/$4",
+    "https://gh-proxy.com/https://github.com/$1/$2/blob/$3/$4",
     "https://ghproxy.net/https://github.com/$1/$2/blob/$3/$4",
     "https://github.com/$1/$2/blob/$3/$4"
 ]
