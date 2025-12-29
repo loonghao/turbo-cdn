@@ -312,3 +312,117 @@ fn test_result_type_alias() {
     assert!(result.is_err());
     assert_eq!(result.unwrap_err().category(), "config");
 }
+
+#[test]
+fn test_http_status_error_creation() {
+    let error = TurboCdnError::http_status(404, "Not Found", "https://example.com/file.zip");
+
+    assert_eq!(error.category(), "http_status");
+    assert!(!error.is_retryable()); // 4xx errors are not retryable
+    assert!(error.should_try_next_mirror()); // But should try next mirror
+    assert_eq!(error.status_code(), Some(404));
+    assert!(error.to_string().contains("404"));
+    assert!(error.to_string().contains("Not Found"));
+}
+
+#[test]
+fn test_server_error_creation() {
+    let error = TurboCdnError::server_error(502, "Bad Gateway", "https://example.com/file.zip");
+
+    assert_eq!(error.category(), "server_error");
+    assert!(error.is_retryable()); // 5xx errors are retryable
+    assert!(error.should_try_next_mirror());
+    assert_eq!(error.status_code(), Some(502));
+    assert!(error.to_string().contains("502"));
+}
+
+#[test]
+fn test_from_status_code_404() {
+    let error = TurboCdnError::from_status_code(404, "https://example.com/file.zip");
+
+    assert_eq!(error.category(), "http_status");
+    assert!(!error.is_retryable());
+    assert!(error.should_try_next_mirror());
+    assert_eq!(error.status_code(), Some(404));
+}
+
+#[test]
+fn test_from_status_code_500() {
+    let error = TurboCdnError::from_status_code(500, "https://example.com/file.zip");
+
+    assert_eq!(error.category(), "server_error");
+    assert!(error.is_retryable());
+    assert!(error.should_try_next_mirror());
+    assert_eq!(error.status_code(), Some(500));
+}
+
+#[test]
+fn test_from_status_code_429_rate_limit() {
+    let error = TurboCdnError::from_status_code(429, "https://example.com/file.zip");
+
+    assert_eq!(error.category(), "rate_limit");
+    assert!(error.is_retryable());
+}
+
+#[test]
+fn test_from_status_code_403_forbidden() {
+    let error = TurboCdnError::from_status_code(403, "https://example.com/file.zip");
+
+    assert_eq!(error.category(), "http_status");
+    assert!(!error.is_retryable());
+    assert_eq!(error.status_code(), Some(403));
+}
+
+#[test]
+fn test_should_try_next_mirror() {
+    // 404 should try next mirror
+    let error_404 = TurboCdnError::http_status(404, "Not Found", "https://example.com");
+    assert!(error_404.should_try_next_mirror());
+
+    // 500 should try next mirror
+    let error_500 =
+        TurboCdnError::server_error(500, "Internal Server Error", "https://example.com");
+    assert!(error_500.should_try_next_mirror());
+
+    // Timeout should try next mirror
+    let error_timeout = TurboCdnError::timeout("Request timed out");
+    assert!(error_timeout.should_try_next_mirror());
+
+    // Config error should NOT try next mirror
+    let error_config = TurboCdnError::config("Invalid config");
+    assert!(!error_config.should_try_next_mirror());
+}
+
+#[test]
+fn test_http_status_codes_comprehensive() {
+    let test_cases = vec![
+        (400, "http_status", false),
+        (401, "http_status", false),
+        (403, "http_status", false),
+        (404, "http_status", false),
+        (405, "http_status", false),
+        (429, "rate_limit", true),
+        (500, "server_error", true),
+        (502, "server_error", true),
+        (503, "server_error", true),
+        (504, "server_error", true),
+    ];
+
+    for (status_code, expected_category, expected_retryable) in test_cases {
+        let error = TurboCdnError::from_status_code(status_code, "https://example.com");
+        assert_eq!(
+            error.category(),
+            expected_category,
+            "Status {} should have category {}",
+            status_code,
+            expected_category
+        );
+        assert_eq!(
+            error.is_retryable(),
+            expected_retryable,
+            "Status {} retryable should be {}",
+            status_code,
+            expected_retryable
+        );
+    }
+}

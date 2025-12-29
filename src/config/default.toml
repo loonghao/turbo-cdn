@@ -1,5 +1,6 @@
 # Turbo CDN Default Configuration
 # This file contains the default settings for Turbo CDN
+# Last updated: 2025-01
 
 [general]
 # Enable debug mode for verbose logging
@@ -118,97 +119,135 @@ speed_test_sizes = [
     104857600   # 100MB
 ]
 
-# URL mapping rules configuration
-[[url_mapping_rules]]
-name = "GitHub Releases - China/Asia"
-pattern = "^https://github\\.com/([^/]+)/([^/]+)/releases/download/([^/]+)/(.+)$"
-replacements = [
-    "https://ghfast.top/https://github.com/$1/$2/releases/download/$3/$4",
-    "https://mirror.ghproxy.com/https://github.com/$1/$2/releases/download/$3/$4",
-    "https://ghproxy.net/https://github.com/$1/$2/releases/download/$3/$4",
-    "https://github.com/$1/$2/releases/download/$3/$4"
-]
-regions = ["China", "Asia"]
-priority = 10
-enabled = true
+# =============================================================================
+# URL Mapping Rules
+# =============================================================================
+# Rules are sorted by priority (lower number = higher priority)
+# Only the first matching rule is applied
+# Original URL is always added as fallback at the end
 
+# -----------------------------------------------------------------------------
+# GitHub Releases - Primary rule for all regions
+# Verified working mirrors as of 2025-01
+# -----------------------------------------------------------------------------
 [[url_mapping_rules]]
-name = "GitHub Releases - Global Enhanced"
+name = "GitHub Releases - Primary"
 pattern = "^https://github\\.com/([^/]+)/([^/]+)/releases/download/([^/]+)/(.+)$"
 replacements = [
+    # Verified working proxies (2025-01)
+    "https://gh.api.99988866.xyz/https://github.com/$1/$2/releases/download/$3/$4",
+    "https://gh-proxy.com/https://github.com/$1/$2/releases/download/$3/$4",
+    "https://ghproxy.cc/https://github.com/$1/$2/releases/download/$3/$4",
     "https://ghproxy.net/https://github.com/$1/$2/releases/download/$3/$4",
-    "https://gh.con.sh/https://github.com/$1/$2/releases/download/$3/$4",
-    "https://cors.isteed.cc/github.com/$1/$2/releases/download/$3/$4",
+    "https://mirror.ghproxy.com/https://github.com/$1/$2/releases/download/$3/$4",
+    "https://ghfast.top/https://github.com/$1/$2/releases/download/$3/$4",
     "https://github.moeyy.xyz/https://github.com/$1/$2/releases/download/$3/$4",
-    "https://ghfast.top/https://github.com/$1/$2/releases/download/$3/$4",
-    "https://mirror.ghproxy.com/https://github.com/$1/$2/releases/download/$3/$4",
+    # Mirror sites
+    "https://bgithub.xyz/$1/$2/releases/download/$3/$4",
+    "https://kkgithub.com/$1/$2/releases/download/$3/$4",
+    # Original as final fallback
     "https://github.com/$1/$2/releases/download/$3/$4"
 ]
-regions = ["Global", "Europe", "NorthAmerica"]
-priority = 20
+regions = ["Global", "China", "Asia", "Europe", "NorthAmerica", "AsiaPacific"]
+priority = 1
 enabled = true
 
+# -----------------------------------------------------------------------------
+# GitHub Raw Files
+# -----------------------------------------------------------------------------
 [[url_mapping_rules]]
-name = "GitHub Raw Files - China/Asia"
+name = "GitHub Raw Files"
 pattern = "^https://raw\\.githubusercontent\\.com/([^/]+)/([^/]+)/([^/]+)/(.+)$"
 replacements = [
-    "https://mirror.ghproxy.com/https://raw.githubusercontent.com/$1/$2/$3/$4",
+    "https://gh.api.99988866.xyz/https://raw.githubusercontent.com/$1/$2/$3/$4",
     "https://ghproxy.net/https://raw.githubusercontent.com/$1/$2/$3/$4",
+    "https://mirror.ghproxy.com/https://raw.githubusercontent.com/$1/$2/$3/$4",
+    "https://raw.gitmirror.com/$1/$2/$3/$4",
     "https://raw.githubusercontent.com/$1/$2/$3/$4"
 ]
-regions = ["China", "Asia"]
-priority = 15
+regions = ["Global", "China", "Asia", "Europe", "NorthAmerica", "AsiaPacific"]
+priority = 2
 enabled = true
 
+# -----------------------------------------------------------------------------
+# GitHub Archive (zip/tar.gz downloads)
+# -----------------------------------------------------------------------------
 [[url_mapping_rules]]
-name = "GitHub Archive - China/Asia"
+name = "GitHub Archive"
 pattern = "^https://github\\.com/([^/]+)/([^/]+)/archive/(.+)$"
 replacements = [
+    "https://gh.api.99988866.xyz/https://github.com/$1/$2/archive/$3",
     "https://ghproxy.net/https://github.com/$1/$2/archive/$3",
     "https://mirror.ghproxy.com/https://github.com/$1/$2/archive/$3",
     "https://github.com/$1/$2/archive/$3"
 ]
-regions = ["China", "Asia"]
-priority = 12
+regions = ["Global", "China", "Asia", "Europe", "NorthAmerica", "AsiaPacific"]
+priority = 3
 enabled = true
 
+# -----------------------------------------------------------------------------
+# GitHub Blob/Tree (repository file access)
+# -----------------------------------------------------------------------------
+[[url_mapping_rules]]
+name = "GitHub Blob"
+pattern = "^https://github\\.com/([^/]+)/([^/]+)/blob/([^/]+)/(.+)$"
+replacements = [
+    "https://gh.api.99988866.xyz/https://github.com/$1/$2/blob/$3/$4",
+    "https://ghproxy.net/https://github.com/$1/$2/blob/$3/$4",
+    "https://github.com/$1/$2/blob/$3/$4"
+]
+regions = ["Global", "China", "Asia"]
+priority = 4
+enabled = true
+
+# -----------------------------------------------------------------------------
+# jsDelivr CDN
+# -----------------------------------------------------------------------------
 [[url_mapping_rules]]
 name = "jsDelivr CDN"
 pattern = "^https://cdn\\.jsdelivr\\.net/(.+)$"
 replacements = [
     "https://fastly.jsdelivr.net/$1",
     "https://gcore.jsdelivr.net/$1",
+    "https://testingcf.jsdelivr.net/$1",
     "https://cdn.jsdelivr.net/$1"
 ]
 regions = ["Global", "China", "Asia", "Europe", "NorthAmerica"]
-priority = 30
+priority = 10
 enabled = true
 
+# -----------------------------------------------------------------------------
+# npm Registry - China
+# -----------------------------------------------------------------------------
 [[url_mapping_rules]]
 name = "npm Registry - China"
 pattern = "^https://registry\\.npmjs\\.org/(.+)$"
 replacements = [
     "https://registry.npmmirror.com/$1",
-    "https://registry.npm.taobao.org/$1",
     "https://registry.npmjs.org/$1"
 ]
 regions = ["China"]
-priority = 25
+priority = 20
 enabled = true
 
+# -----------------------------------------------------------------------------
+# Python PyPI - China
+# -----------------------------------------------------------------------------
 [[url_mapping_rules]]
 name = "Python PyPI - China"
 pattern = "^https://pypi\\.org/simple/(.+)$"
 replacements = [
     "https://pypi.tuna.tsinghua.edu.cn/simple/$1",
     "https://mirrors.aliyun.com/pypi/simple/$1",
-    "https://pypi.douban.com/simple/$1",
     "https://pypi.org/simple/$1"
 ]
 regions = ["China"]
-priority = 30
+priority = 21
 enabled = true
 
+# -----------------------------------------------------------------------------
+# Python PyPI Files - China
+# -----------------------------------------------------------------------------
 [[url_mapping_rules]]
 name = "Python PyPI Files - China"
 pattern = "^https://files\\.pythonhosted\\.org/packages/(.+)$"
@@ -218,9 +257,12 @@ replacements = [
     "https://files.pythonhosted.org/packages/$1"
 ]
 regions = ["China"]
-priority = 31
+priority = 22
 enabled = true
 
+# -----------------------------------------------------------------------------
+# Rust Crates - China
+# -----------------------------------------------------------------------------
 [[url_mapping_rules]]
 name = "Rust Crates - China"
 pattern = "^https://crates\\.io/api/v1/crates/(.+)$"
@@ -230,77 +272,27 @@ replacements = [
     "https://crates.io/api/v1/crates/$1"
 ]
 regions = ["China"]
-priority = 32
+priority = 23
 enabled = true
 
+# -----------------------------------------------------------------------------
+# Go Modules - China
+# -----------------------------------------------------------------------------
 [[url_mapping_rules]]
 name = "Go Modules - China"
 pattern = "^https://proxy\\.golang\\.org/(.+)$"
 replacements = [
     "https://goproxy.cn/$1",
-    "https://mirrors.aliyun.com/goproxy/$1",
+    "https://goproxy.io/$1",
     "https://proxy.golang.org/$1"
 ]
 regions = ["China"]
-priority = 33
+priority = 24
 enabled = true
 
-[[url_mapping_rules]]
-name = "Docker Hub - China"
-pattern = "^https://registry-1\\.docker\\.io/(.+)$"
-replacements = [
-    "https://docker.mirrors.ustc.edu.cn/$1",
-    "https://hub-mirror.c.163.com/$1",
-    "https://registry.docker-cn.com/$1",
-    "https://registry-1.docker.io/$1"
-]
-regions = ["China"]
-priority = 34
-enabled = true
-
-[[url_mapping_rules]]
-name = "Maven Central - China"
-pattern = "^https://repo1\\.maven\\.org/maven2/(.+)$"
-replacements = [
-    "https://maven.aliyun.com/repository/central/$1",
-    "https://mirrors.tuna.tsinghua.edu.cn/maven/central/$1",
-    "https://repo1.maven.org/maven2/$1"
-]
-regions = ["China"]
-priority = 35
-enabled = true
-
-[[url_mapping_rules]]
-name = "GitHub Releases - Enhanced China"
-pattern = "^https://github\\.com/([^/]+)/([^/]+)/releases/download/([^/]+)/(.+)$"
-replacements = [
-    "https://ghfast.top/https://github.com/$1/$2/releases/download/$3/$4",
-    "https://gh.con.sh/https://github.com/$1/$2/releases/download/$3/$4",
-    "https://cors.isteed.cc/github.com/$1/$2/releases/download/$3/$4",
-    "https://github.moeyy.xyz/https://github.com/$1/$2/releases/download/$3/$4",
-    "https://mirror.ghproxy.com/https://github.com/$1/$2/releases/download/$3/$4",
-    "https://ghproxy.net/https://github.com/$1/$2/releases/download/$3/$4",
-    "https://github.com/$1/$2/releases/download/$3/$4"
-]
-regions = ["China", "Asia"]
-priority = 5
-enabled = true
-
-[[url_mapping_rules]]
-name = "jsDelivr CDN - Enhanced"
-pattern = "^https://cdn\\.jsdelivr\\.net/(.+)$"
-replacements = [
-    "https://fastly.jsdelivr.net/$1",
-    "https://gcore.jsdelivr.net/$1",
-    "https://testingcf.jsdelivr.net/$1",
-    "https://jsdelivr.b-cdn.net/$1",
-    "https://cdn.jsdelivr.net/$1"
-]
-regions = ["Global", "China", "Asia", "Europe", "NorthAmerica"]
-priority = 8
-enabled = true
-
-# Cloudflare CDN optimization
+# -----------------------------------------------------------------------------
+# Cloudflare CDN
+# -----------------------------------------------------------------------------
 [[url_mapping_rules]]
 name = "Cloudflare CDN"
 pattern = "^https://cdnjs\\.cloudflare\\.com/ajax/libs/(.+)$"
@@ -310,10 +302,12 @@ replacements = [
     "https://unpkg.com/$1"
 ]
 regions = ["Global", "Europe", "NorthAmerica"]
-priority = 40
+priority = 30
 enabled = true
 
+# -----------------------------------------------------------------------------
 # unpkg CDN
+# -----------------------------------------------------------------------------
 [[url_mapping_rules]]
 name = "unpkg CDN"
 pattern = "^https://unpkg\\.com/(.+)$"
@@ -323,75 +317,5 @@ replacements = [
     "https://fastly.jsdelivr.net/npm/$1"
 ]
 regions = ["Global"]
-priority = 41
-enabled = true
-
-# High-speed GitHub releases for all regions
-[[url_mapping_rules]]
-name = "GitHub Releases - Turbo Speed"
-pattern = "^https://github\\.com/([^/]+)/([^/]+)/releases/download/([^/]+)/(.+)$"
-replacements = [
-    "https://ghfast.top/https://github.com/$1/$2/releases/download/$3/$4",
-    "https://gh.con.sh/https://github.com/$1/$2/releases/download/$3/$4",
-    "https://cors.isteed.cc/github.com/$1/$2/releases/download/$3/$4",
-    "https://github.moeyy.xyz/https://github.com/$1/$2/releases/download/$3/$4",
-    "https://ghproxy.net/https://github.com/$1/$2/releases/download/$3/$4",
-    "https://mirror.ghproxy.com/https://github.com/$1/$2/releases/download/$3/$4",
-    "https://github.com/$1/$2/releases/download/$3/$4",
-    "https://download.fastgit.org/$1/$2/releases/download/$3/$4",
-    "https://hub.fastgit.xyz/$1/$2/releases/download/$3/$4",
-    "https://github.com.cnpmjs.org/$1/$2/releases/download/$3/$4",
-    "https://gitclone.com/github.com/$1/$2/releases/download/$3/$4",
-    "https://kkgithub.com/$1/$2/releases/download/$3/$4"
-]
-regions = ["Global", "China", "Asia", "Europe", "NorthAmerica", "AsiaPacific"]
-priority = 1
-enabled = true
-
-# Additional high-performance CDN sources
-[[url_mapping_rules]]
-name = "Cloudflare R2 - Global"
-pattern = "^https://github\\.com/([^/]+)/([^/]+)/releases/download/([^/]+)/(.+)$"
-replacements = [
-    "https://r2.dev/github/$1/$2/releases/download/$3/$4",
-    "https://github.com/$1/$2/releases/download/$3/$4"
-]
-regions = ["Global", "Europe", "NorthAmerica"]
-priority = 2
-enabled = true
-
-# AWS CloudFront mirrors
-[[url_mapping_rules]]
-name = "AWS CloudFront - Global"
-pattern = "^https://github\\.com/([^/]+)/([^/]+)/releases/download/([^/]+)/(.+)$"
-replacements = [
-    "https://d1234567890.cloudfront.net/github/$1/$2/releases/download/$3/$4",
-    "https://github.com/$1/$2/releases/download/$3/$4"
-]
-regions = ["Global", "NorthAmerica"]
-priority = 3
-enabled = false  # Disabled by default, enable when CDN is available
-
-# European CDN mirrors
-[[url_mapping_rules]]
-name = "European CDN Mirrors"
-pattern = "^https://github\\.com/([^/]+)/([^/]+)/releases/download/([^/]+)/(.+)$"
-replacements = [
-    "https://eu.ghproxy.com/https://github.com/$1/$2/releases/download/$3/$4",
-    "https://github.com/$1/$2/releases/download/$3/$4"
-]
-regions = ["Europe"]
-priority = 5
-enabled = true
-
-# Asia-Pacific CDN mirrors
-[[url_mapping_rules]]
-name = "Asia-Pacific CDN Mirrors"
-pattern = "^https://github\\.com/([^/]+)/([^/]+)/releases/download/([^/]+)/(.+)$"
-replacements = [
-    "https://ap.ghproxy.com/https://github.com/$1/$2/releases/download/$3/$4",
-    "https://github.com/$1/$2/releases/download/$3/$4"
-]
-regions = ["AsiaPacific", "Asia"]
-priority = 5
+priority = 31
 enabled = true

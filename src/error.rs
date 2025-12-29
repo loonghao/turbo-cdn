@@ -67,6 +67,22 @@ pub enum TurboCdnError {
     #[error("File not found: {path}")]
     FileNotFound { path: String },
 
+    /// HTTP status code errors (non-retryable client errors like 404)
+    #[error("HTTP {status_code}: {message}")]
+    HttpStatus {
+        status_code: u16,
+        message: String,
+        url: String,
+    },
+
+    /// Server errors (5xx, potentially retryable)
+    #[error("Server error {status_code}: {message}")]
+    ServerError {
+        status_code: u16,
+        message: String,
+        url: String,
+    },
+
     /// Unsupported operation errors
     #[error("Unsupported operation: {message}")]
     Unsupported { message: String },
@@ -153,6 +169,61 @@ impl TurboCdnError {
         Self::FileNotFound { path: path.into() }
     }
 
+    /// Create a new HTTP status error (for 4xx client errors)
+    pub fn http_status<S: Into<String>>(status_code: u16, message: S, url: S) -> Self {
+        Self::HttpStatus {
+            status_code,
+            message: message.into(),
+            url: url.into(),
+        }
+    }
+
+    /// Create a new server error (for 5xx errors)
+    pub fn server_error<S: Into<String>>(status_code: u16, message: S, url: S) -> Self {
+        Self::ServerError {
+            status_code,
+            message: message.into(),
+            url: url.into(),
+        }
+    }
+
+    /// Create an error from HTTP status code
+    pub fn from_status_code<S: Into<String>>(status_code: u16, url: S) -> Self {
+        let url_str = url.into();
+        let message = match status_code {
+            400 => "Bad Request",
+            401 => "Unauthorized",
+            403 => "Forbidden",
+            404 => "Not Found",
+            405 => "Method Not Allowed",
+            408 => "Request Timeout",
+            429 => "Too Many Requests",
+            500 => "Internal Server Error",
+            502 => "Bad Gateway",
+            503 => "Service Unavailable",
+            504 => "Gateway Timeout",
+            _ => "Unknown Error",
+        };
+
+        if status_code >= 500 {
+            Self::ServerError {
+                status_code,
+                message: message.to_string(),
+                url: url_str,
+            }
+        } else if status_code == 429 {
+            Self::RateLimit {
+                message: format!("Rate limited by {url_str}"),
+            }
+        } else {
+            Self::HttpStatus {
+                status_code,
+                message: message.to_string(),
+                url: url_str,
+            }
+        }
+    }
+
     /// Create a new unsupported operation error
     pub fn unsupported<S: Into<String>>(message: S) -> Self {
         Self::Unsupported {
@@ -185,13 +256,47 @@ impl TurboCdnError {
 
     /// Check if the error is retryable
     pub fn is_retryable(&self) -> bool {
-        matches!(
-            self,
-            TurboCdnError::Network(_)
-                | TurboCdnError::Timeout { .. }
-                | TurboCdnError::RateLimit { .. }
-                | TurboCdnError::Io(_)
-        )
+        match self {
+            // Network errors are generally retryable
+            TurboCdnError::Network(_) => true,
+            // Timeouts are retryable
+            TurboCdnError::Timeout { .. } => true,
+            // Rate limits should be retried after delay
+            TurboCdnError::RateLimit { .. } => true,
+            // IO errors might be transient
+            TurboCdnError::Io(_) => true,
+            // Server errors (5xx) are retryable
+            TurboCdnError::ServerError { .. } => true,
+            // HTTP client errors (4xx) are NOT retryable - the resource doesn't exist
+            TurboCdnError::HttpStatus { .. } => false,
+            // All other errors are not retryable
+            _ => false,
+        }
+    }
+
+    /// Check if this error indicates the resource doesn't exist on this server
+    /// and we should immediately try the next mirror
+    pub fn should_try_next_mirror(&self) -> bool {
+        match self {
+            // 404 Not Found - definitely try next mirror
+            TurboCdnError::HttpStatus { status_code, .. } => *status_code == 404,
+            // Server errors might be temporary, but try next mirror anyway
+            TurboCdnError::ServerError { .. } => true,
+            // Network errors - try next mirror
+            TurboCdnError::Network(_) => true,
+            // Timeout - try next mirror
+            TurboCdnError::Timeout { .. } => true,
+            _ => false,
+        }
+    }
+
+    /// Get HTTP status code if this is an HTTP error
+    pub fn status_code(&self) -> Option<u16> {
+        match self {
+            TurboCdnError::HttpStatus { status_code, .. } => Some(*status_code),
+            TurboCdnError::ServerError { status_code, .. } => Some(*status_code),
+            _ => None,
+        }
     }
 
     /// Get the error category for metrics and logging
@@ -212,6 +317,8 @@ impl TurboCdnError {
             TurboCdnError::Timeout { .. } => "timeout",
             TurboCdnError::ChecksumMismatch { .. } => "checksum",
             TurboCdnError::FileNotFound { .. } => "file_not_found",
+            TurboCdnError::HttpStatus { .. } => "http_status",
+            TurboCdnError::ServerError { .. } => "server_error",
             TurboCdnError::Unsupported { .. } => "unsupported",
             TurboCdnError::Internal { .. } => "internal",
         }

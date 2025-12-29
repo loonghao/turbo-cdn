@@ -22,3 +22,6 @@ target/
 
 advanced-cdn-prd.md
 coverage
+
+# IDE and editor specific
+.codebuddy/
