@@ -52,6 +52,13 @@ enum Commands {
     },
     /// Show performance statistics
     Stats,
+    /// Update turbo-cdn to the latest version
+    #[command(alias = "upgrade")]
+    SelfUpdate {
+        /// Check for updates without installing
+        #[arg(long)]
+        check: bool,
+    },
 }
 
 #[tokio::main]
@@ -82,6 +89,9 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
         }
         Commands::Stats => {
             handle_stats_command().await?;
+        }
+        Commands::SelfUpdate { check } => {
+            handle_self_update_command(check).await?;
         }
     }
 
@@ -312,6 +322,72 @@ async fn handle_stats_command() -> std::result::Result<(), Box<dyn std::error::E
     println!("✓ CDN optimization rules loaded");
     println!();
     println!("💡 Download some files to see performance statistics!");
+
+    Ok(())
+}
+
+async fn handle_self_update_command(
+    check_only: bool,
+) -> std::result::Result<(), Box<dyn std::error::Error>> {
+    use self_update::cargo_crate_version;
+
+    let current_version = cargo_crate_version!();
+
+    println!("🔄 Turbo CDN - Self Update");
+    println!("=========================");
+    println!("Current version: v{current_version}");
+    println!();
+
+    if check_only {
+        // Check for updates without installing
+        println!("🔍 Checking for updates...");
+
+        let updater = self_update::backends::github::Update::configure()
+            .repo_owner("loonghao")
+            .repo_name("turbo-cdn")
+            .bin_name("turbo-cdn")
+            .current_version(current_version)
+            .build()?;
+
+        match updater.get_latest_release() {
+            Ok(release) => {
+                let latest_version = &release.version;
+                if latest_version != current_version {
+                    println!("✨ New version available: v{latest_version}");
+                    println!();
+                    println!("Run 'turbo-cdn self-update' to update.");
+                } else {
+                    println!("✅ You are already running the latest version.");
+                }
+            }
+            Err(e) => {
+                println!("❌ Failed to check for updates: {e}");
+                return Err(e.into());
+            }
+        }
+    } else {
+        // Perform the update
+        println!("🔍 Checking for updates...");
+
+        let status = self_update::backends::github::Update::configure()
+            .repo_owner("loonghao")
+            .repo_name("turbo-cdn")
+            .bin_name("turbo-cdn")
+            .current_version(current_version)
+            .show_download_progress(true)
+            .show_output(true)
+            .no_confirm(false)
+            .build()?
+            .update()?;
+
+        if status.updated() {
+            println!();
+            println!("🎉 Successfully updated to v{}", status.version());
+            println!("   Please restart turbo-cdn to use the new version.");
+        } else {
+            println!("✅ You are already running the latest version.");
+        }
+    }
 
     Ok(())
 }
