@@ -55,6 +55,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - improve code quality and remove code smells
 ## [Unreleased]
 
+## [0.6.0](https://github.com/loonghao/turbo-cdn/compare/v0.5.0...v0.6.0) - 2025-12-29
+
+### Added
+
+- add VitePress documentation site and self-update functionality
+- add loonghao projects and expand E2E tests
+
+### Fixed
+
+- improve CDN reliability and error handling
+- *(deps)* update rust crate ping to 0.7
+- *(deps)* update rust crate lru to 0.16
+
+### Other
+
+- *(deps)* update rust crate reqwest to v0.12.28
+- *(deps)* update rust crate tracing to v0.1.44
+- *(deps)* update rust crate serde_json to v1.0.148
+
 ## [0.5.0](https://github.com/loonghao/turbo-cdn/compare/v0.4.3...v0.5.0) - 2025-12-14
 
 ### Fixed
