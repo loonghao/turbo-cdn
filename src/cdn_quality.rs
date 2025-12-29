@@ -302,6 +302,88 @@ impl CdnQualityAssessor {
         Ok(())
     }
 
+    /// Quick health check for a list of CDN URLs
+    /// Returns only the URLs that respond successfully (status 200-399)
+    pub async fn health_check(&self, urls: &[String]) -> Vec<String> {
+        let mut healthy_urls = Vec::new();
+        let timeout = Duration::from_secs(5);
+
+        for url in urls {
+            match tokio::time::timeout(timeout, self.http_client.head(url)).await {
+                Ok(Ok(response)) => {
+                    if response.status >= 200 && response.status < 400 {
+                        debug!(
+                            "Health check passed for: {} (status: {})",
+                            url, response.status
+                        );
+                        healthy_urls.push(url.clone());
+                    } else {
+                        debug!(
+                            "Health check failed for: {} (status: {})",
+                            url, response.status
+                        );
+                    }
+                }
+                Ok(Err(e)) => {
+                    debug!("Health check error for {}: {}", url, e);
+                }
+                Err(_) => {
+                    debug!("Health check timeout for: {}", url);
+                }
+            }
+        }
+
+        healthy_urls
+    }
+
+    /// Quick health check for a single URL
+    /// Returns true if the URL responds with a success status
+    pub async fn is_healthy(&self, url: &str) -> bool {
+        let timeout = Duration::from_secs(5);
+
+        match tokio::time::timeout(timeout, self.http_client.head(url)).await {
+            Ok(Ok(response)) => {
+                let is_healthy = response.status >= 200 && response.status < 400;
+                if !is_healthy {
+                    debug!("URL {} is unhealthy (status: {})", url, response.status);
+                }
+                is_healthy
+            }
+            Ok(Err(e)) => {
+                debug!("Health check error for {}: {}", url, e);
+                false
+            }
+            Err(_) => {
+                debug!("Health check timeout for: {}", url);
+                false
+            }
+        }
+    }
+
+    /// Mark a CDN as unhealthy (e.g., after receiving 404)
+    pub async fn mark_unhealthy(&self, cdn_url: &str) {
+        let mut metrics_map = self.metrics.write().await;
+
+        if let Some(existing) = metrics_map.get_mut(cdn_url) {
+            existing.availability = 0.0;
+            existing.success_rate = 0.0;
+            existing.quality_score = 0.0;
+            existing.last_updated = chrono::Utc::now();
+            warn!("Marked CDN as unhealthy: {}", cdn_url);
+        } else {
+            // Create new entry with zero scores
+            let metrics = CdnMetrics {
+                availability: 0.0,
+                success_rate: 0.0,
+                quality_score: 0.0,
+                last_updated: chrono::Utc::now(),
+                ..Default::default()
+            };
+            metrics_map.insert(cdn_url.to_string(), metrics);
+            warn!("Marked new CDN as unhealthy: {}", cdn_url);
+        }
+    }
+
     /// Get quality assessment summary
     pub async fn get_assessment_summary(&self) -> HashMap<String, f64> {
         let metrics_map = self.metrics.read().await;

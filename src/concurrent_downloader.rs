@@ -195,7 +195,22 @@ impl ConcurrentDownloader {
                             tracker.record_failure(url, url_duration);
                         }
 
-                        warn!("Attempt {} failed for {}: {}", retry_attempt + 1, url, e);
+                        // Check if we should skip retries for this URL
+                        let should_skip_retries = !e.is_retryable();
+                        let is_not_found = e.status_code() == Some(404);
+
+                        if is_not_found {
+                            warn!("HTTP 404 Not Found for {}, trying next mirror...", url);
+                            break; // Skip retries, try next URL immediately
+                        } else if should_skip_retries {
+                            warn!(
+                                "Non-retryable error for {}: {}, trying next mirror...",
+                                url, e
+                            );
+                            break; // Skip retries, try next URL
+                        } else {
+                            warn!("Attempt {} failed for {}: {}", retry_attempt + 1, url, e);
+                        }
 
                         // If this was the last retry for this URL, try next URL
                         if retry_attempt == retry_attempts {
@@ -207,13 +222,13 @@ impl ConcurrentDownloader {
 
             // If we've exhausted all retries for all URLs, return error
             if index == selected_urls.len() - 1 {
-                return Err(TurboCdnError::network(
+                return Err(TurboCdnError::download(
                     "All download URLs failed after retries".to_string(),
                 ));
             }
         }
 
-        Err(TurboCdnError::network(
+        Err(TurboCdnError::download(
             "All download URLs failed".to_string(),
         ))
     }
@@ -285,11 +300,10 @@ impl ConcurrentDownloader {
             .await
             .map_err(|e| TurboCdnError::network(format!("Failed to get file info: {e}")))?;
 
-        if !response.status().is_success() {
-            return Err(TurboCdnError::network(format!(
-                "Server returned error: {}",
-                response.status()
-            )));
+        let status = response.status();
+        if !status.is_success() {
+            let status_code = status.as_u16();
+            return Err(TurboCdnError::from_status_code(status_code, url));
         }
 
         let total_size = response
@@ -514,11 +528,10 @@ impl ConcurrentDownloader {
             .await
             .map_err(|e| TurboCdnError::network(format!("Failed to download chunk: {e}")))?;
 
-        if !response.status().is_success() {
-            return Err(TurboCdnError::network(format!(
-                "Chunk download failed: {}",
-                response.status()
-            )));
+        let status = response.status();
+        if !status.is_success() && status.as_u16() != 206 {
+            let status_code = status.as_u16();
+            return Err(TurboCdnError::from_status_code(status_code, url));
         }
 
         let bytes = response
@@ -564,11 +577,10 @@ impl ConcurrentDownloader {
             .await
             .map_err(|e| TurboCdnError::network(format!("Failed to start download: {e}")))?;
 
-        if !response.status().is_success() {
-            return Err(TurboCdnError::network(format!(
-                "Download failed: {}",
-                response.status()
-            )));
+        let status = response.status();
+        if !status.is_success() && status.as_u16() != 206 {
+            let status_code = status.as_u16();
+            return Err(TurboCdnError::from_status_code(status_code, url));
         }
 
         // Open or create file

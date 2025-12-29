@@ -253,13 +253,7 @@ impl ServerQualityScorer {
             / (server_metrics.total_requests + server_metrics.failed_requests) as f64;
 
         // Apply failure penalty based on error type
-        let penalty = match error_type {
-            FailureType::Timeout => 0.1,
-            FailureType::ConnectionRefused => 0.2,
-            FailureType::DnsFailure => 0.15,
-            FailureType::HttpError => 0.05,
-            FailureType::NetworkError => 0.1,
-        };
+        let penalty = error_type.penalty();
 
         server_metrics.reliability_score = (server_metrics.reliability_score - penalty).max(0.0);
 
@@ -412,10 +406,63 @@ pub enum FailureType {
     ConnectionRefused,
     /// DNS resolution failure
     DnsFailure,
-    /// HTTP error (4xx, 5xx)
-    HttpError,
+    /// HTTP 4xx client error (not found, forbidden, etc.)
+    HttpClientError(u16),
+    /// HTTP 5xx server error
+    HttpServerError(u16),
     /// Network error
     NetworkError,
+    /// SSL/TLS error
+    SslError,
+}
+
+impl FailureType {
+    /// Create from HTTP status code
+    pub fn from_status_code(status_code: u16) -> Self {
+        if status_code >= 500 {
+            FailureType::HttpServerError(status_code)
+        } else {
+            FailureType::HttpClientError(status_code)
+        }
+    }
+
+    /// Check if this failure type indicates the resource doesn't exist
+    pub fn is_not_found(&self) -> bool {
+        matches!(self, FailureType::HttpClientError(404))
+    }
+
+    /// Check if this failure type is retryable
+    pub fn is_retryable(&self) -> bool {
+        match self {
+            FailureType::Timeout => true,
+            FailureType::NetworkError => true,
+            FailureType::HttpServerError(_) => true,
+            FailureType::HttpClientError(429) => true, // Rate limit
+            FailureType::HttpClientError(_) => false,  // 4xx errors are not retryable
+            FailureType::ConnectionRefused => true,
+            FailureType::DnsFailure => true,
+            FailureType::SslError => false,
+        }
+    }
+
+    /// Get penalty score for this failure type
+    pub fn penalty(&self) -> f64 {
+        match self {
+            FailureType::Timeout => 0.1,
+            FailureType::ConnectionRefused => 0.2,
+            FailureType::DnsFailure => 0.15,
+            FailureType::HttpClientError(404) => 0.3, // Heavy penalty for 404
+            FailureType::HttpClientError(403) => 0.25,
+            FailureType::HttpClientError(429) => 0.05, // Light penalty for rate limit
+            FailureType::HttpClientError(_) => 0.15,
+            FailureType::HttpServerError(502) => 0.1,
+            FailureType::HttpServerError(503) => 0.1,
+            FailureType::HttpServerError(504) => 0.1,
+            FailureType::HttpServerError(_) => 0.15,
+            FailureType::NetworkError => 0.1,
+            FailureType::SslError => 0.2,
+        }
+    }
 }
 
 impl Default for ServerQualityScorer {
