@@ -1,6 +1,6 @@
 # Turbo CDN Default Configuration
 # This file contains the default settings for Turbo CDN
-# Last updated: 2025-12
+# Last updated: 2026-01
 
 [general]
 # Enable debug mode for verbose logging
@@ -11,7 +11,7 @@ debug = false
 default_region = "Global"
 
 # User agent string for HTTP requests
-user_agent = "turbo-cdn/0.5.0"
+user_agent = "turbo-cdn/0.6.1"
 
 # Enable URL mapping cache for faster repeated operations
 enable_url_cache = true
@@ -29,11 +29,11 @@ max_concurrent_downloads = 32
 # Chunk size for downloads in bytes (1MB for better concurrency)
 chunk_size = 1048576
 
-# Connection timeout in seconds
-timeout = 30
+# Connection timeout in seconds (increased for large files)
+timeout = 60
 
-# Maximum retry attempts for failed downloads
-retry_attempts = 3
+# Maximum retry attempts for failed downloads (increased for reliability)
+retry_attempts = 5
 
 # Enable adaptive chunking based on connection speed
 adaptive_chunking = true
@@ -95,16 +95,17 @@ ip_detection_timeout = 5
 auto_detect_region = true
 
 [testing]
-# Test URLs for connectivity and speed testing (updated 2025-12)
+# Test URLs for connectivity and speed testing (updated 2026-01)
 test_urls = [
     # GitHub releases (latest stable versions)
     "https://github.com/BurntSushi/ripgrep/releases/download/14.1.1/ripgrep-14.1.1-x86_64-pc-windows-msvc.zip",
     "https://github.com/sharkdp/fd/releases/download/v10.2.0/fd-v10.2.0-x86_64-pc-windows-msvc.zip",
     "https://github.com/sharkdp/bat/releases/download/v0.24.0/bat-v0.24.0-x86_64-pc-windows-msvc.zip",
 
-    # loonghao projects (our own tools)
-    "https://github.com/loonghao/vx/releases/download/v0.2.3/vx-x86_64-pc-windows-msvc.zip",
-    "https://github.com/loonghao/py2pyd/releases/download/v0.2.3/py2pyd-v0.2.3-cp312-cp312-win_amd64.whl",
+    # loonghao projects (our own tools - updated 2026-01)
+    "https://github.com/loonghao/vx/releases/download/vx-v0.6.8/vx-x86_64-pc-windows-msvc.zip",
+    "https://github.com/loonghao/auroraview/releases/download/auroraview-v0.3.32/auroraview-0.3.32-cp38-abi3-win_amd64.whl",
+    "https://github.com/loonghao/auroraview/releases/download/auroraview-v0.3.32/auroraview-cli-0.3.32-x86_64-pc-windows-msvc.zip",
 
     # jsDelivr CDN (latest versions)
     "https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js",
@@ -134,24 +135,29 @@ speed_test_sizes = [
 
 # -----------------------------------------------------------------------------
 # GitHub Releases - Primary rule for all regions
-# Verified working mirrors as of 2025-12
+# Verified working mirrors as of 2026-01
 # Priority order based on availability testing
 # -----------------------------------------------------------------------------
 [[url_mapping_rules]]
 name = "GitHub Releases - Primary"
 pattern = "^https://github\\.com/([^/]+)/([^/]+)/releases/download/([^/]+)/(.+)$"
 replacements = [
-    # Verified working proxies (2025-12) - ordered by reliability
+    # Tier 1: Most reliable proxies (2026-01 verified)
     "https://gh-proxy.com/https://github.com/$1/$2/releases/download/$3/$4",
     "https://ghproxy.net/https://github.com/$1/$2/releases/download/$3/$4",
     "https://ghfast.top/https://github.com/$1/$2/releases/download/$3/$4",
+    # Tier 2: Alternative proxies
     "https://ghproxy.homeboyc.cn/https://github.com/$1/$2/releases/download/$3/$4",
     "https://gh.api.99988866.xyz/https://github.com/$1/$2/releases/download/$3/$4",
     "https://ghproxy.cc/https://github.com/$1/$2/releases/download/$3/$4",
     "https://mirror.ghproxy.com/https://github.com/$1/$2/releases/download/$3/$4",
-    # Mirror sites
+    # Tier 3: Direct mirror sites
     "https://bgithub.xyz/$1/$2/releases/download/$3/$4",
     "https://kkgithub.com/$1/$2/releases/download/$3/$4",
+    "https://hub.gitmirror.com/https://github.com/$1/$2/releases/download/$3/$4",
+    # Tier 4: Additional mirrors
+    "https://github.moeyy.xyz/https://github.com/$1/$2/releases/download/$3/$4",
+    "https://ghps.cc/https://github.com/$1/$2/releases/download/$3/$4",
     # Original as final fallback
     "https://github.com/$1/$2/releases/download/$3/$4"
 ]
@@ -161,7 +167,7 @@ enabled = true
 
 # -----------------------------------------------------------------------------
 # GitHub Raw Files
-# Verified working mirrors as of 2025-12
+# Verified working mirrors as of 2026-01
 # -----------------------------------------------------------------------------
 [[url_mapping_rules]]
 name = "GitHub Raw Files"
@@ -171,6 +177,7 @@ replacements = [
     "https://ghproxy.net/https://raw.githubusercontent.com/$1/$2/$3/$4",
     "https://ghfast.top/https://raw.githubusercontent.com/$1/$2/$3/$4",
     "https://raw.gitmirror.com/$1/$2/$3/$4",
+    "https://raw.githubusercontents.com/$1/$2/$3/$4",
     "https://raw.githubusercontent.com/$1/$2/$3/$4"
 ]
 regions = ["Global", "China", "Asia", "Europe", "NorthAmerica", "AsiaPacific"]
@@ -179,7 +186,7 @@ enabled = true
 
 # -----------------------------------------------------------------------------
 # GitHub Archive (zip/tar.gz downloads)
-# Verified working mirrors as of 2025-12
+# Verified working mirrors as of 2026-01
 # -----------------------------------------------------------------------------
 [[url_mapping_rules]]
 name = "GitHub Archive"
@@ -188,6 +195,7 @@ replacements = [
     "https://gh-proxy.com/https://github.com/$1/$2/archive/$3",
     "https://ghproxy.net/https://github.com/$1/$2/archive/$3",
     "https://ghfast.top/https://github.com/$1/$2/archive/$3",
+    "https://hub.gitmirror.com/https://github.com/$1/$2/archive/$3",
     "https://github.com/$1/$2/archive/$3"
 ]
 regions = ["Global", "China", "Asia", "Europe", "NorthAmerica", "AsiaPacific"]
