@@ -89,10 +89,14 @@ turbo-cdn = "0.5"
 
 | Feature | 默认 | 描述 |
 |---------|------|------|
-| `rustls-tls` | ✅ | 使用 rustls 进行 TLS（跨平台）|
+| `rustls` | ✅ | 使用 rustls 进行 TLS（跨平台，无需 OpenSSL）|
 | `native-tls` | ❌ | 使用系统 TLS（Linux 上为 OpenSSL）|
 | `fast-hash` | ✅ | 使用 ahash 加速哈希 |
 | `high-performance` | ✅ | 启用所有性能优化 |
+
+::: tip reqwest 0.13 更新
+从 v0.7 开始，Turbo CDN 使用 reqwest 0.13，默认使用 rustls 作为 TLS 后端。这消除了 Linux 系统上的 OpenSSL 构建问题。
+:::
 
 ### 配置示例
 

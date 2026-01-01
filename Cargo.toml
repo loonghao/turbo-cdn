@@ -22,10 +22,11 @@ exclude = ["/.github/", "/tests/fixtures/", "*.md"]
 tokio = { version = "1.0", features = ["full", "fs"] }
 
 # HTTP client - optimized for performance and cross-platform compatibility
-reqwest = { version = "0.12", features = [
+# reqwest 0.13+ uses rustls as default TLS backend, solving OpenSSL build issues on Linux
+reqwest = { version = "0.13", features = [
     "json",
     "stream",
-    "rustls-tls",      # Use rustls instead of OpenSSL to avoid build issues
+    "rustls",          # rustls is now default TLS backend (renamed from rustls-tls in 0.13)
     "gzip",
     "brotli",
     "deflate",
@@ -113,8 +114,8 @@ pretty_assertions = "1.0"
 serial_test = "3.0"
 
 [features]
-default = ["rustls-tls", "fast-hash", "high-performance"]
-rustls-tls = ["reqwest/rustls-tls"]
+default = ["rustls", "fast-hash", "high-performance"]
+rustls = ["reqwest/rustls"]           # renamed from rustls-tls in reqwest 0.13
 native-tls = ["reqwest/native-tls"]
 fast-hash = ["ahash"]
 high-performance = []

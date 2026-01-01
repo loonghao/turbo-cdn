@@ -89,10 +89,14 @@ turbo-cdn = "0.5"
 
 | Feature | Default | Description |
 |---------|---------|-------------|
-| `rustls-tls` | ✅ | Use rustls for TLS (cross-platform) |
+| `rustls` | ✅ | Use rustls for TLS (cross-platform, no OpenSSL needed) |
 | `native-tls` | ❌ | Use system TLS (OpenSSL on Linux) |
 | `fast-hash` | ✅ | Use ahash for faster hashing |
 | `high-performance` | ✅ | Enable all performance optimizations |
+
+::: tip reqwest 0.13 Update
+Starting from v0.7, Turbo CDN uses reqwest 0.13 which makes rustls the default TLS backend. This eliminates OpenSSL build issues on Linux systems.
+:::
 
 ### Example Configurations
 

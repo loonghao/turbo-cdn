@@ -182,7 +182,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 | Feature | Default | Description |
 |---------|---------|-------------|
-| `rustls-tls` | ✅ | Use rustls for TLS |
+| `rustls` | ✅ | Use rustls for TLS (no OpenSSL needed) |
 | `native-tls` | ❌ | Use system TLS |
 | `fast-hash` | ✅ | Use ahash for faster hashing |
 | `high-performance` | ✅ | Enable all optimizations |
@@ -192,19 +192,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ```toml
 # Default (recommended)
 [dependencies]
-turbo-cdn = "0.5"
+turbo-cdn = "0.7"
 
 # With native TLS
 [dependencies]
-turbo-cdn = { version = "0.5", default-features = false, features = ["native-tls"] }
+turbo-cdn = { version = "0.7", default-features = false, features = ["native-tls"] }
 ```
 
 ## Version Compatibility
 
-| Turbo CDN | Rust | MSRV |
-|-----------|------|------|
-| 0.5.x | 1.70+ | 1.70 |
-| 0.4.x | 1.65+ | 1.65 |
+| Turbo CDN | Rust | MSRV | reqwest |
+|-----------|------|------|---------|
+| 0.7.x | 1.70+ | 1.70 | 0.13 |
+| 0.5.x-0.6.x | 1.70+ | 1.70 | 0.12 |
+| 0.4.x | 1.65+ | 1.65 | 0.11 |
 
 ## See Also
 
