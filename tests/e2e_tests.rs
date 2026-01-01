@@ -72,19 +72,31 @@ const MEDIUM_TEST_FILES: &[(&str, &str, u64)] = &[
     ),
 ];
 
-/// loonghao projects test files (our own tools)
+/// loonghao projects test files (our own tools - updated 2026-01)
 const LOONGHAO_TEST_FILES: &[(&str, &str, u64)] = &[
-    // vx - Universal tool executor (~3MB)
+    // vx - Universal tool executor v0.6.8 (~5.6MB)
     (
-        "https://github.com/loonghao/vx/releases/download/v0.2.3/vx-x86_64-pc-windows-msvc.zip",
+        "https://github.com/loonghao/vx/releases/download/vx-v0.6.8/vx-x86_64-pc-windows-msvc.zip",
         "vx-x86_64-pc-windows-msvc.zip",
-        2_500_000,
+        5_000_000,
     ),
-    // py2pyd - Python to pyd compiler (~500KB)
+    // auroraview - Python wheel (~4.2MB)
     (
-        "https://github.com/loonghao/py2pyd/releases/download/v0.2.3/py2pyd-v0.2.3-cp312-cp312-win_amd64.whl",
-        "py2pyd-v0.2.3-cp312-cp312-win_amd64.whl",
-        400_000,
+        "https://github.com/loonghao/auroraview/releases/download/auroraview-v0.3.32/auroraview-0.3.32-cp38-abi3-win_amd64.whl",
+        "auroraview-0.3.32-cp38-abi3-win_amd64.whl",
+        4_000_000,
+    ),
+    // auroraview-cli - CLI tool (~4.2MB)
+    (
+        "https://github.com/loonghao/auroraview/releases/download/auroraview-v0.3.32/auroraview-cli-0.3.32-x86_64-pc-windows-msvc.zip",
+        "auroraview-cli-0.3.32-x86_64-pc-windows-msvc.zip",
+        4_000_000,
+    ),
+    // auroraview-gallery - Large gallery app (~70MB)
+    (
+        "https://github.com/loonghao/auroraview/releases/download/auroraview-v0.3.32/auroraview-gallery-0.3.32-x86_64-pc-windows-msvc.zip",
+        "auroraview-gallery-0.3.32-x86_64-pc-windows-msvc.zip",
+        65_000_000,
     ),
 ];
 
@@ -866,32 +878,35 @@ async fn test_e2e_url_mapping_china_region() {
 // CDN Availability E2E Tests
 // ============================================================================
 
-/// Test CDN mirror availability
+/// Test CDN mirror availability (updated 2026-01)
 #[tokio::test]
 #[ignore = "Requires network access - tests multiple CDN mirrors"]
 async fn test_e2e_cdn_mirror_availability() {
     use std::time::Duration;
 
-    // CDN mirrors ordered by priority (based on 2025-12 testing)
+    // CDN mirrors ordered by priority (based on 2026-01 testing)
     let cdn_mirrors = [
-        ("gh-proxy.com", "https://gh-proxy.com/https://github.com/BurntSushi/ripgrep/releases/download/14.1.1/ripgrep-14.1.1-x86_64-pc-windows-msvc.zip"),
-        ("ghproxy.net", "https://ghproxy.net/https://github.com/BurntSushi/ripgrep/releases/download/14.1.1/ripgrep-14.1.1-x86_64-pc-windows-msvc.zip"),
-        ("ghfast.top", "https://ghfast.top/https://github.com/BurntSushi/ripgrep/releases/download/14.1.1/ripgrep-14.1.1-x86_64-pc-windows-msvc.zip"),
-        ("ghproxy.homeboyc.cn", "https://ghproxy.homeboyc.cn/https://github.com/BurntSushi/ripgrep/releases/download/14.1.1/ripgrep-14.1.1-x86_64-pc-windows-msvc.zip"),
-        ("gh.api.99988866.xyz", "https://gh.api.99988866.xyz/https://github.com/BurntSushi/ripgrep/releases/download/14.1.1/ripgrep-14.1.1-x86_64-pc-windows-msvc.zip"),
-        ("ghproxy.cc", "https://ghproxy.cc/https://github.com/BurntSushi/ripgrep/releases/download/14.1.1/ripgrep-14.1.1-x86_64-pc-windows-msvc.zip"),
-        ("mirror.ghproxy.com", "https://mirror.ghproxy.com/https://github.com/BurntSushi/ripgrep/releases/download/14.1.1/ripgrep-14.1.1-x86_64-pc-windows-msvc.zip"),
-        ("bgithub.xyz", "https://bgithub.xyz/BurntSushi/ripgrep/releases/download/14.1.1/ripgrep-14.1.1-x86_64-pc-windows-msvc.zip"),
-        ("kkgithub.com", "https://kkgithub.com/BurntSushi/ripgrep/releases/download/14.1.1/ripgrep-14.1.1-x86_64-pc-windows-msvc.zip"),
+        ("gh-proxy.com", "https://gh-proxy.com/https://github.com/loonghao/vx/releases/download/vx-v0.6.8/vx-x86_64-pc-windows-msvc.zip"),
+        ("ghproxy.net", "https://ghproxy.net/https://github.com/loonghao/vx/releases/download/vx-v0.6.8/vx-x86_64-pc-windows-msvc.zip"),
+        ("ghfast.top", "https://ghfast.top/https://github.com/loonghao/vx/releases/download/vx-v0.6.8/vx-x86_64-pc-windows-msvc.zip"),
+        ("ghproxy.homeboyc.cn", "https://ghproxy.homeboyc.cn/https://github.com/loonghao/vx/releases/download/vx-v0.6.8/vx-x86_64-pc-windows-msvc.zip"),
+        ("gh.api.99988866.xyz", "https://gh.api.99988866.xyz/https://github.com/loonghao/vx/releases/download/vx-v0.6.8/vx-x86_64-pc-windows-msvc.zip"),
+        ("ghproxy.cc", "https://ghproxy.cc/https://github.com/loonghao/vx/releases/download/vx-v0.6.8/vx-x86_64-pc-windows-msvc.zip"),
+        ("mirror.ghproxy.com", "https://mirror.ghproxy.com/https://github.com/loonghao/vx/releases/download/vx-v0.6.8/vx-x86_64-pc-windows-msvc.zip"),
+        ("bgithub.xyz", "https://bgithub.xyz/loonghao/vx/releases/download/vx-v0.6.8/vx-x86_64-pc-windows-msvc.zip"),
+        ("kkgithub.com", "https://kkgithub.com/loonghao/vx/releases/download/vx-v0.6.8/vx-x86_64-pc-windows-msvc.zip"),
+        ("hub.gitmirror.com", "https://hub.gitmirror.com/https://github.com/loonghao/vx/releases/download/vx-v0.6.8/vx-x86_64-pc-windows-msvc.zip"),
+        ("github.moeyy.xyz", "https://github.moeyy.xyz/https://github.com/loonghao/vx/releases/download/vx-v0.6.8/vx-x86_64-pc-windows-msvc.zip"),
+        ("ghps.cc", "https://ghps.cc/https://github.com/loonghao/vx/releases/download/vx-v0.6.8/vx-x86_64-pc-windows-msvc.zip"),
     ];
 
     let client = reqwest::Client::builder()
-        .timeout(Duration::from_secs(10))
+        .timeout(Duration::from_secs(15))
         .build()
         .expect("Failed to create HTTP client");
 
-    println!("CDN Mirror Availability Test:");
-    println!("==============================");
+    println!("CDN Mirror Availability Test (using loonghao/vx):");
+    println!("==================================================");
 
     let mut available_count = 0;
     for (name, url) in cdn_mirrors.iter() {
@@ -910,14 +925,71 @@ async fn test_e2e_cdn_mirror_availability() {
                 }
             }
             Err(e) => {
-                println!("  [ERR] {} - {:?} ({})", name, elapsed, e);
+                println!("  [ERR] {} - {:?} ({:?})", name, elapsed, e);
             }
         }
     }
 
     println!("\nAvailable: {}/{}", available_count, cdn_mirrors.len());
 
-    // At least some mirrors should be available
+    // At least 30% of mirrors should be available for reliability
+    let min_required = cdn_mirrors.len() / 3;
+    assert!(
+        available_count >= min_required,
+        "At least {} CDN mirrors should be available, got {}",
+        min_required,
+        available_count
+    );
+}
+
+/// Test CDN mirror availability for auroraview
+#[tokio::test]
+#[ignore = "Requires network access - tests multiple CDN mirrors"]
+async fn test_e2e_cdn_mirror_availability_auroraview() {
+    use std::time::Duration;
+
+    // Test with auroraview releases
+    let cdn_mirrors = [
+        ("gh-proxy.com", "https://gh-proxy.com/https://github.com/loonghao/auroraview/releases/download/auroraview-v0.3.32/auroraview-0.3.32-cp38-abi3-win_amd64.whl"),
+        ("ghproxy.net", "https://ghproxy.net/https://github.com/loonghao/auroraview/releases/download/auroraview-v0.3.32/auroraview-0.3.32-cp38-abi3-win_amd64.whl"),
+        ("ghfast.top", "https://ghfast.top/https://github.com/loonghao/auroraview/releases/download/auroraview-v0.3.32/auroraview-0.3.32-cp38-abi3-win_amd64.whl"),
+        ("ghproxy.homeboyc.cn", "https://ghproxy.homeboyc.cn/https://github.com/loonghao/auroraview/releases/download/auroraview-v0.3.32/auroraview-0.3.32-cp38-abi3-win_amd64.whl"),
+        ("mirror.ghproxy.com", "https://mirror.ghproxy.com/https://github.com/loonghao/auroraview/releases/download/auroraview-v0.3.32/auroraview-0.3.32-cp38-abi3-win_amd64.whl"),
+    ];
+
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(15))
+        .build()
+        .expect("Failed to create HTTP client");
+
+    println!("CDN Mirror Availability Test (using loonghao/auroraview):");
+    println!("==========================================================");
+
+    let mut available_count = 0;
+    for (name, url) in cdn_mirrors.iter() {
+        let start = Instant::now();
+        let result = client.head(*url).send().await;
+        let elapsed = start.elapsed();
+
+        match result {
+            Ok(response) => {
+                let status = response.status();
+                if status.is_success() || status.as_u16() == 302 || status.as_u16() == 301 {
+                    println!("  [OK] {} - {:?} ({})", name, elapsed, status);
+                    available_count += 1;
+                } else {
+                    println!("  [FAIL] {} - {:?} ({})", name, elapsed, status);
+                }
+            }
+            Err(e) => {
+                println!("  [ERR] {} - {:?} ({:?})", name, elapsed, e);
+            }
+        }
+    }
+
+    println!("\nAvailable: {}/{}", available_count, cdn_mirrors.len());
+
+    // At least one mirror should be available
     assert!(
         available_count > 0,
         "At least one CDN mirror should be available"
@@ -1245,7 +1317,7 @@ async fn test_e2e_concurrency_benchmark() {
 // loonghao Projects E2E Tests
 // ============================================================================
 
-/// Test downloading vx (Universal tool executor)
+/// Test downloading vx (Universal tool executor) v0.6.8
 #[tokio::test]
 #[ignore = "Requires network access"]
 async fn test_e2e_download_vx() {
@@ -1254,6 +1326,8 @@ async fn test_e2e_download_vx() {
         .with_auto_detect_region(false)
         .with_region(Region::Global)
         .with_max_concurrent_downloads(16)
+        .with_timeout(120)
+        .with_retry_attempts(5)
         .build()
         .await
         .expect("Failed to create TurboCdn");
@@ -1282,15 +1356,17 @@ async fn test_e2e_download_vx() {
     assert!(verify_download(&output_path, min_size));
 }
 
-/// Test downloading py2pyd
+/// Test downloading auroraview Python wheel
 #[tokio::test]
 #[ignore = "Requires network access"]
-async fn test_e2e_download_py2pyd() {
+async fn test_e2e_download_auroraview_wheel() {
     let temp_dir = create_temp_dir();
     let cdn = TurboCdn::builder()
         .with_auto_detect_region(false)
         .with_region(Region::Global)
         .with_max_concurrent_downloads(16)
+        .with_timeout(120)
+        .with_retry_attempts(5)
         .build()
         .await
         .expect("Failed to create TurboCdn");
@@ -1305,12 +1381,95 @@ async fn test_e2e_download_py2pyd() {
         .expect("Download failed");
     let elapsed = start.elapsed();
 
-    println!("py2pyd Download:");
+    println!("auroraview Wheel Download:");
     println!("  File: {}", filename);
     println!(
-        "  Size: {} bytes ({:.2} KB)",
+        "  Size: {} bytes ({:.2} MB)",
         result.size,
-        result.size as f64 / 1024.0
+        result.size as f64 / 1024.0 / 1024.0
+    );
+    println!("  Time: {:?}", elapsed);
+    println!("  Speed: {}", format_speed(result.speed));
+    println!("  CDN URL: {}", result.url);
+
+    assert!(verify_download(&output_path, min_size));
+}
+
+/// Test downloading auroraview CLI
+#[tokio::test]
+#[ignore = "Requires network access"]
+async fn test_e2e_download_auroraview_cli() {
+    let temp_dir = create_temp_dir();
+    let cdn = TurboCdn::builder()
+        .with_auto_detect_region(false)
+        .with_region(Region::Global)
+        .with_max_concurrent_downloads(16)
+        .with_timeout(120)
+        .with_retry_attempts(5)
+        .build()
+        .await
+        .expect("Failed to create TurboCdn");
+
+    let (url, filename, min_size) = LOONGHAO_TEST_FILES[2];
+    let output_path = temp_dir.path().join(filename);
+
+    let start = Instant::now();
+    let result = cdn
+        .download_to_path(url, &output_path)
+        .await
+        .expect("Download failed");
+    let elapsed = start.elapsed();
+
+    println!("auroraview CLI Download:");
+    println!("  File: {}", filename);
+    println!(
+        "  Size: {} bytes ({:.2} MB)",
+        result.size,
+        result.size as f64 / 1024.0 / 1024.0
+    );
+    println!("  Time: {:?}", elapsed);
+    println!("  Speed: {}", format_speed(result.speed));
+    println!("  CDN URL: {}", result.url);
+
+    assert!(verify_download(&output_path, min_size));
+}
+
+/// Test downloading auroraview Gallery (large file ~70MB)
+#[tokio::test]
+#[ignore = "Requires network access - downloads ~70MB"]
+async fn test_e2e_download_auroraview_gallery() {
+    let temp_dir = create_temp_dir();
+    let cdn = TurboCdn::builder()
+        .with_auto_detect_region(false)
+        .with_region(Region::Global)
+        .with_max_concurrent_downloads(32)
+        .with_chunk_size(1024 * 1024) // 1MB chunks
+        .with_adaptive_chunking(true)
+        .with_timeout(300) // 5 minutes for large file
+        .with_retry_attempts(5)
+        .build()
+        .await
+        .expect("Failed to create TurboCdn");
+
+    let (url, filename, min_size) = LOONGHAO_TEST_FILES[3];
+    let output_path = temp_dir.path().join(filename);
+
+    println!("Starting large file download: {}", filename);
+    println!("Expected size: ~{} MB", min_size / 1024 / 1024);
+
+    let start = Instant::now();
+    let result = cdn
+        .download_to_path(url, &output_path)
+        .await
+        .expect("Large file download failed");
+    let elapsed = start.elapsed();
+
+    println!("\nauroraview Gallery Download Complete:");
+    println!("  File: {}", filename);
+    println!(
+        "  Size: {} bytes ({:.2} MB)",
+        result.size,
+        result.size as f64 / 1024.0 / 1024.0
     );
     println!("  Time: {:?}", elapsed);
     println!("  Speed: {}", format_speed(result.speed));
@@ -1328,6 +1487,8 @@ async fn test_e2e_download_loonghao_projects() {
         .with_auto_detect_region(false)
         .with_region(Region::Global)
         .with_max_concurrent_downloads(16)
+        .with_timeout(300) // 5 minutes for large files
+        .with_retry_attempts(5)
         .build()
         .await
         .expect("Failed to create TurboCdn");
@@ -1337,6 +1498,8 @@ async fn test_e2e_download_loonghao_projects() {
 
     let mut total_size = 0u64;
     let mut total_time = std::time::Duration::ZERO;
+    let mut success_count = 0;
+    let mut fail_count = 0;
 
     for (url, filename, min_size) in LOONGHAO_TEST_FILES.iter() {
         let output_path = temp_dir.path().join(*filename);
@@ -1349,22 +1512,30 @@ async fn test_e2e_download_loonghao_projects() {
             Ok(r) => {
                 total_size += r.size;
                 total_time += elapsed;
+                success_count += 1;
                 println!(
-                    "  {} - {:.2} MB in {:?} ({})",
+                    "  [OK] {} - {:.2} MB in {:?} ({})",
                     filename,
                     r.size as f64 / 1024.0 / 1024.0,
                     elapsed,
                     format_speed(r.speed)
                 );
+                println!("       CDN: {}", r.url);
                 assert!(verify_download(&output_path, *min_size));
             }
             Err(e) => {
-                println!("  {} - FAILED: {:?}", filename, e);
+                fail_count += 1;
+                println!("  [FAIL] {} - {:?}", filename, e);
             }
         }
     }
 
-    let overall_speed = total_size as f64 / total_time.as_secs_f64();
+    let overall_speed = if total_time.as_secs_f64() > 0.0 {
+        total_size as f64 / total_time.as_secs_f64()
+    } else {
+        0.0
+    };
+
     println!("\nSummary:");
     println!(
         "  Total size: {:.2} MB",
@@ -1372,6 +1543,14 @@ async fn test_e2e_download_loonghao_projects() {
     );
     println!("  Total time: {:?}", total_time);
     println!("  Overall speed: {}", format_speed(overall_speed));
+    println!("  Success: {}/{}", success_count, LOONGHAO_TEST_FILES.len());
+    println!("  Failed: {}", fail_count);
+
+    // At least 75% should succeed
+    assert!(
+        success_count >= LOONGHAO_TEST_FILES.len() * 3 / 4,
+        "At least 75% of downloads should succeed"
+    );
 }
 
 /// Test URL mapping for loonghao projects
