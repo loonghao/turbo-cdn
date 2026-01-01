@@ -146,7 +146,7 @@ async fn main() {
 
 | Feature | 默认 | 描述 |
 |---------|-----|------|
-| `rustls-tls` | ✅ | 使用 rustls 进行 TLS |
+| `rustls` | ✅ | 使用 rustls 进行 TLS（无需 OpenSSL）|
 | `native-tls` | ❌ | 使用系统 TLS |
 | `fast-hash` | ✅ | 使用 ahash 加速哈希 |
 | `high-performance` | ✅ | 启用所有性能优化 |
@@ -156,12 +156,20 @@ async fn main() {
 ```toml
 # 默认（推荐）
 [dependencies]
-turbo-cdn = "0.5"
+turbo-cdn = "0.7"
 
 # 使用原生 TLS
 [dependencies]
-turbo-cdn = { version = "0.5", default-features = false, features = ["native-tls"] }
+turbo-cdn = { version = "0.7", default-features = false, features = ["native-tls"] }
 ```
+
+## 版本兼容性
+
+| Turbo CDN | Rust | MSRV | reqwest |
+|-----------|------|------|---------|
+| 0.7.x | 1.70+ | 1.70 | 0.13 |
+| 0.5.x-0.6.x | 1.70+ | 1.70 | 0.12 |
+| 0.4.x | 1.65+ | 1.65 | 0.11 |
 
 ## 另请参阅
 
