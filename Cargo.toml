@@ -22,7 +22,7 @@ exclude = ["/.github/", "/tests/fixtures/", "*.md"]
 tokio = { version = "1.0", features = ["full", "fs"] }
 
 # HTTP client - optimized for performance and cross-platform compatibility
-reqwest = { version = "0.12", features = [
+reqwest = { version = "0.13", features = [
     "json",
     "stream",
     "rustls-tls",      # Use rustls instead of OpenSSL to avoid build issues
