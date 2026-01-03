@@ -75,6 +75,26 @@ async fn main() -> turbo_cdn::Result<()> {
 }
 ```
 
+### Feature Flags
+
+```toml
+[dependencies]
+# Default: includes self-update for CLI binary
+turbo-cdn = "0.7"
+
+# Library usage without self-update (avoids lzma-sys conflict)
+turbo-cdn = { version = "0.7", default-features = false, features = ["rustls", "fast-hash", "high-performance"] }
+```
+
+| Feature | Default | Description |
+|---------|---------|-------------|
+| `rustls` | Yes | Use rustls for TLS (recommended) |
+| `native-tls` | No | Use native TLS instead of rustls |
+| `fast-hash` | Yes | Use ahash for faster hashing |
+| `high-performance` | Yes | Enable high-performance optimizations |
+| `self-update` | Yes | CLI self-update functionality (optional for library usage) |
+```
+
 ## 📊 Supported Package Managers
 
 | Package Manager | Mirrors | Regions |

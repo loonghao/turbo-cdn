@@ -98,8 +98,9 @@ brotli = "8.0"
 # Network performance monitoring
 ping = "0.7"
 
-# Self-update functionality
-self_update = { version = "0.42", default-features = false, features = ["archive-tar", "archive-zip", "compression-flate2", "compression-zip-deflate", "rustls"] }
+# Self-update functionality (optional, only needed for CLI binary)
+# Made optional to avoid lzma-sys conflict when used as a library
+self_update = { version = "0.42", default-features = false, features = ["archive-tar", "archive-zip", "compression-flate2", "compression-zip-deflate", "rustls"], optional = true }
 
 [dev-dependencies]
 # Testing
@@ -114,11 +115,12 @@ pretty_assertions = "1.0"
 serial_test = "3.0"
 
 [features]
-default = ["rustls", "fast-hash", "high-performance"]
+default = ["rustls", "fast-hash", "high-performance", "self-update"]
 rustls = ["reqwest/rustls"]           # renamed from rustls-tls in reqwest 0.13
 native-tls = ["reqwest/native-tls"]
 fast-hash = ["ahash"]
 high-performance = []
+self-update = ["dep:self_update"]     # optional self-update functionality for CLI
 
 
 [profile.release]

@@ -53,6 +53,7 @@ enum Commands {
     /// Show performance statistics
     Stats,
     /// Update turbo-cdn to the latest version
+    #[cfg(feature = "self-update")]
     #[command(alias = "upgrade")]
     SelfUpdate {
         /// Check for updates without installing
@@ -90,6 +91,7 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
         Commands::Stats => {
             handle_stats_command().await?;
         }
+        #[cfg(feature = "self-update")]
         Commands::SelfUpdate { check } => {
             handle_self_update_command(check).await?;
         }
@@ -326,6 +328,7 @@ async fn handle_stats_command() -> std::result::Result<(), Box<dyn std::error::E
     Ok(())
 }
 
+#[cfg(feature = "self-update")]
 async fn handle_self_update_command(
     check_only: bool,
 ) -> std::result::Result<(), Box<dyn std::error::Error>> {
