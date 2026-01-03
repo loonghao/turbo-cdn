@@ -75,6 +75,26 @@ async fn main() -> turbo_cdn::Result<()> {
 }
 ```
 
+### Feature 标志
+
+```toml
+[dependencies]
+# 默认：包含 CLI 的自更新功能
+turbo-cdn = "0.7"
+
+# 库使用时不包含 self-update（避免 lzma-sys 冲突）
+turbo-cdn = { version = "0.7", default-features = false, features = ["rustls", "fast-hash", "high-performance"] }
+```
+
+| Feature | 默认 | 描述 |
+|---------|------|------|
+| `rustls` | 是 | 使用 rustls 进行 TLS（推荐） |
+| `native-tls` | 否 | 使用原生 TLS 替代 rustls |
+| `fast-hash` | 是 | 使用 ahash 加速哈希 |
+| `high-performance` | 是 | 启用高性能优化 |
+| `self-update` | 是 | CLI 自更新功能（库使用时可选） |
+```
+
 ## 📊 支持的包管理器
 
 | 包管理器 | 镜像数 | 区域 |
