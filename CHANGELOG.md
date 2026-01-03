@@ -55,6 +55,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - improve code quality and remove code smells
 ## [Unreleased]
 
+## [0.7.1](https://github.com/loonghao/turbo-cdn/compare/v0.7.0...v0.7.1) - 2026-01-03
+
+### Added
+
+- make self_update optional
+
 ## [0.7.0](https://github.com/loonghao/turbo-cdn/compare/v0.6.1...v0.7.0) - 2026-01-01
 
 ### Added
