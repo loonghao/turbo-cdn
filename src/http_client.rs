@@ -29,7 +29,7 @@ impl HttpClient {
     pub fn new(timeout: Duration) -> Result<Self> {
         // Initialize rustls provider before creating reqwest client
         crate::init_rustls_provider();
-        
+
         let client = reqwest::Client::builder()
             .timeout(timeout)
             .tcp_keepalive(Duration::from_secs(60))

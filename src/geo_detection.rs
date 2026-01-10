@@ -65,7 +65,7 @@ impl GeoDetector {
     pub fn new(config: TurboCdnConfig) -> Self {
         // Initialize rustls provider before creating reqwest client
         crate::init_rustls_provider();
-        
+
         let timeout = Duration::from_secs(config.geo_detection.ip_detection_timeout);
         let client = reqwest::Client::builder()
             .timeout(timeout)
