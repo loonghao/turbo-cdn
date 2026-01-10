@@ -55,6 +55,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - improve code quality and remove code smells
 ## [Unreleased]
 
+## [0.8.0](https://github.com/loonghao/turbo-cdn/compare/v0.7.1...v0.8.0) - 2026-01-10
+
+### Added
+
+- rustls ring backend and self-update opt-in
+
+### Fixed
+
+- remove extra blank lines after rustls init calls for fmt compliance
+- make init_rustls_provider public and add to ConcurrentDownloader
+- initialize rustls ring provider before creating reqwest clients
+
+### Other
+
+- *(deps)* update rust crate url to v2.5.8
+- *(deps)* update rust crate rustls to v0.23.36
+- *(deps)* update rust crate tokio-test to v0.4.5
+- *(deps)* update rust crate serde_json to v1.0.149
+
 ## [0.7.1](https://github.com/loonghao/turbo-cdn/compare/v0.7.0...v0.7.1) - 2026-01-03
 
 ### Added
