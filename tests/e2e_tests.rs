@@ -900,6 +900,9 @@ async fn test_e2e_cdn_mirror_availability() {
         ("ghps.cc", "https://ghps.cc/https://github.com/loonghao/vx/releases/download/vx-v0.6.8/vx-x86_64-pc-windows-msvc.zip"),
     ];
 
+    // Initialize rustls provider before creating reqwest client
+    turbo_cdn::init_rustls_provider();
+    
     let client = reqwest::Client::builder()
         .timeout(Duration::from_secs(15))
         .build()
@@ -957,6 +960,9 @@ async fn test_e2e_cdn_mirror_availability_auroraview() {
         ("mirror.ghproxy.com", "https://mirror.ghproxy.com/https://github.com/loonghao/auroraview/releases/download/auroraview-v0.3.32/auroraview-0.3.32-cp38-abi3-win_amd64.whl"),
     ];
 
+    // Initialize rustls provider before creating reqwest client
+    turbo_cdn::init_rustls_provider();
+    
     let client = reqwest::Client::builder()
         .timeout(Duration::from_secs(15))
         .build()
@@ -1021,6 +1027,9 @@ async fn test_e2e_jsdelivr_alternatives_availability() {
         ),
     ];
 
+    // Initialize rustls provider before creating reqwest client
+    turbo_cdn::init_rustls_provider();
+    
     let client = reqwest::Client::builder()
         .timeout(Duration::from_secs(10))
         .build()

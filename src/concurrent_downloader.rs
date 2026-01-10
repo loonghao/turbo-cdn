@@ -80,6 +80,9 @@ impl ConcurrentDownloader {
 
     /// Create a new concurrent downloader with configuration
     pub fn with_config(config: &crate::config::TurboCdnConfig) -> Result<Self> {
+        // Initialize rustls provider before creating reqwest client
+        crate::init_rustls_provider();
+        
         let mut client_builder = Client::builder()
             .timeout(Duration::from_secs(config.performance.timeout))
             .user_agent(&config.general.user_agent)
