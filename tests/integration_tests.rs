@@ -196,13 +196,19 @@ fn test_server_tracker_integration() {
 /// Test URL mapper with different URL patterns
 #[test]
 fn test_url_mapper_patterns() {
-    let config = TurboCdnConfig::load().unwrap_or_default();
+    let config = TurboCdnConfig::load().expect("Failed to load default config");
+    println!(
+        "loaded {} url mapping rules",
+        config.url_mapping_rules.len()
+    );
+
     let mapper = UrlMapper::new(&config, Region::China).expect("Failed to create UrlMapper");
 
     // Test GitHub releases
+
     let github_url = "https://github.com/user/repo/releases/download/v1.0.0/file.zip";
     let mapped = mapper.map_url(github_url).expect("Failed to map URL");
-    assert!(mapped.len() > 1);
+    assert!(mapped.len() > 1, "mapped URLs: {:?}", mapped);
 
     // Test PyPI
     let pypi_url = "https://pypi.org/simple/package/";

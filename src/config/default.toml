@@ -234,7 +234,23 @@ priority = 10
 enabled = true
 
 # -----------------------------------------------------------------------------
+# Microsoft Visual Studio downloads
+# Provides a hook for future mirrors while keeping original URL as fallback
+# -----------------------------------------------------------------------------
+[[url_mapping_rules]]
+name = "Microsoft Visual Studio Downloads"
+pattern = "^https://download\\.visualstudio\\.microsoft\\.com/(.+)$"
+
+replacements = [
+    "https://download.visualstudio.microsoft.com/$1"
+]
+regions = ["Global", "China", "Asia", "Europe", "NorthAmerica", "AsiaPacific"]
+priority = 12
+enabled = true
+
+# -----------------------------------------------------------------------------
 # npm Registry - China
+
 # -----------------------------------------------------------------------------
 [[url_mapping_rules]]
 name = "npm Registry - China"

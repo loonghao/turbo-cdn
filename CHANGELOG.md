@@ -59,7 +59,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- make self_update optional
+- Microsoft Visual Studio download mapping rule while preserving original URL fallback
+- Self-update CLI command retained as opt-in feature flag
+
+### Changed
+
+- Move rustls to ring backend (`rustls-no-provider`) to drop `aws-lc-sys` / cmake / NASM toolchain requirements
+- Disable `self-update` in default feature set for library users; document opt-in CLI builds
+- Deduplicate mapped URLs to avoid repeating the original entry
+
 
 ## [0.7.0](https://github.com/loonghao/turbo-cdn/compare/v0.6.1...v0.7.0) - 2026-01-01
 

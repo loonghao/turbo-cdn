@@ -40,12 +40,17 @@ cargo install turbo-cdn
 ### With Specific Features
 
 ```bash
-# Default features (recommended)
+# Default (library-friendly: rustls ring backend, self-update off)
 cargo install turbo-cdn
 
-# With native TLS instead of rustls
-cargo install turbo-cdn --no-default-features --features native-tls
+# Enable CLI self-update
+cargo install turbo-cdn --features self-update
+
+# Prefer native TLS (e.g., Windows SChannel) with self-update
+cargo install turbo-cdn --no-default-features --features "native-tls,fast-hash,high-performance,self-update"
 ```
+
+
 
 ## From Source
 
@@ -82,37 +87,37 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-turbo-cdn = "0.5"
+# Library-friendly defaults (self-update off, rustls ring backend - no cmake/NASM needed)
+turbo-cdn = { version = "0.7", features = ["rustls", "fast-hash", "high-performance"] }
 ```
 
 ### Feature Flags
 
 | Feature | Default | Description |
 |---------|---------|-------------|
-| `rustls` | ✅ | Use rustls for TLS (cross-platform, no OpenSSL needed) |
-| `native-tls` | ❌ | Use system TLS (OpenSSL on Linux) |
+| `rustls` | ✅ | TLS via rustls (ring backend, no cmake/NASM toolchain required) |
+| `native-tls` | ❌ | Use system/native TLS instead of rustls |
 | `fast-hash` | ✅ | Use ahash for faster hashing |
 | `high-performance` | ✅ | Enable all performance optimizations |
+| `self-update` | ❌ | CLI self-update functionality (opt-in for binaries) |
 
-::: tip reqwest 0.13 Update
-Starting from v0.7, Turbo CDN uses reqwest 0.13 which makes rustls the default TLS backend. This eliminates OpenSSL build issues on Linux systems.
+::: tip rustls ring backend
+Starting from v0.7, Turbo CDN uses rustls with the ring backend (via `rustls-no-provider`), removing the `aws-lc-sys` toolchain requirement.
 :::
 
 ### Example Configurations
 
 ```toml
-# Default (recommended for most users)
-[dependencies]
-turbo-cdn = "0.5"
+# Default (library-friendly, self-update off)
+turbo-cdn = { version = "0.7", features = ["rustls", "fast-hash", "high-performance"] }
 
-# Minimal dependencies
-[dependencies]
-turbo-cdn = { version = "0.5", default-features = false }
+# CLI build with self-update
+turbo-cdn = { version = "0.7", default-features = false, features = ["rustls", "fast-hash", "high-performance", "self-update"] }
 
-# With native TLS
-[dependencies]
-turbo-cdn = { version = "0.5", default-features = false, features = ["native-tls"] }
+# Native TLS with self-update
+turbo-cdn = { version = "0.7", default-features = false, features = ["native-tls", "fast-hash", "high-performance", "self-update"] }
 ```
+
 
 ## Verification
 
@@ -134,11 +139,14 @@ turbo-cdn dl "https://github.com/BurntSushi/ripgrep/releases/download/14.1.1/rip
 cargo install turbo-cdn --force
 ```
 
-### Self-Update (Coming Soon)
+### Self-Update (opt-in feature)
+
+> Available when built with `--features self-update` or when using official CLI release binaries.
 
 ```bash
 turbo-cdn self-update
 ```
+
 
 ## Troubleshooting
 

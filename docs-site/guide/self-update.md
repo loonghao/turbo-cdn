@@ -1,6 +1,9 @@
 # Self Update
 
-Turbo CDN includes a built-in self-update feature to easily keep your installation up to date.
+Turbo CDN includes an opt-in self-update feature to keep your installation up to date.
+
+> Build with `--features self-update` (disabled by default for libraries) or use official CLI release binaries to enable this command.
+
 
 ## Usage
 
@@ -16,10 +19,11 @@ Example output:
 ```
 🔄 Turbo CDN - Self Update
 =========================
-Current version: v0.5.0
+Current version: v0.7.1
 
 🔍 Checking for updates...
-✨ New version available: v0.6.0
+✨ New version available: v0.7.2
+
 
 Run 'turbo-cdn self-update' to update.
 ```
@@ -42,14 +46,15 @@ Example output:
 ```
 🔄 Turbo CDN - Self Update
 =========================
-Current version: v0.5.0
+Current version: v0.7.1
 
 🔍 Checking for updates...
 Downloading...
 ✓ Download complete
 
-🎉 Successfully updated to v0.6.0
+🎉 Successfully updated to v0.7.2
    Please restart turbo-cdn to use the new version.
+
 ```
 
 ## How It Works

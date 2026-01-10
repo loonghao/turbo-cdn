@@ -178,7 +178,7 @@ impl UrlMapper {
                 // Generate replacement URLs
                 for template in &rule.replacements {
                     if let Ok(mapped_url) = Self::apply_template(template, &captures) {
-                        if mapped_url != original_url {
+                        if mapped_url != original_url && !mapped_urls.contains(&mapped_url) {
                             mapped_urls.push(mapped_url);
                         }
                     }
@@ -392,5 +392,21 @@ mod tests {
 
         assert_eq!(mapped_urls.len(), 1);
         assert_eq!(mapped_urls[0], original_url);
+    }
+
+    #[test]
+    fn test_microsoft_downloads_mapping_preserves_original() {
+        let config = TurboCdnConfig::default();
+        let mapper = UrlMapper::new(&config, Region::Global).unwrap();
+
+        let original_url = "https://download.visualstudio.microsoft.com/download/pr/9ae4c5e4-5c47-4a9d-8e4b-9e1d1efb5a0a/e9f8f84c3d4a9c9d4b4b5c7d/msvc.zip";
+        let mapped_urls = mapper.map_url(original_url).unwrap();
+
+        assert!(mapped_urls.contains(&original_url.to_string()));
+        let occurrences = mapped_urls
+            .iter()
+            .filter(|u| u.as_str() == original_url)
+            .count();
+        assert_eq!(occurrences, 1, "original URL should not be duplicated");
     }
 }

@@ -22,11 +22,11 @@ exclude = ["/.github/", "/tests/fixtures/", "*.md"]
 tokio = { version = "1.0", features = ["full", "fs"] }
 
 # HTTP client - optimized for performance and cross-platform compatibility
-# reqwest 0.13+ uses rustls as default TLS backend, solving OpenSSL build issues on Linux
-reqwest = { version = "0.13", features = [
+# Use rustls with native roots by default (ring backend to avoid aws-lc toolchain requirements)
+reqwest = { version = "0.13.1", features = [
     "json",
     "stream",
-    "rustls",          # rustls is now default TLS backend (renamed from rustls-tls in 0.13)
+    "rustls-no-provider", # use custom rustls provider (ring) to avoid aws-lc-sys toolchain
     "gzip",
     "brotli",
     "deflate",
@@ -34,6 +34,12 @@ reqwest = { version = "0.13", features = [
     "charset",         # Better charset handling
     "hickory-dns",     # Use hickory-dns (formerly trust-dns) for better DNS resolution
 ], default-features = false }
+
+# TLS stack: prefer ring backend to avoid cmake/NASM on Windows
+rustls = { version = "0.23.35", default-features = false, features = ["std", "logging", "tls12", "ring"] }
+rustls-webpki = { version = "0.103.8", default-features = false, features = ["std", "ring"] }
+
+
 
 # Serialization
 serde = { version = "1.0", features = ["derive"] }
@@ -115,12 +121,15 @@ pretty_assertions = "1.0"
 serial_test = "3.0"
 
 [features]
-default = ["rustls", "fast-hash", "high-performance", "self-update"]
-rustls = ["reqwest/rustls"]           # renamed from rustls-tls in reqwest 0.13
+# Default features are library-friendly: self-update is opt-in; rustls uses ring backend without aws-lc-sys
+default = ["rustls", "fast-hash", "high-performance"]
+rustls = ["reqwest/rustls-no-provider"]
 native-tls = ["reqwest/native-tls"]
 fast-hash = ["ahash"]
 high-performance = []
 self-update = ["dep:self_update"]     # optional self-update functionality for CLI
+
+
 
 
 [profile.release]

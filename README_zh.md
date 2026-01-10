@@ -79,33 +79,38 @@ async fn main() -> turbo_cdn::Result<()> {
 
 ```toml
 [dependencies]
-# 默认：包含 CLI 的自更新功能
-turbo-cdn = "0.7"
+# 默认库配置：关闭自更新，rustls 使用 ring 后端（无需 cmake/NASM）
+turbo-cdn = { version = "0.7", features = ["rustls", "fast-hash", "high-performance"] }
 
-# 库使用时不包含 self-update（避免 lzma-sys 冲突）
-turbo-cdn = { version = "0.7", default-features = false, features = ["rustls", "fast-hash", "high-performance"] }
+# CLI 版本启用自更新
+turbo-cdn = { version = "0.7", default-features = false, features = ["rustls", "fast-hash", "high-performance", "self-update"] }
+
+# 如需使用原生 TLS（Windows SChannel）
+turbo-cdn = { version = "0.7", default-features = false, features = ["native-tls", "fast-hash", "high-performance"] }
 ```
 
 | Feature | 默认 | 描述 |
 |---------|------|------|
-| `rustls` | 是 | 使用 rustls 进行 TLS（推荐） |
-| `native-tls` | 否 | 使用原生 TLS 替代 rustls |
+| `rustls` | 是 | 通过 rustls（ring 后端，无需 cmake/NASM）进行 TLS |
+| `native-tls` | 否 | 使用原生 TLS（SChannel/Secure Transport）替代 rustls |
 | `fast-hash` | 是 | 使用 ahash 加速哈希 |
 | `high-performance` | 是 | 启用高性能优化 |
-| `self-update` | 是 | CLI 自更新功能（库使用时可选） |
-```
+| `self-update` | 否 | CLI 自更新功能（按需开启） |
 
 ## 📊 支持的包管理器
+
 
 | 包管理器 | 镜像数 | 区域 |
 |---------|-------|------|
 | **GitHub** | 7 个镜像 | 中国、亚洲、全球 |
+| **Microsoft Visual Studio 下载** | 直连 + 可配置镜像 | 全球 |
 | **Python PyPI** | 清华、阿里云、豆瓣 | 中国 |
 | **Rust Crates** | 清华、USTC | 中国 |
 | **Go Modules** | goproxy.cn、阿里云 | 中国 |
 | **Docker Hub** | USTC、网易、Docker China | 中国 |
 | **Maven Central** | 阿里云、清华 | 中国 |
 | **jsDelivr** | 5 个全球 CDN 节点 | 全球 |
+
 
 ## 📖 文档
 
