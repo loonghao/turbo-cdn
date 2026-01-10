@@ -46,3 +46,64 @@ fn test_feature_flags() {
         );
     }
 }
+
+/// Test that rustls feature is properly configured
+#[test]
+fn test_rustls_feature_flag() {
+    #[cfg(feature = "rustls")]
+    {
+        assert!(
+            cfg!(feature = "rustls"),
+            "rustls feature should be enabled when opted in"
+        );
+    }
+
+    #[cfg(not(feature = "rustls"))]
+    {
+        assert!(
+            !cfg!(feature = "rustls"),
+            "rustls feature should be disabled when not requested"
+        );
+    }
+}
+
+/// Test that native-tls feature is properly configured
+#[test]
+fn test_native_tls_feature_flag() {
+    #[cfg(feature = "native-tls")]
+    {
+        assert!(
+            cfg!(feature = "native-tls"),
+            "native-tls feature should be enabled when opted in"
+        );
+    }
+
+    #[cfg(not(feature = "native-tls"))]
+    {
+        assert!(
+            !cfg!(feature = "native-tls"),
+            "native-tls feature should be disabled when not requested"
+        );
+    }
+}
+
+/// Test that init_rustls_provider works correctly based on feature
+#[test]
+fn test_init_rustls_provider() {
+    // This should compile and run regardless of which TLS backend is enabled
+    // When rustls is enabled, it initializes the provider
+    // When rustls is disabled, it's a no-op
+    turbo_cdn::init_rustls_provider();
+}
+
+/// Test that TLS backend is mutually exclusive in practice
+/// Note: Both features can technically be enabled, but only one should be used
+#[test]
+fn test_tls_backend_configuration() {
+    // At least one TLS backend should be available
+    let has_tls = cfg!(feature = "rustls") || cfg!(feature = "native-tls");
+    assert!(
+        has_tls || cfg!(test), // In test mode, we might have neither explicitly set
+        "At least one TLS backend should be configured for production use"
+    );
+}

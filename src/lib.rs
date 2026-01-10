@@ -35,15 +35,24 @@
 //! ```
 
 // Initialize rustls crypto provider once (required when using rustls-no-provider feature)
+#[cfg(feature = "rustls")]
 use std::sync::Once;
+#[cfg(feature = "rustls")]
 static INIT_RUSTLS: Once = Once::new();
 
 /// Initialize rustls crypto provider (ring backend)
 /// This must be called before creating any reqwest Client when using rustls-no-provider
+#[cfg(feature = "rustls")]
 pub fn init_rustls_provider() {
     INIT_RUSTLS.call_once(|| {
         let _ = rustls::crypto::ring::default_provider().install_default();
     });
+}
+
+/// No-op when rustls feature is disabled
+#[cfg(not(feature = "rustls"))]
+pub fn init_rustls_provider() {
+    // No-op: rustls is not enabled, using native-tls or other TLS backend
 }
 
 pub mod adaptive_concurrency;

@@ -91,18 +91,20 @@ turbo-cdn = { version = "0.8", features = ["rustls", "fast-hash", "high-performa
 # CLI 版本启用自更新
 turbo-cdn = { version = "0.8", default-features = false, features = ["rustls", "fast-hash", "high-performance", "self-update"] }
 
-# 如需使用原生 TLS（Windows SChannel）
+# 使用原生 TLS（Windows SChannel，macOS Secure Transport）- 不引入 rustls 依赖
 turbo-cdn = { version = "0.8", default-features = false, features = ["native-tls", "fast-hash", "high-performance"] }
 
 ```
 
 | Feature | 默认 | 描述 |
 |---------|------|------|
-| `rustls` | 是 | 通过 rustls（ring 后端，无需 cmake/NASM）进行 TLS |
-| `native-tls` | 否 | 使用原生 TLS（SChannel/Secure Transport）替代 rustls |
+| `rustls` | 是 | 通过 rustls（ring 后端，无需 cmake/NASM）进行 TLS。包含 `rustls` 和 `rustls-webpki` 依赖。 |
+| `native-tls` | 否 | 使用原生 TLS（Windows SChannel，macOS Secure Transport）。不会引入 rustls 相关依赖。 |
 | `fast-hash` | 是 | 使用 ahash 加速哈希 |
 | `high-performance` | 是 | 启用高性能优化 |
 | `self-update` | 否 | CLI 自更新功能（按需开启） |
+
+> **下游 crate 注意：** 使用 `native-tls` feature 时，`rustls` 和 `rustls-webpki` 不会作为依赖引入。这允许下游 crate 使用自己的 TLS 配置而不会产生冲突。
 
 ## 📊 支持的包管理器
 
