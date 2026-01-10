@@ -22,11 +22,10 @@ exclude = ["/.github/", "/tests/fixtures/", "*.md"]
 tokio = { version = "1.0", features = ["full", "fs"] }
 
 # HTTP client - optimized for performance and cross-platform compatibility
-# Use rustls with native roots by default (ring backend to avoid aws-lc toolchain requirements)
+# TLS backend is controlled by features: rustls (default) or native-tls
 reqwest = { version = "0.13.1", features = [
     "json",
     "stream",
-    "rustls-no-provider", # use custom rustls provider (ring) to avoid aws-lc-sys toolchain
     "gzip",
     "brotli",
     "deflate",
@@ -36,8 +35,9 @@ reqwest = { version = "0.13.1", features = [
 ], default-features = false }
 
 # TLS stack: prefer ring backend to avoid cmake/NASM on Windows
-rustls = { version = "0.23.35", default-features = false, features = ["std", "logging", "tls12", "ring"] }
-rustls-webpki = { version = "0.103.8", default-features = false, features = ["std", "ring"] }
+# Made optional so downstream crates using native-tls don't pull in rustls
+rustls = { version = "0.23.35", default-features = false, features = ["std", "logging", "tls12", "ring"], optional = true }
+rustls-webpki = { version = "0.103.8", default-features = false, features = ["std", "ring"], optional = true }
 
 
 
@@ -123,7 +123,9 @@ serial_test = "3.0"
 [features]
 # Default features are library-friendly: self-update is opt-in; rustls uses ring backend without aws-lc-sys
 default = ["rustls", "fast-hash", "high-performance"]
-rustls = ["reqwest/rustls-no-provider"]
+# rustls TLS backend (includes rustls and rustls-webpki dependencies)
+rustls = ["reqwest/rustls-no-provider", "dep:rustls", "dep:rustls-webpki"]
+# native-tls TLS backend (uses system TLS, no rustls dependencies)
 native-tls = ["reqwest/native-tls"]
 fast-hash = ["ahash"]
 high-performance = []

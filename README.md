@@ -91,18 +91,20 @@ turbo-cdn = { version = "0.8", features = ["rustls", "fast-hash", "high-performa
 # CLI build with self-update enabled
 turbo-cdn = { version = "0.8", default-features = false, features = ["rustls", "fast-hash", "high-performance", "self-update"] }
 
-# Windows-friendly native TLS (SChannel) if you prefer not to use rustls
+# Use native TLS (SChannel on Windows, Secure Transport on macOS) - no rustls dependencies
 turbo-cdn = { version = "0.8", default-features = false, features = ["native-tls", "fast-hash", "high-performance"] }
 
 ```
 
 | Feature | Default | Description |
 |---------|---------|-------------|
-| `rustls` | Yes | TLS via rustls (ring backend, no cmake/NASM toolchain required) |
-| `native-tls` | No | Use native TLS (SChannel/Secure Transport) instead of rustls |
+| `rustls` | Yes | TLS via rustls with ring backend (no cmake/NASM toolchain required). Includes `rustls` and `rustls-webpki` dependencies. |
+| `native-tls` | No | Use native TLS (SChannel on Windows, Secure Transport on macOS). Does NOT pull in rustls dependencies. |
 | `fast-hash` | Yes | Use ahash for faster hashing |
 | `high-performance` | Yes | Enable high-performance optimizations |
 | `self-update` | No | CLI self-update functionality (opt-in for binaries) |
+
+> **Note for downstream crates:** When using `native-tls` feature, `rustls` and `rustls-webpki` are NOT included as dependencies. This allows downstream crates to use their own TLS configuration without conflicts.
 
 ## 📊 Supported Package Managers
 
