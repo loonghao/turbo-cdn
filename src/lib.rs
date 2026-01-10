@@ -34,6 +34,18 @@
 //! }
 //! ```
 
+// Initialize rustls crypto provider once (required when using rustls-no-provider feature)
+use std::sync::Once;
+static INIT_RUSTLS: Once = Once::new();
+
+/// Initialize rustls crypto provider (ring backend)
+/// This must be called before creating any reqwest Client when using rustls-no-provider
+fn init_rustls_provider() {
+    INIT_RUSTLS.call_once(|| {
+        let _ = rustls::crypto::ring::default_provider().install_default();
+    });
+}
+
 pub mod adaptive_concurrency;
 pub mod adaptive_speed_controller;
 pub mod cdn_quality;

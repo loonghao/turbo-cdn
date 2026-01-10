@@ -314,6 +314,9 @@ impl SmartDownloader {
 
     /// Perform a range request to test download speed
     async fn perform_range_request(&self, url: &str, direct: bool) -> Result<u64> {
+        // Initialize rustls provider before creating reqwest client
+        crate::init_rustls_provider();
+        
         let client = reqwest::Client::new();
         let test_url = if direct {
             url.to_string()
