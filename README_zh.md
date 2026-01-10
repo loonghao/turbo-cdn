@@ -20,7 +20,8 @@
 - 🌐 **智能地理检测** - 自动区域检测，多 API 回退
 - 📊 **实时 CDN 质量评估** - 持续监控，动态排名
 - ⚡ **高性能架构** - mimalloc、reqwest + rustls、自适应并发
-- 🔗 **16+ CDN 镜像源** - GitHub、PyPI、Crates.io、npm、Docker Hub、Maven 等
+- 🔗 **多 CDN 镜像覆盖** - GitHub、PyPI、Crates.io、npm、Docker Hub、Maven 等
+
 - 🧠 **智能下载模式** - 基于性能测试自动选择方式
 - 🔄 **断点续传** - 强大的中断恢复能力
 
@@ -56,7 +57,12 @@ turbo-cdn dl "https://example.com/file.zip" --verbose
 turbo-cdn stats
 ```
 
+**可选自更新命令：** 安装时启用 `cargo install turbo-cdn --features self-update` 后，可使用 `turbo-cdn self-update` / `turbo-cdn upgrade`。
+
+**Stats 命令现状：** 目前输出就绪摘要，详细指标将在后续版本提供。
+
 ### 库使用
+
 
 ```rust
 use turbo_cdn::*;
@@ -80,13 +86,14 @@ async fn main() -> turbo_cdn::Result<()> {
 ```toml
 [dependencies]
 # 默认库配置：关闭自更新，rustls 使用 ring 后端（无需 cmake/NASM）
-turbo-cdn = { version = "0.7", features = ["rustls", "fast-hash", "high-performance"] }
+turbo-cdn = { version = "0.8", features = ["rustls", "fast-hash", "high-performance"] }
 
 # CLI 版本启用自更新
-turbo-cdn = { version = "0.7", default-features = false, features = ["rustls", "fast-hash", "high-performance", "self-update"] }
+turbo-cdn = { version = "0.8", default-features = false, features = ["rustls", "fast-hash", "high-performance", "self-update"] }
 
 # 如需使用原生 TLS（Windows SChannel）
-turbo-cdn = { version = "0.7", default-features = false, features = ["native-tls", "fast-hash", "high-performance"] }
+turbo-cdn = { version = "0.8", default-features = false, features = ["native-tls", "fast-hash", "high-performance"] }
+
 ```
 
 | Feature | 默认 | 描述 |

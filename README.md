@@ -20,7 +20,8 @@
 - 🌐 **Intelligent Geographic Detection** - Auto-region detection with multiple API fallbacks
 - 📊 **Real-time CDN Quality Assessment** - Continuous monitoring with dynamic ranking
 - ⚡ **High-Performance Architecture** - mimalloc, reqwest + rustls, adaptive concurrency
-- 🔗 **16+ CDN Mirror Sources** - GitHub, PyPI, Crates.io, npm, Docker Hub, Maven, and more
+- 🔗 **Multi-CDN Mirror Coverage** - GitHub, PyPI, Crates.io, npm, Docker Hub, Maven, and more
+
 - 🧠 **Smart Download Mode** - Automatic method selection based on performance testing
 - 🔄 **Resume Support** - Robust resume capability for interrupted downloads
 
@@ -56,7 +57,12 @@ turbo-cdn dl "https://example.com/file.zip" --verbose
 turbo-cdn stats
 ```
 
+**Optional self-update command:** enable during install with `cargo install turbo-cdn --features self-update` to use `turbo-cdn self-update` / `turbo-cdn upgrade`.
+
+**Stats command status:** currently prints a readiness summary; detailed metrics will ship in upcoming releases.
+
 ### Library Usage
+
 
 ```rust
 use turbo_cdn::*;
@@ -80,13 +86,14 @@ async fn main() -> turbo_cdn::Result<()> {
 ```toml
 [dependencies]
 # Library-friendly defaults (self-update off, rustls ring backend - no cmake/NASM needed)
-turbo-cdn = { version = "0.7", features = ["rustls", "fast-hash", "high-performance"] }
+turbo-cdn = { version = "0.8", features = ["rustls", "fast-hash", "high-performance"] }
 
 # CLI build with self-update enabled
-turbo-cdn = { version = "0.7", default-features = false, features = ["rustls", "fast-hash", "high-performance", "self-update"] }
+turbo-cdn = { version = "0.8", default-features = false, features = ["rustls", "fast-hash", "high-performance", "self-update"] }
 
 # Windows-friendly native TLS (SChannel) if you prefer not to use rustls
-turbo-cdn = { version = "0.7", default-features = false, features = ["native-tls", "fast-hash", "high-performance"] }
+turbo-cdn = { version = "0.8", default-features = false, features = ["native-tls", "fast-hash", "high-performance"] }
+
 ```
 
 | Feature | Default | Description |
