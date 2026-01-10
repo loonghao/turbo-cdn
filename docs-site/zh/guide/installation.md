@@ -40,12 +40,16 @@ cargo install turbo-cdn
 ### 指定 Features
 
 ```bash
-# 默认 features（推荐）
+# 默认（库友好：rustls 使用 ring 后端，关闭自更新）
 cargo install turbo-cdn
 
-# 使用原生 TLS 而非 rustls
-cargo install turbo-cdn --no-default-features --features native-tls
+# 启用 CLI 自更新
+cargo install turbo-cdn --features self-update
+
+# 偏好原生 TLS（如 Windows SChannel）并启用自更新
+cargo install turbo-cdn --no-default-features --features "native-tls,fast-hash,high-performance,self-update"
 ```
+
 
 ## 从源码
 
@@ -82,37 +86,37 @@ RUSTFLAGS="-C target-cpu=native" cargo build --release --profile dist
 
 ```toml
 [dependencies]
-turbo-cdn = "0.5"
+# 库默认：rustls 使用 ring 后端，无需 cmake/NASM，自更新关闭
+turbo-cdn = { version = "0.7", features = ["rustls", "fast-hash", "high-performance"] }
 ```
 
 ### Feature Flags
 
 | Feature | 默认 | 描述 |
 |---------|------|------|
-| `rustls` | ✅ | 使用 rustls 进行 TLS（跨平台，无需 OpenSSL）|
-| `native-tls` | ❌ | 使用系统 TLS（Linux 上为 OpenSSL）|
+| `rustls` | ✅ | 通过 rustls（ring 后端，无需 cmake/NASM）进行 TLS |
+| `native-tls` | ❌ | 使用系统/原生 TLS 替代 rustls |
 | `fast-hash` | ✅ | 使用 ahash 加速哈希 |
 | `high-performance` | ✅ | 启用所有性能优化 |
+| `self-update` | ❌ | CLI 自更新功能（按需开启） |
 
-::: tip reqwest 0.13 更新
-从 v0.7 开始，Turbo CDN 使用 reqwest 0.13，默认使用 rustls 作为 TLS 后端。这消除了 Linux 系统上的 OpenSSL 构建问题。
+::: tip rustls ring 后端
+从 v0.7 起，Turbo CDN 的 rustls 使用 ring 后端（`rustls-no-provider`），不再依赖 `aws-lc-sys` 构建链。
 :::
 
 ### 配置示例
 
 ```toml
-# 默认（推荐大多数用户）
-[dependencies]
-turbo-cdn = "0.5"
+# 默认（库友好，关闭自更新）
+turbo-cdn = { version = "0.7", features = ["rustls", "fast-hash", "high-performance"] }
 
-# 最小依赖
-[dependencies]
-turbo-cdn = { version = "0.5", default-features = false }
+# CLI 版本启用自更新
+turbo-cdn = { version = "0.7", default-features = false, features = ["rustls", "fast-hash", "high-performance", "self-update"] }
 
-# 使用原生 TLS
-[dependencies]
-turbo-cdn = { version = "0.5", default-features = false, features = ["native-tls"] }
+# 原生 TLS + 自更新
+turbo-cdn = { version = "0.7", default-features = false, features = ["native-tls", "fast-hash", "high-performance", "self-update"] }
 ```
+
 
 ## 验证
 
@@ -134,11 +138,14 @@ turbo-cdn dl "https://github.com/BurntSushi/ripgrep/releases/download/14.1.1/rip
 cargo install turbo-cdn --force
 ```
 
-### 自更新（即将推出）
+### 自更新（按需开启）
+
+> 仅在构建时启用 `--features self-update` 或使用官方发布的 CLI 二进制时可用。
 
 ```bash
 turbo-cdn self-update
 ```
+
 
 ## 故障排除
 

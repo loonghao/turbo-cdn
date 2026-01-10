@@ -29,12 +29,12 @@ async fn test_core_functionality_available() {
 /// Test that feature flags are properly configured
 #[test]
 fn test_feature_flags() {
-    // self-update is optional but enabled by default
+    // self-update is optional and disabled by default for library users
     #[cfg(feature = "self-update")]
     {
         assert!(
             cfg!(feature = "self-update"),
-            "self-update feature should be enabled"
+            "self-update feature should be enabled when opted in"
         );
     }
 
@@ -42,7 +42,7 @@ fn test_feature_flags() {
     {
         assert!(
             !cfg!(feature = "self-update"),
-            "self-update feature should be disabled"
+            "self-update feature should be disabled when not requested"
         );
     }
 }

@@ -79,33 +79,38 @@ async fn main() -> turbo_cdn::Result<()> {
 
 ```toml
 [dependencies]
-# Default: includes self-update for CLI binary
-turbo-cdn = "0.7"
+# Library-friendly defaults (self-update off, rustls ring backend - no cmake/NASM needed)
+turbo-cdn = { version = "0.7", features = ["rustls", "fast-hash", "high-performance"] }
 
-# Library usage without self-update (avoids lzma-sys conflict)
-turbo-cdn = { version = "0.7", default-features = false, features = ["rustls", "fast-hash", "high-performance"] }
+# CLI build with self-update enabled
+turbo-cdn = { version = "0.7", default-features = false, features = ["rustls", "fast-hash", "high-performance", "self-update"] }
+
+# Windows-friendly native TLS (SChannel) if you prefer not to use rustls
+turbo-cdn = { version = "0.7", default-features = false, features = ["native-tls", "fast-hash", "high-performance"] }
 ```
 
 | Feature | Default | Description |
 |---------|---------|-------------|
-| `rustls` | Yes | Use rustls for TLS (recommended) |
-| `native-tls` | No | Use native TLS instead of rustls |
+| `rustls` | Yes | TLS via rustls (ring backend, no cmake/NASM toolchain required) |
+| `native-tls` | No | Use native TLS (SChannel/Secure Transport) instead of rustls |
 | `fast-hash` | Yes | Use ahash for faster hashing |
 | `high-performance` | Yes | Enable high-performance optimizations |
-| `self-update` | Yes | CLI self-update functionality (optional for library usage) |
-```
+| `self-update` | No | CLI self-update functionality (opt-in for binaries) |
 
 ## 📊 Supported Package Managers
+
 
 | Package Manager | Mirrors | Regions |
 |----------------|---------|---------|
 | **GitHub** | 7 mirrors | China, Asia, Global |
+| **Microsoft Visual Studio downloads** | Direct + configurable mirrors | Global |
 | **Python PyPI** | Tsinghua, Aliyun, Douban | China |
 | **Rust Crates** | Tsinghua, USTC | China |
 | **Go Modules** | goproxy.cn, Aliyun | China |
 | **Docker Hub** | USTC, NetEase, Docker China | China |
 | **Maven Central** | Aliyun, Tsinghua | China |
 | **jsDelivr** | 5 global CDN nodes | Global |
+
 
 ## 📖 Documentation
 
