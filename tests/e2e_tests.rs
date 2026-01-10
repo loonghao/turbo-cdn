@@ -902,7 +902,6 @@ async fn test_e2e_cdn_mirror_availability() {
 
     // Initialize rustls provider before creating reqwest client
     turbo_cdn::init_rustls_provider();
-    
     let client = reqwest::Client::builder()
         .timeout(Duration::from_secs(15))
         .build()
@@ -962,7 +961,6 @@ async fn test_e2e_cdn_mirror_availability_auroraview() {
 
     // Initialize rustls provider before creating reqwest client
     turbo_cdn::init_rustls_provider();
-    
     let client = reqwest::Client::builder()
         .timeout(Duration::from_secs(15))
         .build()
@@ -1029,7 +1027,6 @@ async fn test_e2e_jsdelivr_alternatives_availability() {
 
     // Initialize rustls provider before creating reqwest client
     turbo_cdn::init_rustls_provider();
-    
     let client = reqwest::Client::builder()
         .timeout(Duration::from_secs(10))
         .build()
