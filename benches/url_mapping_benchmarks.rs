@@ -25,7 +25,7 @@ fn benchmark_url_mapping(c: &mut Criterion) {
 
     // Benchmark single URL mapping
     group.bench_function("single_url_mapping", |b| {
-        let mut mapper = UrlMapper::new(&config, Region::Global).unwrap();
+        let mapper = UrlMapper::new(&config, Region::Global).unwrap();
         b.iter(|| {
             let url = black_box(test_urls[0]);
             let _result = mapper.map_url(url).unwrap();
@@ -34,7 +34,7 @@ fn benchmark_url_mapping(c: &mut Criterion) {
 
     // Benchmark repeated URL mapping (cache performance)
     group.bench_function("repeated_url_mapping", |b| {
-        let mut mapper = UrlMapper::new(&config, Region::Global).unwrap();
+        let mapper = UrlMapper::new(&config, Region::Global).unwrap();
         let url = test_urls[0];
         b.iter(|| {
             let url = black_box(url);
@@ -44,7 +44,7 @@ fn benchmark_url_mapping(c: &mut Criterion) {
 
     // Benchmark multiple URL mapping
     group.bench_function("multiple_url_mapping", |b| {
-        let mut mapper = UrlMapper::new(&config, Region::Global).unwrap();
+        let mapper = UrlMapper::new(&config, Region::Global).unwrap();
         b.iter(|| {
             for url in black_box(&test_urls) {
                 let _result = mapper.map_url(url).unwrap();
@@ -63,7 +63,7 @@ fn benchmark_url_mapping(c: &mut Criterion) {
             BenchmarkId::new("region_mapping", format!("{:?}", region)),
             &region,
             |b, region| {
-                let mut mapper = UrlMapper::new(&config, region.clone()).unwrap();
+                let mapper = UrlMapper::new(&config, region.clone()).unwrap();
                 b.iter(|| {
                     for url in black_box(&test_urls) {
                         let _result = mapper.map_url(url).unwrap();
@@ -140,7 +140,7 @@ fn benchmark_cache_performance(c: &mut Criterion) {
 
     // Test cache hit rates
     group.bench_function("cache_hit_rate", |b| {
-        let mut mapper = UrlMapper::new(&config, Region::Global).unwrap();
+        let mapper = UrlMapper::new(&config, Region::Global).unwrap();
         let test_url = "https://github.com/BurntSushi/ripgrep/releases/download/14.1.1/ripgrep-14.1.1-x86_64-pc-windows-msvc.zip";
         // Prime the cache
         let _ = mapper.map_url(test_url).unwrap();
@@ -152,7 +152,7 @@ fn benchmark_cache_performance(c: &mut Criterion) {
 
     // Test cache miss performance
     group.bench_function("cache_miss_rate", |b| {
-        let mut mapper = UrlMapper::new(&config, Region::Global).unwrap();
+        let mapper = UrlMapper::new(&config, Region::Global).unwrap();
         let mut counter = 0;
 
         b.iter(|| {
@@ -173,7 +173,7 @@ fn benchmark_memory_usage(c: &mut Criterion) {
     // Test memory usage with many URLs
     group.bench_function("memory_usage_many_urls", |b| {
         b.iter(|| {
-            let mut mapper = UrlMapper::new(&config, Region::Global).unwrap();
+            let mapper = UrlMapper::new(&config, Region::Global).unwrap();
 
             // Process many different URLs to test memory usage
             for i in 0..1000 {
@@ -224,7 +224,7 @@ fn benchmark_performance_comparison(c: &mut Criterion) {
 
     // Benchmark optimized version (current implementation)
     group.bench_function("optimized_string_ops", |b| {
-        let mut mapper = UrlMapper::new(&config, Region::Global).unwrap();
+        let mapper = UrlMapper::new(&config, Region::Global).unwrap();
         b.iter(|| {
             for url in black_box(&test_urls) {
                 let _result = mapper.map_url(url).unwrap();

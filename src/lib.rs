@@ -84,6 +84,7 @@ pub mod server_quality_scorer;
 pub mod server_tracker;
 pub mod smart_chunking;
 pub mod smart_downloader;
+pub mod string_interner;
 pub mod url_mapper;
 
 // Note: Imports will be added as needed
