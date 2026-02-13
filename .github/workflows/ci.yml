@@ -31,7 +31,9 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Run clippy
-        run: cargo clippy --all-targets --all-features -- -D warnings
+        # Note: Cannot use --all-features because rustls-ring and rustls-aws-lc are mutually exclusive
+        # (both alias the same 'rustls' crate with different crypto backends)
+        run: cargo clippy --all-targets --features rustls,fast-hash,high-performance,self-update -- -D warnings
 
   # Testing across platforms
   test:
@@ -120,7 +122,8 @@ jobs:
         uses: taiki-e/install-action@cargo-llvm-cov
 
       - name: Generate code coverage
-        run: cargo llvm-cov --all-features --workspace --lcov --output-path lcov.info
+        # Note: Cannot use --all-features because rustls-ring and rustls-aws-lc are mutually exclusive
+        run: cargo llvm-cov --features rustls,fast-hash,high-performance,self-update --workspace --lcov --output-path lcov.info
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
