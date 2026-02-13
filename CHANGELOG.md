@@ -55,6 +55,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - improve code quality and remove code smells
 ## [Unreleased]
 
+## [0.8.2](https://github.com/loonghao/turbo-cdn/compare/v0.8.1...v0.8.2) - 2026-02-13
+
+### Added
+
+- add GitHub releases version listing API with CDN fallback and configurable TLS backends
+
+### Fixed
+
+- resolve clippy warnings and fmt issues
+- pin bytes >= 1.11.1 to fix RUSTSEC-2026-0007 security vulnerability
+- add pub mod memory_tracker and fix test API references
+- resolve CI compilation errors and clippy warnings
+- resolve CI issues - YAML syntax, security audit, and dependency updates
+- make rustls and rustls-webpki optional dependencies
+
+### Other
+
+- fix cargo fmt trailing whitespace in string_interner.rs
+- fix cargo fmt formatting issues
+- *(deps)* update rust crate regex to v1.12.3
+- release v0.8.2
+
 ## [0.8.2](https://github.com/loonghao/turbo-cdn/compare/v0.8.1...v0.8.2) - 2026-01-10
 
 ### Fixed
