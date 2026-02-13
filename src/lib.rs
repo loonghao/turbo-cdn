@@ -78,6 +78,7 @@ pub mod http_client;
 pub mod http_client_manager;
 pub mod load_balancer;
 pub mod logging;
+pub mod memory_tracker;
 pub mod mmap_writer;
 pub mod progress;
 pub mod server_quality_scorer;

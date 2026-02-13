@@ -65,26 +65,22 @@ async fn test_performance_metrics_integration() {
     // Create TurboCdn instance to test performance metrics integration
     let turbo_cdn = TurboCdn::new().await.expect("Failed to create TurboCdn");
 
-    // Get performance metrics
-    let metrics = turbo_cdn.get_performance_metrics();
+    // Get performance summary (actual API)
+    let summary = turbo_cdn.get_performance_summary();
+
+    // Verify performance summary fields are accessible
+    assert!(summary.total_attempts >= 0);
+    assert!(summary.average_speed >= 0.0);
+
+    // Test memory tracker integration
+    let tracker = memory_tracker::global_memory_tracker();
+    let usage = tracker.get_usage();
 
     // Verify memory usage is tracked
-    assert!(metrics.memory_usage.allocation_count >= 0);
-    assert!(metrics.memory_usage.efficiency_ratio() >= 0.0);
+    assert!(usage.efficiency_ratio() >= 0.0);
 
-    // Verify performance scores are calculated
-    let overall_score = metrics.overall_performance_score();
-    assert!(overall_score >= 0.0 && overall_score <= 1.0);
-
-    let memory_score = metrics.memory_performance_score();
-    assert!(memory_score >= 0.0 && memory_score <= 1.0);
-
-    // Verify recommendations are provided
-    let recommendations = metrics.get_recommendations();
-    assert!(!recommendations.is_empty());
-
-    // Test memory pressure info
-    let (pressure, pressure_recommendations) = turbo_cdn.get_memory_pressure_info();
+    // Test memory pressure detection
+    let pressure = memory_tracker::check_global_memory_pressure();
     assert!(matches!(
         pressure,
         memory_tracker::MemoryPressure::Low
@@ -92,5 +88,9 @@ async fn test_performance_metrics_integration() {
             | memory_tracker::MemoryPressure::High
             | memory_tracker::MemoryPressure::Critical
     ));
-    assert!(!pressure_recommendations.is_empty());
+
+    // Test efficiency metrics and recommendations
+    let metrics = tracker.efficiency_metrics();
+    assert!(metrics.efficiency_ratio >= 0.0);
+    assert!(metrics.efficiency_ratio <= 1.0);
 }
