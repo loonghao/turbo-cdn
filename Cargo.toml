@@ -21,6 +21,9 @@ exclude = ["/.github/", "/tests/fixtures/", "*.md"]
 # Async runtime
 tokio = { version = "1.0", features = ["full", "fs"] }
 
+# Bytes - pinned to fix RUSTSEC-2026-0007 (integer overflow in BytesMut::reserve)
+bytes = "1.11.1"
+
 # HTTP client - optimized for performance and cross-platform compatibility
 # TLS backend is controlled by features: rustls (default) or native-tls
 reqwest = { version = "0.13.1", features = [
