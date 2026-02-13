@@ -39,7 +39,7 @@ impl StringInterner {
     /// Intern a string, returning an Arc<str> for efficient sharing
     pub fn intern(&self, s: &str) -> Arc<str> {
         use std::sync::atomic::Ordering;
-        
+
         self.stats.total_requests.fetch_add(1, Ordering::Relaxed);
 
         // Check if already interned
@@ -71,7 +71,7 @@ impl StringInterner {
     /// Get cache statistics
     pub fn stats(&self) -> InternerStatistics {
         use std::sync::atomic::Ordering;
-        
+
         InternerStatistics {
             total_requests: self.stats.total_requests.load(Ordering::Relaxed),
             cache_hits: self.stats.cache_hits.load(Ordering::Relaxed),
@@ -115,7 +115,7 @@ pub struct InternerStatistics {
 }
 
 /// Global string interner instance for URL patterns and frequently used strings
-static GLOBAL_INTERNER: once_cell::sync::Lazy<StringInterner> = 
+static GLOBAL_INTERNER: once_cell::sync::Lazy<StringInterner> =
     once_cell::sync::Lazy::new(StringInterner::new);
 
 /// Convenience function to intern a string using the global interner
@@ -140,13 +140,13 @@ mod tests {
     #[test]
     fn test_string_interning() {
         let interner = StringInterner::new();
-        
+
         let s1 = interner.intern("test");
         let s2 = interner.intern("test");
-        
+
         // Should be the same Arc
         assert!(Arc::ptr_eq(&s1, &s2));
-        
+
         let stats = interner.stats();
         assert_eq!(stats.total_requests, 2);
         assert_eq!(stats.cache_hits, 1);
@@ -157,10 +157,10 @@ mod tests {
     #[test]
     fn test_cow_interning() {
         let interner = StringInterner::new();
-        
+
         let cow1 = interner.intern_cow("test");
         let cow2 = interner.intern_cow("test");
-        
+
         // Both should be borrowed variants pointing to the same data
         match (&cow1, &cow2) {
             (Cow::Borrowed(s1), Cow::Borrowed(s2)) => {
@@ -174,9 +174,9 @@ mod tests {
     fn test_global_interner() {
         let s1 = intern_string("global_test");
         let s2 = intern_string("global_test");
-        
+
         assert!(Arc::ptr_eq(&s1, &s2));
-        
+
         let stats = global_interner_stats();
         assert!(stats.total_requests >= 2);
     }
@@ -184,14 +184,14 @@ mod tests {
     #[test]
     fn test_interner_clear() {
         let interner = StringInterner::new();
-        
+
         interner.intern("test1");
         interner.intern("test2");
-        
+
         assert_eq!(interner.cache_size(), 2);
-        
+
         interner.clear();
-        
+
         assert_eq!(interner.cache_size(), 0);
         let stats = interner.stats();
         assert_eq!(stats.total_requests, 0);
