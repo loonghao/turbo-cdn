@@ -93,8 +93,11 @@ pub use concurrent_downloader::{ConcurrentDownloader, DownloadResult};
 pub use config::{Region, TurboCdnConfig};
 pub use constants::*;
 pub use error::{Result, TurboCdnError};
+pub use github_releases::{
+    AssetInfo, DataSource, FetchOptions, GitHubReleasesFetcher, ReleaseInfo, ReleasesResult,
+    VersionsResult,
+};
 pub use progress::{ConsoleProgressReporter, ProgressCallback, ProgressInfo, ProgressTracker};
-pub use github_releases::{GitHubReleasesFetcher, ReleaseInfo, AssetInfo, FetchOptions, DataSource, VersionsResult, ReleasesResult};
 pub use server_tracker::{PerformanceSummary, ServerStats};
 pub use url_mapper::UrlMapper;
 

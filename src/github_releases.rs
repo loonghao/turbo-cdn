@@ -370,12 +370,10 @@ impl GitHubReleasesFetcher {
                             source: DataSource::JsDelivr,
                         })
                     }
-                    Err(jsdelivr_err) => {
-                        Err(TurboCdnError::download(format!(
-                            "Failed to fetch releases for {}/{}: GitHub error: {}; jsDelivr error: {}",
-                            owner, repo, github_err, jsdelivr_err
-                        )))
-                    }
+                    Err(jsdelivr_err) => Err(TurboCdnError::download(format!(
+                        "Failed to fetch releases for {}/{}: GitHub error: {}; jsDelivr error: {}",
+                        owner, repo, github_err, jsdelivr_err
+                    ))),
                 }
             }
         }
@@ -396,21 +394,13 @@ impl GitHubReleasesFetcher {
     }
 
     /// Fetch versions from GitHub API
-    async fn fetch_versions_from_github(
-        &self,
-        owner: &str,
-        repo: &str,
-    ) -> Result<Vec<String>> {
+    async fn fetch_versions_from_github(&self, owner: &str, repo: &str) -> Result<Vec<String>> {
         let releases = self.list_releases_from_github(owner, repo).await?;
         Ok(releases.into_iter().map(|r| r.tag_name).collect())
     }
 
     /// Fetch detailed releases from GitHub API
-    async fn list_releases_from_github(
-        &self,
-        owner: &str,
-        repo: &str,
-    ) -> Result<Vec<ReleaseInfo>> {
+    async fn list_releases_from_github(&self, owner: &str, repo: &str) -> Result<Vec<ReleaseInfo>> {
         crate::init_rustls_provider();
 
         let url = format!(
@@ -459,10 +449,9 @@ impl GitHubReleasesFetcher {
             ));
         }
 
-        let github_releases: Vec<GitHubApiRelease> = response
-            .json()
-            .await
-            .map_err(|e| TurboCdnError::internal(format!("Failed to parse GitHub response: {e}")))?;
+        let github_releases: Vec<GitHubApiRelease> = response.json().await.map_err(|e| {
+            TurboCdnError::internal(format!("Failed to parse GitHub response: {e}"))
+        })?;
 
         // Convert and filter
         let releases: Vec<ReleaseInfo> = github_releases
@@ -502,17 +491,10 @@ impl GitHubReleasesFetcher {
     }
 
     /// Fetch versions from jsDelivr data API (fallback, no rate limits)
-    async fn fetch_versions_from_jsdelivr(
-        &self,
-        owner: &str,
-        repo: &str,
-    ) -> Result<Vec<String>> {
+    async fn fetch_versions_from_jsdelivr(&self, owner: &str, repo: &str) -> Result<Vec<String>> {
         crate::init_rustls_provider();
 
-        let url = format!(
-            "{}/package/gh/{}/{}",
-            JSDELIVR_DATA_API_BASE, owner, repo
-        );
+        let url = format!("{}/package/gh/{}/{}", JSDELIVR_DATA_API_BASE, owner, repo);
 
         debug!("Fetching versions from jsDelivr: {}", url);
 
@@ -529,16 +511,12 @@ impl GitHubReleasesFetcher {
         let status = response.status();
 
         if !status.is_success() {
-            return Err(TurboCdnError::from_status_code(
-                status.as_u16(),
-                url,
-            ));
+            return Err(TurboCdnError::from_status_code(status.as_u16(), url));
         }
 
-        let package_info: JsDelivrPackageResponse = response
-            .json()
-            .await
-            .map_err(|e| TurboCdnError::internal(format!("Failed to parse jsDelivr response: {e}")))?;
+        let package_info: JsDelivrPackageResponse = response.json().await.map_err(|e| {
+            TurboCdnError::internal(format!("Failed to parse jsDelivr response: {e}"))
+        })?;
 
         let mut versions: Vec<String> = package_info
             .versions
@@ -613,12 +591,16 @@ struct GitHubApiAsset {
 /// }
 /// ```
 pub async fn fetch_versions(owner: &str, repo: &str) -> Result<Vec<String>> {
-    GitHubReleasesFetcher::new().fetch_versions(owner, repo).await
+    GitHubReleasesFetcher::new()
+        .fetch_versions(owner, repo)
+        .await
 }
 
 /// List detailed release info for a GitHub repository (convenience function)
 pub async fn list_releases(owner: &str, repo: &str) -> Result<Vec<ReleaseInfo>> {
-    GitHubReleasesFetcher::new().list_releases(owner, repo).await
+    GitHubReleasesFetcher::new()
+        .list_releases(owner, repo)
+        .await
 }
 
 /// Fetch the latest release version (convenience function)
@@ -629,10 +611,7 @@ pub async fn fetch_latest_version(owner: &str, repo: &str) -> Result<String> {
 }
 
 /// Fetch versions with detailed source information (convenience function)
-pub async fn fetch_versions_with_source(
-    owner: &str,
-    repo: &str,
-) -> Result<VersionsResult> {
+pub async fn fetch_versions_with_source(owner: &str, repo: &str) -> Result<VersionsResult> {
     GitHubReleasesFetcher::new()
         .fetch_versions_with_source(owner, repo)
         .await
@@ -684,7 +663,9 @@ mod tests {
             assets: vec![AssetInfo {
                 name: "app-linux-x64.tar.gz".to_string(),
                 size: 1024,
-                browser_download_url: "https://github.com/owner/repo/releases/download/v1.0.0/app-linux-x64.tar.gz".to_string(),
+                browser_download_url:
+                    "https://github.com/owner/repo/releases/download/v1.0.0/app-linux-x64.tar.gz"
+                        .to_string(),
                 content_type: Some("application/gzip".to_string()),
                 download_count: 100,
             }],
