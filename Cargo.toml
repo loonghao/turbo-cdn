@@ -39,6 +39,10 @@ reqwest = { version = "0.13.1", features = [
 rustls = { version = "0.23.35", default-features = false, features = ["std", "logging", "tls12", "ring"], optional = true }
 rustls-webpki = { version = "0.103.8", default-features = false, features = ["std", "ring"], optional = true }
 
+# Alternative: rustls with aws-lc-rs backend (requires cmake + NASM)
+rustls-aws-lc = { package = "rustls", version = "0.23.35", default-features = false, features = ["std", "logging", "tls12", "aws-lc-rs"], optional = true }
+rustls-webpki-aws-lc = { package = "rustls-webpki", version = "0.103.8", default-features = false, features = ["std", "aws-lc-rs"], optional = true }
+
 
 
 # Serialization
@@ -123,9 +127,14 @@ serial_test = "3.0"
 [features]
 # Default features are library-friendly: self-update is opt-in; rustls uses ring backend without aws-lc-sys
 default = ["rustls", "fast-hash", "high-performance"]
-# rustls TLS backend (includes rustls and rustls-webpki dependencies)
-rustls = ["reqwest/rustls-no-provider", "dep:rustls", "dep:rustls-webpki"]
-# native-tls TLS backend (uses system TLS, no rustls dependencies)
+# rustls TLS backend using ring (default, no cmake/NASM required)
+# This is an alias for rustls-ring for backward compatibility
+rustls = ["rustls-ring"]
+# rustls with ring crypto backend (recommended for cross-compilation to aarch64-pc-windows-msvc)
+rustls-ring = ["reqwest/rustls-no-provider", "dep:rustls", "dep:rustls-webpki"]
+# rustls with aws-lc-rs crypto backend (requires cmake and NASM)
+rustls-aws-lc = ["reqwest/rustls-no-provider", "dep:rustls-aws-lc", "dep:rustls-webpki-aws-lc"]
+# native-tls TLS backend (uses system TLS: SChannel on Windows, no external deps)
 native-tls = ["reqwest/native-tls"]
 fast-hash = ["ahash"]
 high-performance = []

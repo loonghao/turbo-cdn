@@ -35,22 +35,30 @@
 //! ```
 
 // Initialize rustls crypto provider once (required when using rustls-no-provider feature)
-#[cfg(feature = "rustls")]
+#[cfg(any(feature = "rustls-ring", feature = "rustls-aws-lc"))]
 use std::sync::Once;
-#[cfg(feature = "rustls")]
+#[cfg(any(feature = "rustls-ring", feature = "rustls-aws-lc"))]
 static INIT_RUSTLS: Once = Once::new();
 
 /// Initialize rustls crypto provider (ring backend)
 /// This must be called before creating any reqwest Client when using rustls-no-provider
-#[cfg(feature = "rustls")]
+#[cfg(feature = "rustls-ring")]
 pub fn init_rustls_provider() {
     INIT_RUSTLS.call_once(|| {
         let _ = rustls::crypto::ring::default_provider().install_default();
     });
 }
 
+/// Initialize rustls crypto provider (aws-lc-rs backend)
+#[cfg(all(feature = "rustls-aws-lc", not(feature = "rustls-ring")))]
+pub fn init_rustls_provider() {
+    INIT_RUSTLS.call_once(|| {
+        let _ = rustls_aws_lc::crypto::aws_lc_rs::default_provider().install_default();
+    });
+}
+
 /// No-op when rustls feature is disabled
-#[cfg(not(feature = "rustls"))]
+#[cfg(not(any(feature = "rustls-ring", feature = "rustls-aws-lc")))]
 pub fn init_rustls_provider() {
     // No-op: rustls is not enabled, using native-tls or other TLS backend
 }
@@ -65,6 +73,7 @@ pub mod constants;
 pub mod dns_cache;
 pub mod error;
 pub mod geo_detection;
+pub mod github_releases;
 pub mod http_client;
 pub mod http_client_manager;
 pub mod load_balancer;
@@ -85,6 +94,7 @@ pub use config::{Region, TurboCdnConfig};
 pub use constants::*;
 pub use error::{Result, TurboCdnError};
 pub use progress::{ConsoleProgressReporter, ProgressCallback, ProgressInfo, ProgressTracker};
+pub use github_releases::{GitHubReleasesFetcher, ReleaseInfo, AssetInfo, FetchOptions, DataSource, VersionsResult, ReleasesResult};
 pub use server_tracker::{PerformanceSummary, ServerStats};
 pub use url_mapper::UrlMapper;
 
@@ -807,6 +817,39 @@ pub mod async_api {
         ) -> Result<DownloadResult> {
             let client = AsyncTurboCdn::new().await?;
             client.download_to_path_async(url, output_path).await
+        }
+
+        /// Fetch GitHub releases version list with automatic CDN fallback
+        ///
+        /// When GitHub API is rate-limited or unavailable, automatically falls back
+        /// to jsDelivr data API.
+        ///
+        /// # Example
+        /// ```rust,no_run
+        /// use turbo_cdn::async_api::quick;
+        ///
+        /// #[tokio::main]
+        /// async fn main() -> turbo_cdn::Result<()> {
+        ///     let versions = quick::fetch_github_versions("BurntSushi", "ripgrep").await?;
+        ///     println!("Latest: {}", versions[0]);
+        ///     Ok(())
+        /// }
+        /// ```
+        pub async fn fetch_github_versions(owner: &str, repo: &str) -> Result<Vec<String>> {
+            crate::github_releases::fetch_versions(owner, repo).await
+        }
+
+        /// List detailed GitHub release information with automatic CDN fallback
+        pub async fn list_github_releases(
+            owner: &str,
+            repo: &str,
+        ) -> Result<Vec<crate::github_releases::ReleaseInfo>> {
+            crate::github_releases::list_releases(owner, repo).await
+        }
+
+        /// Fetch the latest GitHub release version
+        pub async fn fetch_latest_github_version(owner: &str, repo: &str) -> Result<String> {
+            crate::github_releases::fetch_latest_version(owner, repo).await
         }
     }
 }
