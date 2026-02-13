@@ -68,7 +68,9 @@ jobs:
 
       - name: Run security audit
         # cargo audit exits with 0 if no vulnerabilities found (warnings are OK)
-        run: cargo audit
+        # Ignore RUSTSEC-2025-0119: number_prefix is unmaintained but pulled by self_update -> indicatif 0.17
+        # No upstream fix available yet (self_update 0.42 is latest)
+        run: cargo audit --ignore RUSTSEC-2025-0119
 
   # Formatting check
   rustfmt:

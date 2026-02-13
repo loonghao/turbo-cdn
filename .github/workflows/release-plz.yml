@@ -15,7 +15,7 @@ jobs:
     name: Release-plz release
     runs-on: ubuntu-latest
     # Skip if triggered by release-plz's own PR merge (prevents duplicate releases)
-    if: ${{ github.repository_owner == 'loonghao' && !startsWith(github.event.head_commit.message, 'chore: release') }}
+    if: "${{ github.repository_owner == 'loonghao' && !startsWith(github.event.head_commit.message, 'chore: release') }}"
     permissions:
       contents: write
     steps:
@@ -43,7 +43,7 @@ jobs:
     name: Release-plz PR
     runs-on: ubuntu-latest
     # Skip if triggered by release-plz's own PR merge (prevents duplicate PRs)
-    if: ${{ github.repository_owner == 'loonghao' && !startsWith(github.event.head_commit.message, 'chore: release') }}
+    if: "${{ github.repository_owner == 'loonghao' && !startsWith(github.event.head_commit.message, 'chore: release') }}"
     permissions:
       contents: write
       pull-requests: write
