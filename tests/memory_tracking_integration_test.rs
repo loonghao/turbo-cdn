@@ -69,7 +69,7 @@ async fn test_performance_metrics_integration() {
     let summary = turbo_cdn.get_performance_summary();
 
     // Verify performance summary fields are accessible
-    assert!(summary.total_attempts >= 0);
+    // Note: total_attempts is u32, so always >= 0
     assert!(summary.average_speed >= 0.0);
 
     // Test memory tracker integration

@@ -63,7 +63,7 @@ impl StringInterner {
         // This is safe because Arc<str> has static lifetime semantics
         unsafe {
             let ptr = Arc::as_ptr(&interned);
-            let static_str = &*(ptr as *const str);
+            let static_str = &*ptr;
             Cow::Borrowed(static_str)
         }
     }

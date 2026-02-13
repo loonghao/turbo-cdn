@@ -5,7 +5,7 @@ use turbo_cdn::url_mapper::UrlMapper;
 
 fn benchmark_url_mapping_operations(c: &mut Criterion) {
     let config = TurboCdnConfig::default();
-    let mut mapper = UrlMapper::new(&config, Region::Global).unwrap();
+    let mapper = UrlMapper::new(&config, Region::Global).unwrap();
 
     // Test URLs for benchmarking
     let test_urls = vec![
