@@ -3,12 +3,8 @@
 
 //! # Configuration System
 //!
-//! Robust, type-safe configuration management based on figment.
+//! Type-safe configuration management using TOML.
 
-use figment::{
-    providers::{Env, Format, Toml},
-    Figment,
-};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
@@ -231,27 +227,22 @@ impl Default for TestingConfig {
 }
 
 impl TurboCdnConfig {
-    /// Load configuration from multiple sources
-    #[allow(clippy::result_large_err)]
-    pub fn load() -> Result<Self, figment::Error> {
+    /// Load configuration from embedded default TOML.
+    pub fn load() -> Result<Self, toml::de::Error> {
         let config_content = include_str!("default.toml");
-
-        Figment::new()
-            .merge(Toml::string(config_content))
-            .merge(Env::prefixed("TURBO_CDN_").split("__"))
-            .extract()
+        toml::from_str(config_content)
     }
 
-    /// Create with custom config file
-    #[allow(clippy::result_large_err)]
-    pub fn load_from_file<P: Into<PathBuf>>(path: P) -> Result<Self, figment::Error> {
-        let config_content = include_str!("default.toml");
-
-        Figment::new()
-            .merge(Toml::string(config_content))
-            .merge(Toml::file(path.into()))
-            .merge(Env::prefixed("TURBO_CDN_").split("__"))
-            .extract()
+    /// Load configuration from a custom TOML file, falling back to defaults.
+    pub fn load_from_file<P: Into<PathBuf>>(path: P) -> Result<Self, Box<dyn std::error::Error>> {
+        let path = path.into();
+        if path.exists() {
+            let file_content = std::fs::read_to_string(&path)?;
+            Ok(toml::from_str(&file_content)?)
+        } else {
+            let config_content = include_str!("default.toml");
+            Ok(toml::from_str(config_content)?)
+        }
     }
 }
 
