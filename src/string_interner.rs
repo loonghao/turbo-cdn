@@ -7,7 +7,7 @@ use dashmap::DashMap;
 use std::borrow::Cow;
 use std::sync::Arc;
 
-/// High-performance string interner using Arc<str> for zero-copy sharing
+/// High-performance string interner using `Arc<str>` for zero-copy sharing
 #[derive(Debug, Default)]
 pub struct StringInterner {
     /// Cache of interned strings
@@ -36,7 +36,7 @@ impl StringInterner {
         }
     }
 
-    /// Intern a string, returning an Arc<str> for efficient sharing
+    /// Intern a string, returning an `Arc<str>` for efficient sharing
     pub fn intern(&self, s: &str) -> Arc<str> {
         use std::sync::atomic::Ordering;
 
@@ -56,7 +56,7 @@ impl StringInterner {
         arc_str
     }
 
-    /// Intern a string and return as Cow<str> for flexible usage
+    /// Intern a string and return as `Cow<str>` for flexible usage
     pub fn intern_cow(&self, s: &str) -> Cow<'static, str> {
         let interned = self.intern(s);
         // Convert Arc<str> to Cow<'static, str>
