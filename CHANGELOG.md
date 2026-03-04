@@ -59,6 +59,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- replace figment with toml 1.0 to resolve linker conflict ([#131](https://github.com/loonghao/turbo-cdn/pull/131))
+- escape type parameters in doc comments to resolve rustdoc warnings
+
+### Other
+
+- release v0.8.2
+
+## [0.8.3](https://github.com/loonghao/turbo-cdn/compare/v0.8.2...v0.8.3) - 2026-03-04
+
+### Fixed
+
 - escape type parameters in doc comments to resolve rustdoc warnings
 
 ## [0.8.2](https://github.com/loonghao/turbo-cdn/compare/v0.8.1...v0.8.2) - 2026-01-10
