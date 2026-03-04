@@ -55,6 +55,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - improve code quality and remove code smells
 ## [Unreleased]
 
+## [0.8.3](https://github.com/loonghao/turbo-cdn/compare/v0.8.2...v0.8.3) - 2026-03-04
+
+### Fixed
+
+- escape type parameters in doc comments to resolve rustdoc warnings
+
 ## [0.8.2](https://github.com/loonghao/turbo-cdn/compare/v0.8.1...v0.8.2) - 2026-01-10
 
 ### Fixed
