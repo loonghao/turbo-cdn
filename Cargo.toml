@@ -1,6 +1,6 @@
 [package]
 name = "turbo-cdn"
-version = "0.8.2"
+version = "0.8.3"
 edition = "2021"
 authors = ["Hal <hal.long@outlook.com>"]
 description = "Intelligent download accelerator with automatic CDN optimization and concurrent chunked downloads"
@@ -80,7 +80,7 @@ chrono = { version = "0.4", features = ["serde"] }
 tokio-util = { version = "0.7", features = ["io"] }
 
 # Configuration
-figment = { version = "0.10", features = ["toml", "env"] }
+toml = "1.0"
 
 # CLI
 clap = { version = "4.5", features = ["derive", "color"] }
