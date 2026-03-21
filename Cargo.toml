@@ -40,7 +40,7 @@ reqwest = { version = "0.13.1", features = [
 # TLS stack: prefer ring backend to avoid cmake/NASM on Windows
 # Made optional so downstream crates using native-tls don't pull in rustls
 rustls = { version = "0.23.35", default-features = false, features = ["std", "logging", "tls12", "ring"], optional = true }
-rustls-webpki = { version = "0.103.8", default-features = false, features = ["std", "ring"], optional = true }
+rustls-webpki = { version = "0.103.10", default-features = false, features = ["std", "ring"], optional = true }
 
 # Alternative: rustls with aws-lc-rs backend (requires cmake + NASM)
 rustls-aws-lc = { package = "rustls", version = "0.23.35", default-features = false, features = ["std", "logging", "tls12", "aws-lc-rs"], optional = true }
