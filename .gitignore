@@ -25,3 +25,7 @@ coverage
 
 # IDE and editor specific
 .codebuddy/
+
+# Rust incremental-compilation artifacts leaked into the repo root (PIP-3735)
+*.rcgu.o
+*.o
