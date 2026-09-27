@@ -25,3 +25,7 @@ coverage
 
 # IDE and editor specific
 .codebuddy/
+
+# Rust incremental compilation artifacts accidentally left in the repo root
+*.o
+*.rcgu.o
